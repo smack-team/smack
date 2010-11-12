@@ -36,30 +36,25 @@
 #define SMACK64 "security.SMACK64"
 #define SMACK64_LEN 23
 
-struct object_rule {
+struct smack_object {
 	char object[SMACK64_LEN + 1];
 	unsigned ac;
-	int dirty;
-	UT_hash_handle object_hash;
+	UT_hash_handle hh;
 };
 
-struct subject_rule {
+struct smack_subject {
 	char subject[SMACK64_LEN + 1];
-	struct object_rule *objects;
-	UT_hash_handle subject_hash;
+	struct smack_object *objects;
+	UT_hash_handle hh;
 };
 
 struct smack_ruleset {
-	struct subject_rule *subjects;
+	struct smack_subject *subjects;
 };
 
-static struct object_rule *update_rule(struct smack_ruleset *rule_set,
-					     const char *subject, const char *object,
-					     unsigned ac);
-inline struct subject_rule *find_subject_rules(struct smack_ruleset *rule_set, 
-					     const char *subject);
-inline struct object_rule *find_object_rule(struct subject_rule *rule,
-					 	  const char *object);
+static int update_rule(struct smack_ruleset *handle,
+		       const char *subject_str, const char *object_str,
+		       unsigned ac);
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_str(unsigned ac, char *str);
 
@@ -72,16 +67,18 @@ smack_ruleset_t smack_create_ruleset(void)
 
 void smack_destroy_ruleset(smack_ruleset_t handle)
 {
-	struct subject_rule *srule, *next_srule;
-	struct object_rule *orule, *next_orule;
+	struct smack_subject *s;
+	struct smack_object *o;
 
-	for (srule = handle->subjects; srule; srule = next_srule) {
-		for (orule = srule->objects; orule; orule = next_orule) {
-			next_orule = orule->object_hash.next;
-			free(orule);
+	while (handle->subjects != NULL) {
+		s = handle->subjects;
+		while (s->objects != NULL) {
+			o = s->objects;
+			HASH_DEL(s->objects, o);
+			free(o);
 		}
-		next_srule = srule->subject_hash.next;
-		free(srule);
+		HASH_DEL(handle->subjects, s);
+		free(s);
 	}
 
 	free(handle);
@@ -95,11 +92,11 @@ int smack_read_rules(smack_ruleset_t handle, const char *path,
 	char object[SMACK64_LEN + 1];
 	char access_str[SMACK_ACC_LEN];
 	unsigned access;
-	int ret, sok, ook;
+	int ret;
 
 	file = fopen(path, "r");
 	if (file == NULL)
-		return errno;
+		return -1;
 
 	for (;;) {
 		ret = fscanf(file, "%23s %23s %4s\n", subject, object,
@@ -112,7 +109,11 @@ int smack_read_rules(smack_ruleset_t handle, const char *path,
 		if (subject_filter == NULL ||
 		    strcmp(subject, subject_filter) == 0) {
 			access = str_to_ac(access_str);
-			update_rule(handle, subject, object, access);
+			if (update_rule(handle, subject, object, access) ==
+			    -1) {
+				fclose(file);
+				return -1;
+			}
 		}
 	}
 
@@ -122,10 +123,9 @@ int smack_read_rules(smack_ruleset_t handle, const char *path,
 
 int smack_write_rules(smack_ruleset_t handle, const char *path)
 {
-	struct subject_rule *srule;
-	struct object_rule *orule;
+	struct smack_subject *s, *stmp;
+	struct smack_object *o, *otmp;
 	FILE *file;
-	struct smack_ruleset *rule_set = handle;
 	char access_str[6];
 	int err;
 
@@ -133,15 +133,12 @@ int smack_write_rules(smack_ruleset_t handle, const char *path)
 	if (!file)
 		return errno;
 
-	for (srule = rule_set->subjects; srule; srule = srule->subject_hash.next) {
-		for (orule = srule->objects; orule; orule = orule->object_hash.next) {
-			if (orule->dirty)
-				continue;
-
-			ac_to_str(orule->ac, access_str);
+	HASH_ITER(hh, handle->subjects, s, stmp) {
+		HASH_ITER(hh, s->objects, o, otmp) {
+			ac_to_str(o->ac, access_str);
 			err = fprintf(file, "%-23s %-23s %4s\n", 
-				      srule->subject,
-				      orule->object, access_str);
+				      s->subject,
+				      o->object, access_str);
 			if (err < 0) {
 				fclose(file);
 				return errno;
@@ -158,72 +155,72 @@ int smack_add_rule(smack_ruleset_t handle, const char *subject,
 {
 	unsigned access;
 	access = str_to_ac(access_str);
-	return (update_rule(handle, subject, object, access) ? 0 : -1);
+	return (update_rule(handle, subject, object, access) == 0 ? 0  : -1);
 }
 
 void smack_remove_rule(smack_ruleset_t handle, const char *subject,
 		       const char *object)
 {
-	struct subject_rule *srule;
-	struct object_rule *orule;
+	struct smack_subject *s = NULL;
+	struct smack_object *o = NULL;
 
-	srule = find_subject_rules(handle, subject);
-	if (srule == NULL)
+	HASH_FIND_STR(handle->subjects, subject, s);
+	if (s == NULL)
 		return;
 
-	orule = find_object_rule(srule, object);
-	if (orule == NULL)
+	HASH_FIND_STR(s->objects, object, o);
+	if (o == NULL)
 		return;
 
-	orule->dirty = 1;
+	HASH_DEL(s->objects, o);
+	free(o);
 }
 
 void smack_remove_subject_rules(smack_ruleset_t handle, const char *subject)
 {
-	struct subject_rule *srule;
-	struct object_rule *orule;
+	struct smack_subject *s = NULL;
+	struct smack_object *o = NULL, *tmp = NULL;
 
-	srule = find_subject_rules(handle, subject);
-	if (srule == NULL)
+	HASH_FIND_STR(handle->subjects, subject, s);
+	if (s == NULL)
 		return;
 
-	for (orule = srule->objects; orule; orule = orule->object_hash.next)
-		orule->dirty = 1;
+	HASH_ITER(hh, s->objects, o, tmp) {
+		HASH_DEL(s->objects, o);
+		free(o);
+	}
 }
 
 void smack_remove_object_rules(smack_ruleset_t handle, const char *object)
 {
-	struct subject_rule *srule;
-	struct object_rule *orule;
+	struct smack_subject *s = NULL, *tmp = NULL;
+	struct smack_object *o = NULL;
 
-	for (srule = handle->subjects; srule; srule = srule->subject_hash.next) {
-		orule = find_object_rule(srule, object);
-		if (orule != NULL)
-			orule->dirty = 1;
+	HASH_ITER(hh, handle->subjects, s, tmp) {
+		HASH_FIND_STR(s->objects, object, o);
+		HASH_DEL(s->objects, o);
+		free(o);
 	}
 }
 
 int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
 			   const char *object, const char *access_str)
 {
-	struct subject_rule *srule;
-	struct object_rule *orule;
+	struct smack_subject *s = NULL;
+	struct smack_object *o = NULL;
 	unsigned ac;
 
 	ac = str_to_ac(access_str);
 
-	srule = find_subject_rules(handle, subject);
-	if (srule == NULL)
+	HASH_FIND_STR(handle->subjects, subject, s);
+	if (s == NULL)
 		return 0;
 
-	orule = find_object_rule(srule, object);
-	if (orule == NULL)
+	HASH_FIND_STR(s->objects, object, o);
+	if (o == NULL)
 		return 0;
 
-	if (orule->dirty)
-		return 0;
-
-	return ((orule->ac & ac) == ac);
+	return ((o->ac & ac) == ac);
 }
 
 int smack_set_smack(const char *path, const char *smack)
@@ -261,50 +258,29 @@ int smack_get_smack(const char *path, char **smack)
 	return 0;
 }
 
-static struct object_rule *update_rule(struct smack_ruleset *rule_set,
-				       const char *subject,
-				       const char *object, unsigned ac)
+static int update_rule(struct smack_ruleset *handle,
+		       const char *subject_str,
+		       const char *object_str, unsigned ac)
 {
-	struct subject_rule *srule;
-	struct object_rule *orule;
+	struct smack_subject *s = NULL;
+	struct smack_object *o = NULL;
 
-	srule = find_subject_rules(rule_set, subject);
-	if (srule == NULL) {
-		srule = calloc(1, sizeof(struct subject_rule));
-		strcpy(srule->subject, subject);
-		HASH_ADD(subject_hash, rule_set->subjects, subject,
-			 strlen(srule->subject), srule);
+	HASH_FIND_STR(handle->subjects, subject_str, s);
+	if (s == NULL) {
+		s = calloc(1, sizeof(struct smack_subject));
+		strcpy(s->subject, subject_str);
+		HASH_ADD_STR(handle->subjects, subject, s);
 	}
 
-	orule = find_object_rule(srule, object);
-	if (orule == NULL) {
-		orule = calloc(1, sizeof(struct object_rule));
-		strcpy(orule->object, object);
-		HASH_ADD(object_hash, srule->objects, object,
-			 strlen(orule->object), orule);
+	HASH_FIND_STR(s->objects, object_str, o);
+	if (o == NULL) {
+		o = calloc(1, sizeof(struct smack_object));
+		strcpy(o->object, object_str);
+		HASH_ADD_STR(s->objects, object, o);
 	}
 
-	orule->dirty = 0;
-	orule->ac = ac;
-	return orule;
-}
-
-inline struct subject_rule *find_subject_rules(struct smack_ruleset *rule_set,
-					       const char *subject)
-{
-	struct subject_rule *rule;
-	HASH_FIND(subject_hash, rule_set->subjects, subject, strlen(subject),
-		  rule);
-	return rule;
-}
-
-inline struct object_rule *find_object_rule(struct subject_rule *rule,
-					    const char *object)
-{
-	struct object_rule *orule;
-	HASH_FIND(object_hash, rule->objects, object, strlen(object),
-		  orule);
-	return orule;
+	o->ac = ac;
+	return 0;
 }
 
 inline unsigned str_to_ac(const char *str)

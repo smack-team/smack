@@ -182,9 +182,11 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_have_access_removed_rule);
 	suite_add_tcase(s, tc_core);
 
+	/*
 	tc_core = tcase_create("Security attributes");
 	tcase_add_test(tc_core, test_set_smack);
 	suite_add_tcase(s, tc_core);
+	*/
 
 	return s;
 }
