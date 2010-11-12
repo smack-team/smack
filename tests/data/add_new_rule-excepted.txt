@@ -1,0 +1,2 @@
+Foo                     Bar                     r-x-
+Orange                  Apple                   r--a
