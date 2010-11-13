@@ -61,12 +61,12 @@ START_TEST(test_modify_existing_rule)
 }
 END_TEST
 
-START_TEST(test_write_rules_config)
+START_TEST(test_rw_rules_config)
 {
 	int rc;
 	smack_ruleset_t rules = smack_create_ruleset();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/write_rules-in.txt", NULL);
+	rc = smack_read_rules(rules, "data/write_rules_config-excepted.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
 	rc = smack_write_rules(rules, "write_rules_config-result.txt", SMACK_FORMAT_CONFIG);
 	fail_unless(rc == 0, "Failed to write ruleset");
@@ -76,12 +76,12 @@ START_TEST(test_write_rules_config)
 }
 END_TEST
 
-START_TEST(test_write_rules_kernel)
+START_TEST(test_rw_rules_kernel)
 {
 	int rc;
 	smack_ruleset_t rules = smack_create_ruleset();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/write_rules-in.txt", NULL);
+	rc = smack_read_rules(rules, "data/write_rules_config-excepted.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
 	rc = smack_write_rules(rules, "write_rules_kernel-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
@@ -90,7 +90,6 @@ START_TEST(test_write_rules_kernel)
 	smack_destroy_ruleset(rules);
 }
 END_TEST
-
 
 START_TEST(test_remove_rule)
 {
@@ -200,8 +199,8 @@ Suite *ruleset_suite (void)
 	tc_core = tcase_create("Rules");
 	tcase_add_test(tc_core, test_add_new_rule);
 	tcase_add_test(tc_core, test_modify_existing_rule);
-	tcase_add_test(tc_core, test_write_rules_config);
-	tcase_add_test(tc_core, test_write_rules_kernel);
+	tcase_add_test(tc_core, test_rw_rules_config);
+	tcase_add_test(tc_core, test_rw_rules_kernel);
 	tcase_add_test(tc_core, test_remove_rule);
 	tcase_add_test(tc_core, test_remove_subject_rules);
 	tcase_add_test(tc_core, test_remove_object_rules);
