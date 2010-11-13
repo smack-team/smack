@@ -40,6 +40,8 @@ typedef struct smack_ruleset *smack_ruleset_t;
 #define SMACK_FORMAT_CONFIG 0
 #define SMACK_FORMAT_KERNEL 1
 
+#define SMACK_SET_SYMLINK 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -136,23 +138,27 @@ extern int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
 				  const char *object, const char *access);
 
 /*!
- * Set SMACK64 security attribute for a given path. Follows symbolic links.
+ * Set SMACK64 security attribute for a given path.
  *
  * @param path path to a file
  * @param smack new value
+ * @param flags set flags
  * @return 0 on success
  */
-extern int smack_set_file_smack(const char *path, const char *smack);
+extern int smack_set_file_smack(const char *path, const char *smack,
+				int flags);
 
 /*!
- * Get SMACK64 security attribute for a given path. Follows symbolic links.
+ * Get SMACK64 security attribute for a given path.
  * Allocated memory must be freed by the caller.
  *
  * @param path path to a file
  * @param smack current value
+ * @param flags set flags
  * @return 0 on success
  */
-extern int smack_get_file_smack(const char *path, char **smack);
+extern int smack_get_file_smack(const char *path, char **smack,
+				int flags);
 
 /*!
  * Get SMACK64 security attribute for a given pid.

@@ -232,7 +232,7 @@ int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
-int smack_set_file_smack(const char *path, const char *smack)
+int smack_set_file_smack(const char *path, const char *smack, int flags)
 {
 	size_t size;
 	int ret;
@@ -241,22 +241,34 @@ int smack_set_file_smack(const char *path, const char *smack)
 	if (size > SMACK64_LEN)
 		return -1;
 
-	ret = setxattr(path, SMACK64, smack, size, 0);
+	if ((flags & SMACK_SET_SYMLINK) == 0)
+		ret = setxattr(path, SMACK64, smack, size, 0);
+	else
+		ret = lsetxattr(path, SMACK64, smack, size, 0);
 
 	return ret;
 }
 
-int smack_get_file_smack(const char *path, char **smack)
+int smack_get_file_smack(const char *path, char **smack, int flags)
 {
 	ssize_t ret;
 	char *buf;
 
-	ret = getxattr(path, SMACK64, NULL, 0);
+	if ((flags & SMACK_SET_SYMLINK) == 0)
+		ret = getxattr(path, SMACK64, NULL, 0);
+	else
+		ret = lgetxattr(path, SMACK64, NULL, 0);
+
 	if (ret < 0)
 		return -1;
 
 	buf = malloc(ret + 1);
-	ret = getxattr(path, SMACK64, buf, ret);
+
+	if ((flags & SMACK_SET_SYMLINK) == 0)
+		ret = getxattr(path, SMACK64, buf, ret);
+	else
+		ret = lgetxattr(path, SMACK64, buf, ret);
+
 	if (ret < 0) {
 		free(buf);
 		return -1;

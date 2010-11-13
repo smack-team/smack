@@ -176,10 +176,31 @@ START_TEST(test_set_file_smack)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_file_smack("set_smack-dummy.txt", "Apple");
+	rc = smack_set_file_smack("set_smack-dummy.txt", "Apple", 0);
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_file_smack("set_smack-dummy.txt", &smack);
+	rc = smack_get_file_smack("set_smack-dummy.txt", &smack, 0);
+	fail_unless(rc == 0, "Failed to get SMACK64");
+
+	rc = strcmp(smack, "Apple");
+	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
+
+	free(smack);
+}
+END_TEST
+
+START_TEST(test_set_file_smack_symlink)
+{
+	FILE *file;
+	int rc;
+	char *smack;
+
+	symlink("unknown.txt", "set_smack-symlink.txt");
+
+	rc = smack_set_file_smack("set_smack-symlink.txt", "Apple", SMACK_SET_SYMLINK);
+	fail_unless(rc == 0, "Failed to set SMACK64");
+
+	rc = smack_get_file_smack("set_smack-symlink.txt", &smack, SMACK_SET_SYMLINK);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -208,11 +229,10 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_have_access_removed_rule);
 	suite_add_tcase(s, tc_core);
 
-	/*
 	tc_core = tcase_create("Security attributes");
 	tcase_add_test(tc_core, test_set_file_smack);
+	tcase_add_test(tc_core, test_set_file_smack_symlink);
 	suite_add_tcase(s, tc_core);
-	*/
 
 	return s;
 }
