@@ -56,7 +56,7 @@ static int update_rule(struct smack_ruleset *handle,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
 inline unsigned str_to_ac(const char *str);
-inline void ac_to_str(unsigned ac, char *str);
+inline void ac_to_str(unsigned ac, char *str, int format);
 
 smack_ruleset_t smack_create_ruleset(void)
 {
@@ -121,24 +121,30 @@ int smack_read_rules(smack_ruleset_t handle, const char *path,
 	return 0;
 }
 
-int smack_write_rules(smack_ruleset_t handle, const char *path)
+int smack_write_rules(smack_ruleset_t handle, const char *path, int format)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
 	FILE *file;
-	char access_str[6];
+	char str[6];
 	int err;
 
 	file = fopen(path, "w+");
 	if (!file)
-		return errno;
+		return -1;
 
 	HASH_ITER(hh, handle->subjects, s, stmp) {
 		HASH_ITER(hh, s->objects, o, otmp) {
-			ac_to_str(o->ac, access_str);
-			err = fprintf(file, "%-23s %-23s %4s\n", 
-				      s->subject,
-				      o->object, access_str);
+			if (format == SMACK_FORMAT_CONFIG) {
+				ac_to_str(o->ac, str, SMACK_FORMAT_CONFIG);
+				err = fprintf(file, "%s %s %s\n",
+					      s->subject, o->object, str);
+			} else if (format == SMACK_FORMAT_KERNEL) {
+				ac_to_str(o->ac, str, SMACK_FORMAT_KERNEL);
+				err = fprintf(file, "%-23s %-23s %4s\n",
+					      s->subject, o->object, str);
+			}
+
 			if (err < 0) {
 				fclose(file);
 				return errno;
@@ -316,12 +322,26 @@ inline unsigned str_to_ac(const char *str)
 	return access;
 }
 
-inline void ac_to_str(unsigned access, char *str)
+inline void ac_to_str(unsigned access, char *str, int format)
 {
-	str[0] = ((access & SMACK_ACC_R) != 0) ? 'r' : '-';
-	str[1] = ((access & SMACK_ACC_W) != 0) ? 'w' : '-';
-	str[2] = ((access & SMACK_ACC_X) != 0) ? 'x' : '-';
-	str[3] = ((access & SMACK_ACC_A) != 0) ? 'a' : '-';
-	str[4] = '\0';
+	int i;
+	if (format == SMACK_FORMAT_KERNEL) {
+		str[0] = ((access & SMACK_ACC_R) != 0) ? 'r' : '-';
+		str[1] = ((access & SMACK_ACC_W) != 0) ? 'w' : '-';
+		str[2] = ((access & SMACK_ACC_X) != 0) ? 'x' : '-';
+		str[3] = ((access & SMACK_ACC_A) != 0) ? 'a' : '-';
+		str[4] = '\0';
+	} else if (format == SMACK_FORMAT_CONFIG) {
+		i = 0;
+		if ((access & SMACK_ACC_R) != 0)
+			str[i++] = 'r';
+		if ((access & SMACK_ACC_W) != 0)
+			str[i++] = 'w';
+		if ((access & SMACK_ACC_X) != 0)
+			str[i++] = 'x';
+		if ((access & SMACK_ACC_A) != 0)
+			str[i++] = 'a';
+		str[i] = '\0';
+	}
 }
 

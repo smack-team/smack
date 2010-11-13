@@ -37,6 +37,9 @@
  */
 typedef struct smack_ruleset *smack_ruleset_t;
 
+#define SMACK_FORMAT_CONFIG 0
+#define SMACK_FORMAT_KERNEL 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -73,10 +76,12 @@ extern int smack_read_rules(smack_ruleset_t handle,
  * Write rules to a given file.
  *
  * @param handle handle to a ruleset
- * @param path path to the file where rules are written
+ * @param path path to the rules file
+ * @param format file format
  * @return 0 on success
  */
-extern int smack_write_rules(smack_ruleset_t handle, const char *path);
+extern int smack_write_rules(smack_ruleset_t handle, const char *path,
+			     int format);
 
 /*!
  * Add new rule to a rule set.
