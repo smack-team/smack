@@ -166,7 +166,7 @@ START_TEST(test_have_access_removed_rule)
 }
 END_TEST
 
-START_TEST(test_set_smack)
+START_TEST(test_set_file_smack)
 {
 	FILE *file;
 	int rc;
@@ -176,10 +176,10 @@ START_TEST(test_set_smack)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_smack("set_smack-dummy.txt", "Apple");
+	rc = smack_set_file_smack("set_smack-dummy.txt", "Apple");
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_smack("set_smack-dummy.txt", &smack);
+	rc = smack_get_file_smack("set_smack-dummy.txt", &smack);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -210,7 +210,7 @@ Suite *ruleset_suite (void)
 
 	/*
 	tc_core = tcase_create("Security attributes");
-	tcase_add_test(tc_core, test_set_smack);
+	tcase_add_test(tc_core, test_set_file_smack);
 	suite_add_tcase(s, tc_core);
 	*/
 

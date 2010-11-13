@@ -36,6 +36,9 @@
 #define SMACK64 "security.SMACK64"
 #define SMACK64_LEN 23
 
+#define SMACK_PROC_PATH "/proc/%d/attr/current"
+#define LINE_BUFFER_SIZE 255
+
 struct smack_object {
 	char object[SMACK64_LEN + 1];
 	unsigned ac;
@@ -229,7 +232,7 @@ int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
-int smack_set_smack(const char *path, const char *smack)
+int smack_set_file_smack(const char *path, const char *smack)
 {
 	size_t size;
 	int ret;
@@ -243,7 +246,7 @@ int smack_set_smack(const char *path, const char *smack)
 	return ret;
 }
 
-int smack_get_smack(const char *path, char **smack)
+int smack_get_file_smack(const char *path, char **smack)
 {
 	ssize_t ret;
 	char *buf;
@@ -263,6 +266,28 @@ int smack_get_smack(const char *path, char **smack)
 	*smack = buf;
 	return 0;
 }
+
+int smack_get_proc_smack(int pid, char **smack)
+{
+	char buf[LINE_BUFFER_SIZE];
+	FILE *file;
+
+	snprintf(buf, LINE_BUFFER_SIZE, SMACK_PROC_PATH, pid);
+
+	file = fopen(buf, "r");
+	if (file == NULL)
+		return -1;
+
+	if (fgets(buf, LINE_BUFFER_SIZE, file) == NULL) {
+		fclose(file);
+		return -1;
+	}
+
+	fclose(file);
+	*smack = strdup(buf);
+	return *smack != NULL ? 0 : - 1;
+}
+
 
 static int update_rule(struct smack_ruleset *handle,
 		       const char *subject_str,

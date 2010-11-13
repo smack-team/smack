@@ -142,7 +142,7 @@ extern int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
  * @param smack new value
  * @return 0 on success
  */
-extern int smack_set_smack(const char *path, const char *smack);
+extern int smack_set_file_smack(const char *path, const char *smack);
 
 /*!
  * Get SMACK64 security attribute for a given path. Follows symbolic links.
@@ -152,7 +152,16 @@ extern int smack_set_smack(const char *path, const char *smack);
  * @param smack current value
  * @return 0 on success
  */
-extern int smack_get_smack(const char *path, char **smack);
+extern int smack_get_file_smack(const char *path, char **smack);
+
+/*!
+ * Get SMACK64 security attribute for a given pid.
+ *
+ * @param pid pid of a process
+ * @param smack current value
+ * @return 0 on success
+ */
+extern int smack_get_proc_smack(int pid, char **smack);
 
 #ifdef __cplusplus
 }
