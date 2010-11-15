@@ -157,7 +157,7 @@ extern void smack_destroy_users(smack_users_t handle);
 /*!
  * Read users from a given file.
  *
- * @param handle handle to a users db
+ * @param handle handle to an users db
  * @param path path to the file containing users
  * @return 0 on success
  */
@@ -166,11 +166,22 @@ extern int smack_read_users_from_file(smack_users_t handle, const char *path);
 /*!
  * Write users to a given file.
  *
- * @param handle handle to a users db
+ * @param handle handle to an users db
  * @param path path to the users file
  * @return 0 on success
  */
 extern int smack_write_users_to_file(smack_users_t handle, const char *path);
+
+/*!
+ * Get label of user.
+ *
+ * @param handle handle to an users db
+ * @param user user name
+ *
+ * @return pointer to a string containing label of the user. Returns NULL
+ * on failure.
+ */
+const char *smack_get_user_label(smack_users_t handle, const char *user);
 
 /*!
  * Set SMACK64 security attribute for a given path.

@@ -42,15 +42,35 @@ START_TEST(test_rw_users)
 }
 END_TEST
 
+START_TEST(test_user_label)
+{
+	int rc;
+	const char *l;
+
+	smack_users_t users = smack_create_users();
+	fail_unless(users != NULL, "Users creation failed");
+
+	rc = smack_read_users_from_file(users, "data/rw_users-in.txt");
+	fail_unless(rc == 0, "Failed to read users");
+
+	l = smack_get_user_label(users, "bar");
+	fail_unless(l != NULL, "Label not found");
+	fail_unless(strcmp(l, "Orange") == 0, "Unexcepted label %s", l);
+
+	smack_destroy_users(users);
+}
+END_TEST
+
 Suite *ruleset_suite (void)
 {
 	Suite *s;
 	TCase *tc_core;
 
-	s = suite_create("Smack");
+	s = suite_create("User");
 
 	tc_core = tcase_create("Users");
 	tcase_add_test(tc_core, test_rw_users);
+	tcase_add_test(tc_core, test_user_label);
 	suite_add_tcase(s, tc_core);
 
 	return s;

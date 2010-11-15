@@ -123,6 +123,18 @@ int smack_write_users_to_file(smack_users_t handle, const char *path)
 	return 0;
 }
 
+const char *smack_get_user_label(smack_users_t handle, const char *user)
+{
+	struct smack_user *u;
+
+	HASH_FIND_STR(handle->users, user, u);
+
+	if (u == NULL)
+		return;
+
+	return u->label;
+}
+
 static int update_user(struct smack_user **users,
 		       const char *user, const char *label)
 {
@@ -135,7 +147,7 @@ static int update_user(struct smack_user **users,
 	if (u == NULL) {
 		u = calloc(1, sizeof(struct smack_user));
 		u->user = strdup(user);
-		HASH_ADD_STR(*users, user, u);
+		HASH_ADD_KEYPTR( hh, *users, u->user, strlen(u->user), u);
 	}
 
 	strcpy(u->label, label);
