@@ -35,14 +35,14 @@
 /*!
  * Handle to a in-memory representation of set of Smack rules.
  */
-typedef struct smack_ruleset *smack_ruleset_t;
+typedef struct smack_rules *smack_rules_t;
 
 typedef struct smack_users *smack_users_t;
 
 #define SMACK_FORMAT_CONFIG 0
 #define SMACK_FORMAT_KERNEL 1
 
-#define SMACK_SET_SYMLINK 1
+#define SMACK_XATTR_SYMLINK 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,97 +50,98 @@ extern "C" {
 
 /*!
  * Create a new rule set. The returned rule set must be freed with
- * smack_destroy_ruleset().
+ * smack_destroy_rules().
  *
  * @return handle to the rule set. Returns NULL if allocation fails.
  */
-extern smack_ruleset_t smack_create_ruleset(void);
+extern smack_rules_t smack_create_rules(void);
 
 /*!
- * Free resources allocated by ruleset.
+ * Free resources allocated by rules.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  */
-extern void smack_destroy_ruleset(smack_ruleset_t handle);
+extern void smack_destroy_rules(smack_rules_t handle);
 
 /*!
- * Read rules from a given file. Rules can be optionally filtered with a
- * subject.
+ * Read rules from a given file. Rules can be optionally filtered by a
+ * subject. Old rules are replaced with read ruleset on success full
+ * read.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param path path to the file containing rules
  * @param subject read only rules for the given subject if not set to NULL.
  * @return 0 on success
  */
-extern int smack_read_rules(smack_ruleset_t handle,
-			    const char *path,
-			    const char *subject);
+extern int smack_read_rules_from_file(smack_rules_t handle,
+				      const char *path,
+				      const char *subject);
 
 /*!
  * Write rules to a given file.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param path path to the rules file
  * @param format file format
  * @return 0 on success
  */
-extern int smack_write_rules(smack_ruleset_t handle, const char *path,
-			     int format);
+extern int smack_write_rules_to_file(smack_rules_t handle, const char *path,
+				     int format);
 
 /*!
  * Add new rule to a rule set.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access string defining access type
  * @return 0 on success
  */
-extern int smack_add_rule(smack_ruleset_t handle, const char *subject,
+extern int smack_add_rule(smack_rules_t handle, const char *subject,
 			  const char *object, const char *access);
 
 /*!
  * Remove rule from a rule set.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param subject subject of the rule
  * @param object object of the rule
  */
-extern void smack_remove_rule(smack_ruleset_t handle, const char *subject,
+extern void smack_remove_rule(smack_rules_t handle, const char *subject,
 			      const char *object);
 
 /*!
  * Remove all rules with the given subject from a rule set.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param subject subject of the rule
  */
-extern void smack_remove_subject_rules(smack_ruleset_t handle,
-				       const char *subject);
+extern void smack_remove_rules_by_subject(smack_rules_t handle,
+					  const char *subject);
 
 /*!
  * Remove all rules with the given object from a rule set.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param object object of the rule
  */
-extern void smack_remove_object_rules(smack_ruleset_t handle,
-				      const char *object);
+extern void smack_remove_rules_by_object(smack_rules_t handle,
+					 const char *object);
 
 /*!
  * Does the given subject have at least the given access to the given object?
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access string defining access type
  * @return boolean value
  */
-extern int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
+extern int smack_have_access_rule(smack_rules_t handle, const char *subject,
 				  const char *object, const char *access);
 /*!
  * Create users database. The returned rule set must be freed with
- * smack_destroy_ruleset().
+ * smack_destroy_rules().
  *
  * @return handle to the users db. Returns NULL if creation fails.
  */
@@ -149,7 +150,7 @@ extern smack_users_t smack_create_users();
 /*!
  * Free users database.
  *
- * @param handle handle to a ruleset
+ * @param handle handle to a rules
  */
 extern void smack_destroy_users(smack_users_t handle);
 
@@ -160,7 +161,7 @@ extern void smack_destroy_users(smack_users_t handle);
  * @param path path to the file containing users
  * @return 0 on success
  */
-extern int smack_read_users(smack_users_t handle, const char *path);
+extern int smack_read_users_from_file(smack_users_t handle, const char *path);
 
 /*!
  * Write users to a given file.
@@ -169,7 +170,7 @@ extern int smack_read_users(smack_users_t handle, const char *path);
  * @param path path to the users file
  * @return 0 on success
  */
-extern int smack_write_users(smack_users_t handle, const char *path);
+extern int smack_write_users_to_file(smack_users_t handle, const char *path);
 
 /*!
  * Set SMACK64 security attribute for a given path.
@@ -179,8 +180,8 @@ extern int smack_write_users(smack_users_t handle, const char *path);
  * @param flags set flags
  * @return 0 on success
  */
-extern int smack_set_file_smack(const char *path, const char *smack,
-				int flags);
+extern int smack_set_smack_to_file(const char *path, const char *smack,
+				   int flags);
 
 /*!
  * Get SMACK64 security attribute for a given path.
@@ -191,8 +192,8 @@ extern int smack_set_file_smack(const char *path, const char *smack,
  * @param flags set flags
  * @return 0 on success
  */
-extern int smack_get_file_smack(const char *path, char **smack,
-				int flags);
+extern int smack_get_smack_from_file(const char *path, char **smack,
+				     int flags);
 
 /*!
  * Get SMACK64 security attribute for a given pid.
@@ -201,7 +202,7 @@ extern int smack_get_file_smack(const char *path, char **smack,
  * @param smack current value
  * @return 0 on success
  */
-extern int smack_get_proc_smack(int pid, char **smack);
+extern int smack_get_smack_from_proc(int pid, char **smack);
 
 #ifdef __cplusplus
 }

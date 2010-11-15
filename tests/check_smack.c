@@ -30,139 +30,139 @@ static int files_equal(const char *filename1, const char *filename2);
 START_TEST(test_add_new_rule)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/add_new_rule-in.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/add_new_rule-in.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
 	rc = smack_add_rule(rules, "Orange", "Apple", "ra");
 	fail_unless(rc == 0, "Failed to add rule");
-	rc = smack_write_rules(rules, "add_new_rule-result.txt", SMACK_FORMAT_KERNEL);
+	rc = smack_write_rules_to_file(rules, "add_new_rule-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("add_new_rule-result.txt", "data/add_new_rule-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
 START_TEST(test_modify_existing_rule)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/modify_existing_rule-in.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/modify_existing_rule-in.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
 	rc = smack_add_rule(rules, "Foo", "Bar", "wx");
 	fail_unless(rc == 0, "Failed to add rule");
-	rc = smack_write_rules(rules, "modify_existing_rule-result.txt", SMACK_FORMAT_KERNEL);
+	rc = smack_write_rules_to_file(rules, "modify_existing_rule-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("modify_existing_rule-result.txt", "data/modify_existing_rule-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
 START_TEST(test_rw_rules_config)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/write_rules_config-excepted.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/write_rules_config-excepted.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
-	rc = smack_write_rules(rules, "write_rules_config-result.txt", SMACK_FORMAT_CONFIG);
+	rc = smack_write_rules_to_file(rules, "write_rules_config-result.txt", SMACK_FORMAT_CONFIG);
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("write_rules_config-result.txt", "data/write_rules_config-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
 START_TEST(test_rw_rules_kernel)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/write_rules_config-excepted.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/write_rules_config-excepted.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
-	rc = smack_write_rules(rules, "write_rules_kernel-result.txt", SMACK_FORMAT_KERNEL);
+	rc = smack_write_rules_to_file(rules, "write_rules_kernel-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("write_rules_kernel-result.txt", "data/write_rules_kernel-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
 START_TEST(test_remove_rule)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/remove_rule-in.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/remove_rule-in.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
 	smack_remove_rule(rules, "Orange", "Apple");
-	rc = smack_write_rules(rules, "remove_rule-result.txt", SMACK_FORMAT_KERNEL);
+	rc = smack_write_rules_to_file(rules, "remove_rule-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("remove_rule-result.txt", "data/remove_rule-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
-START_TEST(test_remove_subject_rules)
+START_TEST(test_remove_rules_by_subject)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/remove_subject_rules-in.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/remove_rules_by_subject-in.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
-	smack_remove_subject_rules(rules, "Foo");
-	rc = smack_write_rules(rules, "remove_subject_rules-result.txt", SMACK_FORMAT_KERNEL);
+	smack_remove_rules_by_subject(rules, "Foo");
+	rc = smack_write_rules_to_file(rules, "remove_rules_by_subject-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
-	rc = files_equal("remove_subject_rules-result.txt", "data/remove_subject_rules-excepted.txt");
+	rc = files_equal("remove_rules_by_subject-result.txt", "data/remove_rules_by_subject-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
-START_TEST(test_remove_object_rules)
+START_TEST(test_remove_rules_by_object)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/remove_object_rules-in.txt", NULL);
+	rc = smack_read_rules_from_file(rules, "data/remove_rules_by_object-in.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
-	smack_remove_object_rules(rules, "Apple");
-	rc = smack_write_rules(rules, "remove_object_rules-result.txt", SMACK_FORMAT_KERNEL);
+	smack_remove_rules_by_object(rules, "Apple");
+	rc = smack_write_rules_to_file(rules, "remove_rules_by_object-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
-	rc = files_equal("remove_object_rules-result.txt", "data/remove_object_rules-excepted.txt");
+	rc = files_equal("remove_rules_by_object-result.txt", "data/remove_rules_by_object-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
 START_TEST(test_have_access_rule)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/have_access_rule-in.txt", "Orange");
+	rc = smack_read_rules_from_file(rules, "data/have_access_rule-in.txt", "Orange");
 	fail_unless(rc == 0, "Failed to read ruleset");
 	rc = smack_have_access_rule(rules, "Orange", "Apple", "a");
 	fail_unless(rc, "Have access \"a\" failed");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
 START_TEST(test_have_access_removed_rule)
 {
 	int rc;
-	smack_ruleset_t rules = smack_create_ruleset();
+	smack_rules_t rules = smack_create_rules();
 	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules(rules, "data/have_access_rule-in.txt", "Orange");
+	rc = smack_read_rules_from_file(rules, "data/have_access_rule-in.txt", "Orange");
 	fail_unless(rc == 0, "Failed to read ruleset");
 	smack_remove_rule(rules, "Orange", "Apple");
 	rc = smack_have_access_rule(rules, "Orange", "Apple", "a");
 	fail_unless(!rc, "Has access to a removed rule");
-	smack_destroy_ruleset(rules);
+	smack_destroy_rules(rules);
 }
 END_TEST
 
@@ -171,9 +171,9 @@ START_TEST(test_rw_users)
 	int rc;
 	smack_users_t users = smack_create_users();
 	fail_unless(users != NULL, "Users creation failed");
-	rc = smack_read_users(users, "data/rw_users-in.txt");
+	rc = smack_read_users_from_file(users, "data/rw_users-in.txt");
 	fail_unless(rc == 0, "Failed to read users");
-	rc = smack_write_users(users, "rw_users-result.txt");
+	rc = smack_write_users_to_file(users, "rw_users-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("rw_users-result.txt", "data/rw_users-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
@@ -181,7 +181,7 @@ START_TEST(test_rw_users)
 }
 END_TEST
 
-START_TEST(test_set_file_smack)
+START_TEST(test_set_smack_to_file)
 {
 	FILE *file;
 	int rc;
@@ -191,10 +191,10 @@ START_TEST(test_set_file_smack)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_file_smack("set_smack-dummy.txt", "Apple", 0);
+	rc = smack_set_smack_to_file("set_smack-dummy.txt", "Apple", 0);
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_file_smack("set_smack-dummy.txt", &smack, 0);
+	rc = smack_get_smack_from_file("set_smack-dummy.txt", &smack, 0);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -204,7 +204,7 @@ START_TEST(test_set_file_smack)
 }
 END_TEST
 
-START_TEST(test_set_file_smack_symlink)
+START_TEST(test_set_smack_to_file_symlink)
 {
 	FILE *file;
 	int rc;
@@ -212,10 +212,10 @@ START_TEST(test_set_file_smack_symlink)
 
 	symlink("unknown.txt", "set_smack-symlink.txt");
 
-	rc = smack_set_file_smack("set_smack-symlink.txt", "Apple", SMACK_SET_SYMLINK);
+	rc = smack_set_smack_to_file("set_smack-symlink.txt", "Apple", SMACK_XATTR_SYMLINK);
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_file_smack("set_smack-symlink.txt", &smack, SMACK_SET_SYMLINK);
+	rc = smack_get_smack_from_file("set_smack-symlink.txt", &smack, SMACK_XATTR_SYMLINK);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -238,16 +238,16 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_rw_rules_config);
 	tcase_add_test(tc_core, test_rw_rules_kernel);
 	tcase_add_test(tc_core, test_remove_rule);
-	tcase_add_test(tc_core, test_remove_subject_rules);
-	tcase_add_test(tc_core, test_remove_object_rules);
+	tcase_add_test(tc_core, test_remove_rules_by_subject);
+	tcase_add_test(tc_core, test_remove_rules_by_object);
 	tcase_add_test(tc_core, test_have_access_rule);
 	tcase_add_test(tc_core, test_have_access_removed_rule);
 	tcase_add_test(tc_core, test_rw_users);
 	suite_add_tcase(s, tc_core);
 
 	tc_core = tcase_create("Security attributes");
-	tcase_add_test(tc_core, test_set_file_smack);
-	tcase_add_test(tc_core, test_set_file_smack_symlink);
+	tcase_add_test(tc_core, test_set_smack_to_file);
+	tcase_add_test(tc_core, test_set_smack_to_file_symlink);
 	suite_add_tcase(s, tc_core);
 
 	return s;

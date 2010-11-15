@@ -51,7 +51,7 @@ struct smack_subject {
 	UT_hash_handle hh;
 };
 
-struct smack_ruleset {
+struct smack_rules {
 	struct smack_subject *subjects;
 };
 
@@ -65,78 +65,79 @@ struct smack_users {
 	struct smack_user *users;
 };
 
-static int update_rule(struct smack_ruleset *handle,
+static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
-static int update_user(struct smack_users *handle,
+static void destroy_rules(struct smack_subject **subjects);
+static int update_user(struct smack_user **users,
 		       const char *user, const char *label);
+static void destroy_users(struct smack_user **users);
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_str(unsigned ac, char *str, int format);
 
-smack_ruleset_t smack_create_ruleset(void)
+smack_rules_t smack_create_rules(void)
 {
-	struct smack_ruleset *result =
-		calloc(1, sizeof(struct smack_ruleset));
+	struct smack_rules *result =
+		calloc(1, sizeof(struct smack_rules));
 	return result;
 }
 
-void smack_destroy_ruleset(smack_ruleset_t handle)
+void smack_destroy_rules(smack_rules_t handle)
 {
-	struct smack_subject *s;
-	struct smack_object *o;
-
-	while (handle->subjects != NULL) {
-		s = handle->subjects;
-		while (s->objects != NULL) {
-			o = s->objects;
-			HASH_DEL(s->objects, o);
-			free(o);
-		}
-		HASH_DEL(handle->subjects, s);
-		free(s);
-	}
-
+	destroy_rules(&handle->subjects);
 	free(handle);
 }
 
-int smack_read_rules(smack_ruleset_t handle, const char *path,
-		     const char *subject_filter)
+int smack_read_rules_from_file(smack_rules_t handle, const char *path,
+			       const char *subject_filter)
 {
 	FILE *file;
-	char subject[SMACK64_LEN + 1];
-	char object[SMACK64_LEN + 1];
-	char access_str[SMACK_ACC_LEN];
-	unsigned access;
-	int ret;
+	char *buf = NULL;
+	const char *subject, *object, *access;
+	unsigned ac;
+	size_t size;
+	struct smack_subject *subjects = NULL;
+	int ret = 0;
 
 	file = fopen(path, "r");
 	if (file == NULL)
 		return -1;
 
-	for (;;) {
-		ret = fscanf(file, "%23s %23s %4s\n", subject, object,
-			     access_str);
-		if (ret == EOF)
-			break;
-		if (ret != 3)
-			continue;
+	while (ret == 0 && getline(&buf, &size, file) != -1) {
+		subject = strtok(buf, " \n");
+		object = strtok(NULL, " \n");
+		access = strtok(NULL, " \n");
 
-		if (subject_filter == NULL ||
-		    strcmp(subject, subject_filter) == 0) {
-			access = str_to_ac(access_str);
-			if (update_rule(handle, subject, object, access) ==
-			    -1) {
-				fclose(file);
-				return -1;
-			}
+		if (subject == NULL || object == NULL || access == NULL ||
+		    strtok(NULL, " \n") != NULL) {
+			ret = -1;
+		} else if (subject_filter == NULL ||
+			 strcmp(subject, subject_filter) == 0) {
+			ac = str_to_ac(access);
+			ret = update_rule(&subjects, subject, object, ac);
 		}
+
+		free(buf);
+		buf = NULL;
 	}
 
+	if (ferror(file))
+		ret = -1;
+
+	if (ret == 0) {
+		destroy_rules(&handle->subjects);
+		handle->subjects = subjects;
+	} else {
+		destroy_rules(&subjects);
+	}
+
+	free(buf);
 	fclose(file);
-	return 0;
+	return ret;
 }
 
-int smack_write_rules(smack_ruleset_t handle, const char *path, int format)
+int smack_write_rules_to_file(smack_rules_t handle, const char *path,
+			      int format)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -171,15 +172,17 @@ int smack_write_rules(smack_ruleset_t handle, const char *path, int format)
 	return 0;
 }
 
-int smack_add_rule(smack_ruleset_t handle, const char *subject, 
+int smack_add_rule(smack_rules_t handle, const char *subject, 
 		   const char *object, const char *access_str)
 {
 	unsigned access;
+	int ret;
 	access = str_to_ac(access_str);
-	return (update_rule(handle, subject, object, access) == 0 ? 0  : -1);
+	ret = update_rule(&handle->subjects, subject, object, access);
+	return ret == 0 ? 0  : -1;
 }
 
-void smack_remove_rule(smack_ruleset_t handle, const char *subject,
+void smack_remove_rule(smack_rules_t handle, const char *subject,
 		       const char *object)
 {
 	struct smack_subject *s = NULL;
@@ -197,7 +200,7 @@ void smack_remove_rule(smack_ruleset_t handle, const char *subject,
 	free(o);
 }
 
-void smack_remove_subject_rules(smack_ruleset_t handle, const char *subject)
+void smack_remove_rules_by_subject(smack_rules_t handle, const char *subject)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL, *tmp = NULL;
@@ -212,7 +215,7 @@ void smack_remove_subject_rules(smack_ruleset_t handle, const char *subject)
 	}
 }
 
-void smack_remove_object_rules(smack_ruleset_t handle, const char *object)
+void smack_remove_rules_by_object(smack_rules_t handle, const char *object)
 {
 	struct smack_subject *s = NULL, *tmp = NULL;
 	struct smack_object *o = NULL;
@@ -224,7 +227,7 @@ void smack_remove_object_rules(smack_ruleset_t handle, const char *object)
 	}
 }
 
-int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
+int smack_have_access_rule(smack_rules_t handle, const char *subject,
 			   const char *object, const char *access_str)
 {
 	struct smack_subject *s = NULL;
@@ -254,55 +257,53 @@ smack_users_t smack_create_users()
 
 void smack_destroy_users(smack_users_t handle)
 {
-	struct smack_user *u, *tmp;
-
-	HASH_ITER(hh, handle->users, u, tmp) {
-		HASH_DEL(handle->users, u);
-		free(u->user);
-		free(u);
-	}
+	destroy_users(&handle->users);
+	free(handle);
 }
 
-int smack_read_users(smack_users_t handle, const char *path)
+int smack_read_users_from_file(smack_users_t handle, const char *path)
 {
 	FILE *file;
 	char *buf = NULL;
 	size_t size;
-	char *user;
-	char *label;
+	const char *user, *label;
+	struct smack_user *users = NULL;
 	int ret = 0;
 
 	file = fopen(path, "r");
 	if (file == NULL)
 		return -1;
 
-	while (getline(&buf, &size, file) != -1) {
-		user = strtok(buf, " ");
-		if (user == NULL || user[0] == '#')
-			continue;
-
+	while (ret == 0 && getline(&buf, &size, file) != -1) {
+		user = strtok(buf, " \n");
 		label = strtok(NULL, " \n");
-		if (label == NULL)
+
+		if (user == NULL || label == NULL ||
+		    strtok(NULL, " \n") != NULL)
 			ret = -1;
 		else
-			ret = update_user(handle, user, label);
+			ret = update_user(&users, user, label);
 
 		free(buf);
 		buf = NULL;
-
-		if (ret != 0)
-			break;
 	}
 
 	if (ferror(file))
 		ret = -1;
+
+	if (ret == 0) {
+		destroy_users(&handle->users);
+		handle->users = users;
+	} else {
+		destroy_users(&users);
+	}
 
 	free(buf);
 	fclose(file);
 	return 0;
 }
 
-int smack_write_users(smack_users_t handle, const char *path)
+int smack_write_users_to_file(smack_users_t handle, const char *path)
 {
 	struct smack_user *u, *tmp;
 	FILE *file;
@@ -326,7 +327,7 @@ int smack_write_users(smack_users_t handle, const char *path)
 	return 0;
 }
 
-int smack_set_file_smack(const char *path, const char *smack, int flags)
+int smack_set_smack_to_file(const char *path, const char *smack, int flags)
 {
 	size_t size;
 	int ret;
@@ -335,7 +336,7 @@ int smack_set_file_smack(const char *path, const char *smack, int flags)
 	if (size > SMACK64_LEN)
 		return -1;
 
-	if ((flags & SMACK_SET_SYMLINK) == 0)
+	if ((flags & SMACK_XATTR_SYMLINK) == 0)
 		ret = setxattr(path, SMACK64, smack, size, 0);
 	else
 		ret = lsetxattr(path, SMACK64, smack, size, 0);
@@ -343,12 +344,12 @@ int smack_set_file_smack(const char *path, const char *smack, int flags)
 	return ret;
 }
 
-int smack_get_file_smack(const char *path, char **smack, int flags)
+int smack_get_smack_from_file(const char *path, char **smack, int flags)
 {
 	ssize_t ret;
 	char *buf;
 
-	if ((flags & SMACK_SET_SYMLINK) == 0)
+	if ((flags & SMACK_XATTR_SYMLINK) == 0)
 		ret = getxattr(path, SMACK64, NULL, 0);
 	else
 		ret = lgetxattr(path, SMACK64, NULL, 0);
@@ -358,7 +359,7 @@ int smack_get_file_smack(const char *path, char **smack, int flags)
 
 	buf = malloc(ret + 1);
 
-	if ((flags & SMACK_SET_SYMLINK) == 0)
+	if ((flags & SMACK_XATTR_SYMLINK) == 0)
 		ret = getxattr(path, SMACK64, buf, ret);
 	else
 		ret = lgetxattr(path, SMACK64, buf, ret);
@@ -373,7 +374,7 @@ int smack_get_file_smack(const char *path, char **smack, int flags)
 	return 0;
 }
 
-int smack_get_proc_smack(int pid, char **smack)
+int smack_get_smack_from_proc(int pid, char **smack)
 {
 	char buf[LINE_BUFFER_SIZE];
 	FILE *file;
@@ -395,7 +396,7 @@ int smack_get_proc_smack(int pid, char **smack)
 }
 
 
-static int update_rule(struct smack_ruleset *handle,
+static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str,
 		       const char *object_str, unsigned ac)
 {
@@ -406,11 +407,11 @@ static int update_rule(struct smack_ruleset *handle,
 	    strlen(object_str) > SMACK64_LEN)
 		return -ERANGE;
 
-	HASH_FIND_STR(handle->subjects, subject_str, s);
+	HASH_FIND_STR(*subjects, subject_str, s);
 	if (s == NULL) {
 		s = calloc(1, sizeof(struct smack_subject));
 		strcpy(s->subject, subject_str);
-		HASH_ADD_STR(handle->subjects, subject, s);
+		HASH_ADD_STR(*subjects, subject, s);
 	}
 
 	HASH_FIND_STR(s->objects, object_str, o);
@@ -424,7 +425,24 @@ static int update_rule(struct smack_ruleset *handle,
 	return 0;
 }
 
-static int update_user(struct smack_users *handle,
+static void destroy_rules(struct smack_subject **subjects)
+{
+	struct smack_subject *s;
+	struct smack_object *o;
+
+	while (*subjects != NULL) {
+		s = *subjects;
+		while (s->objects != NULL) {
+			o = s->objects;
+			HASH_DEL(s->objects, o);
+			free(o);
+		}
+		HASH_DEL(*subjects, s);
+		free(s);
+	}
+}
+
+static int update_user(struct smack_user **users,
 		       const char *user, const char *label)
 {
 	struct smack_user *u = NULL;
@@ -432,15 +450,26 @@ static int update_user(struct smack_users *handle,
 	if (strlen(label) > SMACK64_LEN)
 		return -ERANGE;
 
-	HASH_FIND_STR(handle->users, user, u);
+	HASH_FIND_STR(*users, user, u);
 	if (u == NULL) {
 		u = calloc(1, sizeof(struct smack_subject));
 		u->user = strdup(user);
-		HASH_ADD_STR(handle->users, user, u);
+		HASH_ADD_STR(*users, user, u);
 	}
 
 	strcpy(u->label, label);
 	return 0;
+}
+
+static void destroy_users(struct smack_user **users)
+{
+	struct smack_user *u, *tmp;
+
+	HASH_ITER(hh, *users, u, tmp) {
+		HASH_DEL(*users, u);
+		free(u->user);
+		free(u);
+	}
 }
 
 inline unsigned str_to_ac(const char *str)
