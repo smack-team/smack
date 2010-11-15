@@ -166,88 +166,6 @@ START_TEST(test_have_access_removed_rule)
 }
 END_TEST
 
-START_TEST(test_rw_users)
-{
-	int rc;
-	smack_users_t users = smack_create_users();
-	fail_unless(users != NULL, "Users creation failed");
-	rc = smack_read_users_from_file(users, "data/rw_users-in.txt");
-	fail_unless(rc == 0, "Failed to read users");
-	rc = smack_write_users_to_file(users, "rw_users-result.txt");
-	fail_unless(rc == 0, "Failed to write ruleset");
-	rc = files_equal("rw_users-result.txt", "data/rw_users-excepted.txt");
-	fail_unless(rc == 1, "Unexcepted result");
-	smack_destroy_users(users);
-}
-END_TEST
-
-START_TEST(test_set_smack_to_file)
-{
-	FILE *file;
-	int rc;
-	char *smack;
-
-	file = fopen("set_smack-dummy.txt", "w");
-	fprintf(file, "dummy\n");
-	fclose(file);
-
-	rc = smack_set_smack_to_file("set_smack-dummy.txt", "Apple", 0);
-	fail_unless(rc == 0, "Failed to set SMACK64");
-
-	rc = smack_get_smack_from_file("set_smack-dummy.txt", &smack, 0);
-	fail_unless(rc == 0, "Failed to get SMACK64");
-
-	rc = strcmp(smack, "Apple");
-	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
-}
-END_TEST
-
-START_TEST(test_set_smack_to_file_symlink)
-{
-	FILE *file;
-	int rc;
-	char *smack;
-
-	symlink("unknown.txt", "set_smack-symlink.txt");
-
-	rc = smack_set_smack_to_file("set_smack-symlink.txt", "Apple", SMACK_XATTR_SYMLINK);
-	fail_unless(rc == 0, "Failed to set SMACK64");
-
-	rc = smack_get_smack_from_file("set_smack-symlink.txt", &smack, SMACK_XATTR_SYMLINK);
-	fail_unless(rc == 0, "Failed to get SMACK64");
-
-	rc = strcmp(smack, "Apple");
-	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
-}
-END_TEST
-
-START_TEST(test_set_smackexec_to_file)
-{
-	FILE *file;
-	int rc;
-	char *smack;
-
-	file = fopen("set_smack-dummy.txt", "w");
-	fprintf(file, "dummy\n");
-	fclose(file);
-
-	rc = smack_set_smackexec_to_file("set_smack-dummy.txt", "Apple", 0);
-	fail_unless(rc == 0, "Failed to set SMACK64EXEC");
-
-	rc = smack_get_smackexec_from_file("set_smack-dummy.txt", &smack, 0);
-	fail_unless(rc == 0, "Failed to get SMACK64EXEC");
-
-	rc = strcmp(smack, "Apple");
-	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
-}
-END_TEST
-
 Suite *ruleset_suite (void)
 {
 	Suite *s;
@@ -265,13 +183,6 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_remove_rules_by_object);
 	tcase_add_test(tc_core, test_have_access_rule);
 	tcase_add_test(tc_core, test_have_access_removed_rule);
-	tcase_add_test(tc_core, test_rw_users);
-	suite_add_tcase(s, tc_core);
-
-	tc_core = tcase_create("Security attributes");
-	tcase_add_test(tc_core, test_set_smack_to_file);
-	tcase_add_test(tc_core, test_set_smack_to_file_symlink);
-	tcase_add_test(tc_core, test_set_smackexec_to_file);
 	suite_add_tcase(s, tc_core);
 
 	return s;
@@ -282,7 +193,7 @@ int main(void)
 	int nfailed;
 	Suite *s = ruleset_suite();
 	SRunner *sr = srunner_create(s);
-	srunner_set_log(sr, "check_smack.log");
+	srunner_set_log(sr, "check_rules.log");
 	srunner_run_all(sr, CK_ENV);
 	nfailed = srunner_ntests_failed(sr);
 	srunner_free(sr);
