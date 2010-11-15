@@ -145,7 +145,7 @@ int smack_write_rules_to_file(smack_rules_t handle, const char *path,
 	struct smack_object *o, *otmp;
 	FILE *file;
 	char str[6];
-	int err;
+	int err = 0;
 
 	file = fopen(path, "w+");
 	if (!file)
@@ -309,7 +309,6 @@ int smack_write_users_to_file(smack_users_t handle, const char *path)
 {
 	struct smack_user *u, *tmp;
 	FILE *file;
-	char str[6];
 	int err;
 
 	file = fopen(path, "w+");
