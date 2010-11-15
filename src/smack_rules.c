@@ -29,18 +29,13 @@
 #include <stdlib.h>
 #include <uthash.h>
 
+#define SMACK64_LEN 23
+
 #define SMACK_ACC_R 1
 #define SMACK_ACC_W 2
 #define SMACK_ACC_X 4
 #define SMACK_ACC_A 16
 #define SMACK_ACC_LEN 4
-
-#define SMACK64 "security.SMACK64"
-#define SMACK64EXEC "security.SMACK64EXEC"
-#define SMACK64_LEN 23
-
-#define SMACK_PROC_PATH "/proc/%d/attr/current"
-#define LINE_BUFFER_SIZE 255
 
 struct smack_object {
 	char object[SMACK64_LEN + 1];
@@ -58,23 +53,10 @@ struct smack_rules {
 	struct smack_subject *subjects;
 };
 
-struct smack_user {
-	char *user;
-	char label[SMACK64_LEN + 1];
-	UT_hash_handle hh;
-};
-
-struct smack_users {
-	struct smack_user *users;
-};
-
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
 static void destroy_rules(struct smack_subject **subjects);
-static int update_user(struct smack_user **users,
-		       const char *user, const char *label);
-static void destroy_users(struct smack_user **users);
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_str(unsigned ac, char *str, int format);
 
@@ -250,200 +232,6 @@ int smack_have_access_rule(smack_rules_t handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
-smack_users_t smack_create_users()
-{
-
-	struct smack_users *result =
-		calloc(1, sizeof(struct smack_users));
-	return result;
-}
-
-void smack_destroy_users(smack_users_t handle)
-{
-	destroy_users(&handle->users);
-	free(handle);
-}
-
-int smack_read_users_from_file(smack_users_t handle, const char *path)
-{
-	FILE *file;
-	char *buf = NULL;
-	size_t size;
-	const char *user, *label;
-	struct smack_user *users = NULL;
-	int ret = 0;
-
-	file = fopen(path, "r");
-	if (file == NULL)
-		return -1;
-
-	while (ret == 0 && getline(&buf, &size, file) != -1) {
-		user = strtok(buf, " \n");
-		label = strtok(NULL, " \n");
-
-		if (user == NULL || label == NULL ||
-		    strtok(NULL, " \n") != NULL)
-			ret = -1;
-		else
-			ret = update_user(&users, user, label);
-
-		free(buf);
-		buf = NULL;
-	}
-
-	if (ferror(file))
-		ret = -1;
-
-	if (ret == 0) {
-		destroy_users(&handle->users);
-		handle->users = users;
-	} else {
-		destroy_users(&users);
-	}
-
-	free(buf);
-	fclose(file);
-	return 0;
-}
-
-int smack_write_users_to_file(smack_users_t handle, const char *path)
-{
-	struct smack_user *u, *tmp;
-	FILE *file;
-	int err;
-
-	file = fopen(path, "w+");
-	if (!file)
-		return -1;
-
-	HASH_ITER(hh, handle->users, u, tmp) {
-		err = fprintf(file, "%s %s\n",
-			      u->user, u->label);
-		if (err < 0) {
-			fclose(file);
-			return errno;
-		}
-	}
-
-	fclose(file);
-	return 0;
-}
-
-int smack_set_smack_to_file(const char *path, const char *smack, int flags)
-{
-	size_t size;
-	int ret;
-
-	size = strlen(smack);
-	if (size > SMACK64_LEN)
-		return -1;
-
-	if ((flags & SMACK_XATTR_SYMLINK) == 0)
-		ret = setxattr(path, SMACK64, smack, size, 0);
-	else
-		ret = lsetxattr(path, SMACK64, smack, size, 0);
-
-	return ret;
-}
-
-int smack_get_smack_from_file(const char *path, char **smack, int flags)
-{
-	ssize_t ret;
-	char *buf;
-
-	if ((flags & SMACK_XATTR_SYMLINK) == 0)
-		ret = getxattr(path, SMACK64, NULL, 0);
-	else
-		ret = lgetxattr(path, SMACK64, NULL, 0);
-
-	if (ret < 0)
-		return -1;
-
-	buf = malloc(ret + 1);
-
-	if ((flags & SMACK_XATTR_SYMLINK) == 0)
-		ret = getxattr(path, SMACK64, buf, ret);
-	else
-		ret = lgetxattr(path, SMACK64, buf, ret);
-
-	if (ret < 0) {
-		free(buf);
-		return -1;
-	}
-
-	buf[ret] = '\0';
-	*smack = buf;
-	return 0;
-}
-
-int smack_get_smack_from_proc(int pid, char **smack)
-{
-	char buf[LINE_BUFFER_SIZE];
-	FILE *file;
-
-	snprintf(buf, LINE_BUFFER_SIZE, SMACK_PROC_PATH, pid);
-
-	file = fopen(buf, "r");
-	if (file == NULL)
-		return -1;
-
-	if (fgets(buf, LINE_BUFFER_SIZE, file) == NULL) {
-		fclose(file);
-		return -1;
-	}
-
-	fclose(file);
-	*smack = strdup(buf);
-	return *smack != NULL ? 0 : - 1;
-}
-
-int smack_set_smackexec_to_file(const char *path, const char *smack, int flags)
-{
-	size_t size;
-	int ret;
-
-	size = strlen(smack);
-	if (size > SMACK64_LEN)
-		return -1;
-
-	if ((flags & SMACK_XATTR_SYMLINK) == 0)
-		ret = setxattr(path, SMACK64EXEC, smack, size, 0);
-	else
-		ret = lsetxattr(path, SMACK64EXEC, smack, size, 0);
-
-	return ret;
-}
-
-int smack_get_smackexec_from_file(const char *path, char **smack, int flags)
-{
-	ssize_t ret;
-	char *buf;
-
-	if ((flags & SMACK_XATTR_SYMLINK) == 0)
-		ret = getxattr(path, SMACK64EXEC, NULL, 0);
-	else
-		ret = lgetxattr(path, SMACK64EXEC, NULL, 0);
-
-	if (ret < 0)
-		return -1;
-
-	buf = malloc(ret + 1);
-
-	if ((flags & SMACK_XATTR_SYMLINK) == 0)
-		ret = getxattr(path, SMACK64EXEC, buf, ret);
-	else
-		ret = lgetxattr(path, SMACK64EXEC, buf, ret);
-
-	if (ret < 0) {
-		free(buf);
-		return -1;
-	}
-
-	buf[ret] = '\0';
-	*smack = buf;
-	return 0;
-}
-
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str,
 		       const char *object_str, unsigned ac)
@@ -487,36 +275,6 @@ static void destroy_rules(struct smack_subject **subjects)
 		}
 		HASH_DEL(*subjects, s);
 		free(s);
-	}
-}
-
-static int update_user(struct smack_user **users,
-		       const char *user, const char *label)
-{
-	struct smack_user *u = NULL;
-
-	if (strlen(label) > SMACK64_LEN)
-		return -ERANGE;
-
-	HASH_FIND_STR(*users, user, u);
-	if (u == NULL) {
-		u = calloc(1, sizeof(struct smack_subject));
-		u->user = strdup(user);
-		HASH_ADD_STR(*users, user, u);
-	}
-
-	strcpy(u->label, label);
-	return 0;
-}
-
-static void destroy_users(struct smack_user **users)
-{
-	struct smack_user *u, *tmp;
-
-	HASH_ITER(hh, *users, u, tmp) {
-		HASH_DEL(*users, u);
-		free(u->user);
-		free(u);
 	}
 }
 
