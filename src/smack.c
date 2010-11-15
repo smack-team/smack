@@ -55,9 +55,21 @@ struct smack_ruleset {
 	struct smack_subject *subjects;
 };
 
+struct smack_user {
+	char *user;
+	char label[SMACK64_LEN + 1];
+	UT_hash_handle hh;
+};
+
+struct smack_users {
+	struct smack_user *users;
+};
+
 static int update_rule(struct smack_ruleset *handle,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
+static int update_user(struct smack_users *handle,
+		       const char *user, const char *label);
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_str(unsigned ac, char *str, int format);
 
@@ -232,6 +244,88 @@ int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
+smack_users_t smack_create_users()
+{
+
+	struct smack_users *result =
+		calloc(1, sizeof(struct smack_users));
+	return result;
+}
+
+void smack_destroy_users(smack_users_t handle)
+{
+	struct smack_user *u, *tmp;
+
+	HASH_ITER(hh, handle->users, u, tmp) {
+		HASH_DEL(handle->users, u);
+		free(u->user);
+		free(u);
+	}
+}
+
+int smack_read_users(smack_users_t handle, const char *path)
+{
+	FILE *file;
+	char *buf = NULL;
+	size_t size;
+	char *user;
+	char *label;
+	int ret = 0;
+
+	file = fopen(path, "r");
+	if (file == NULL)
+		return -1;
+
+	while (getline(&buf, &size, file) != -1) {
+		user = strtok(buf, " ");
+		if (user == NULL || user[0] == '#')
+			continue;
+
+		label = strtok(NULL, " \n");
+		if (label == NULL)
+			ret = -1;
+		else
+			ret = update_user(handle, user, label);
+
+		free(buf);
+		buf = NULL;
+
+		if (ret != 0)
+			break;
+	}
+
+	if (ferror(file))
+		ret = -1;
+
+	free(buf);
+	fclose(file);
+	return 0;
+}
+
+int smack_write_users(smack_users_t handle, const char *path)
+{
+	struct smack_user *u, *tmp;
+	FILE *file;
+	char str[6];
+	int err;
+
+	file = fopen(path, "w+");
+	if (!file)
+		return -1;
+
+	HASH_ITER(hh, handle->users, u, tmp) {
+		err = fprintf(file, "%s %s\n",
+			      u->user, u->label);
+		if (err < 0) {
+			fclose(file);
+			return errno;
+		}
+	}
+
+	fclose(file);
+	return 0;
+}
+
 int smack_set_file_smack(const char *path, const char *smack, int flags)
 {
 	size_t size;
@@ -308,6 +402,10 @@ static int update_rule(struct smack_ruleset *handle,
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 
+	if (strlen(subject_str) > SMACK64_LEN &&
+	    strlen(object_str) > SMACK64_LEN)
+		return -ERANGE;
+
 	HASH_FIND_STR(handle->subjects, subject_str, s);
 	if (s == NULL) {
 		s = calloc(1, sizeof(struct smack_subject));
@@ -323,6 +421,25 @@ static int update_rule(struct smack_ruleset *handle,
 	}
 
 	o->ac = ac;
+	return 0;
+}
+
+static int update_user(struct smack_users *handle,
+		       const char *user, const char *label)
+{
+	struct smack_user *u = NULL;
+
+	if (strlen(label) > SMACK64_LEN)
+		return -ERANGE;
+
+	HASH_FIND_STR(handle->users, user, u);
+	if (u == NULL) {
+		u = calloc(1, sizeof(struct smack_subject));
+		u->user = strdup(user);
+		HASH_ADD_STR(handle->users, user, u);
+	}
+
+	strcpy(u->label, label);
 	return 0;
 }
 

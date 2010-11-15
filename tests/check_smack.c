@@ -166,6 +166,21 @@ START_TEST(test_have_access_removed_rule)
 }
 END_TEST
 
+START_TEST(test_rw_users)
+{
+	int rc;
+	smack_users_t users = smack_create_users();
+	fail_unless(users != NULL, "Users creation failed");
+	rc = smack_read_users(users, "data/rw_users-in.txt");
+	fail_unless(rc == 0, "Failed to read users");
+	rc = smack_write_users(users, "rw_users-result.txt");
+	fail_unless(rc == 0, "Failed to write ruleset");
+	rc = files_equal("rw_users-result.txt", "data/rw_users-excepted.txt");
+	fail_unless(rc == 1, "Unexcepted result");
+	smack_destroy_users(users);
+}
+END_TEST
+
 START_TEST(test_set_file_smack)
 {
 	FILE *file;
@@ -227,6 +242,7 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_remove_object_rules);
 	tcase_add_test(tc_core, test_have_access_rule);
 	tcase_add_test(tc_core, test_have_access_removed_rule);
+	tcase_add_test(tc_core, test_rw_users);
 	suite_add_tcase(s, tc_core);
 
 	tc_core = tcase_create("Security attributes");

@@ -37,6 +37,8 @@
  */
 typedef struct smack_ruleset *smack_ruleset_t;
 
+typedef struct smack_users *smack_users_t;
+
 #define SMACK_FORMAT_CONFIG 0
 #define SMACK_FORMAT_KERNEL 1
 
@@ -136,6 +138,38 @@ extern void smack_remove_object_rules(smack_ruleset_t handle,
  */
 extern int smack_have_access_rule(smack_ruleset_t handle, const char *subject,
 				  const char *object, const char *access);
+/*!
+ * Create users database. The returned rule set must be freed with
+ * smack_destroy_ruleset().
+ *
+ * @return handle to the users db. Returns NULL if creation fails.
+ */
+extern smack_users_t smack_create_users();
+
+/*!
+ * Free users database.
+ *
+ * @param handle handle to a ruleset
+ */
+extern void smack_destroy_users(smack_users_t handle);
+
+/*!
+ * Read users from a given file.
+ *
+ * @param handle handle to a users db
+ * @param path path to the file containing users
+ * @return 0 on success
+ */
+extern int smack_read_users(smack_users_t handle, const char *path);
+
+/*!
+ * Write users to a given file.
+ *
+ * @param handle handle to a users db
+ * @param path path to the users file
+ * @return 0 on success
+ */
+extern int smack_write_users(smack_users_t handle, const char *path);
 
 /*!
  * Set SMACK64 security attribute for a given path.
