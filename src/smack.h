@@ -89,7 +89,8 @@ extern int smack_write_rules_to_file(smack_rules_t handle, const char *path,
 				     int format);
 
 /*!
- * Add new rule to a rule set.
+ * Add new rule to a rule set. Updates existing rule if there is already rule
+ * for the given subject and object.
  *
  * @param handle handle to a rules
  * @param subject subject of the rule
@@ -171,6 +172,17 @@ extern int smack_read_users_from_file(smack_users_t handle, const char *path);
  * @return 0 on success
  */
 extern int smack_write_users_to_file(smack_users_t handle, const char *path);
+
+/*!
+ * Add user to the user db. Updates existing user if user is already in the
+ * user db.
+ *
+ * @param handle handle to the users db
+ * @param user user name
+ * @param label user label
+ */
+extern int smack_add_user(smack_users_t handle, const char *user,
+			  const char *label);
 
 /*!
  * Get label of user.

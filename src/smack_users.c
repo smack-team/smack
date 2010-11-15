@@ -123,6 +123,13 @@ int smack_write_users_to_file(smack_users_t handle, const char *path)
 	return 0;
 }
 
+int smack_add_user(smack_users_t handle, const char *user, const char *label)
+{
+	int ret;
+	ret = update_user(&handle->users, user, label);
+	return ret == 0 ? 0  : -1;
+}
+
 const char *smack_get_user_label(smack_users_t handle, const char *user)
 {
 	struct smack_user *u;

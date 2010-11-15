@@ -27,16 +27,20 @@
 
 static int files_equal(const char *filename1, const char *filename2);
 
-START_TEST(test_rw_users)
+START_TEST(test_add_user)
 {
 	int rc;
 	smack_users_t users = smack_create_users();
 	fail_unless(users != NULL, "Users creation failed");
-	rc = smack_read_users_from_file(users, "data/rw_users-in.txt");
+	rc = smack_read_users_from_file(users, "data/add_user-in.txt");
 	fail_unless(rc == 0, "Failed to read users");
-	rc = smack_write_users_to_file(users, "rw_users-result.txt");
+
+	rc = smack_add_user(users, "zip", "Zap");
+	fail_unless(rc == 0, "Failed to add user");
+
+	rc = smack_write_users_to_file(users, "add_user-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
-	rc = files_equal("rw_users-result.txt", "data/rw_users-excepted.txt");
+	rc = files_equal("add_user-result.txt", "data/add_user-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
 	smack_destroy_users(users);
 }
@@ -50,7 +54,7 @@ START_TEST(test_user_label)
 	smack_users_t users = smack_create_users();
 	fail_unless(users != NULL, "Users creation failed");
 
-	rc = smack_read_users_from_file(users, "data/rw_users-in.txt");
+	rc = smack_read_users_from_file(users, "data/add_user-in.txt");
 	fail_unless(rc == 0, "Failed to read users");
 
 	l = smack_get_user_label(users, "bar");
@@ -69,7 +73,7 @@ Suite *ruleset_suite (void)
 	s = suite_create("User");
 
 	tc_core = tcase_create("Users");
-	tcase_add_test(tc_core, test_rw_users);
+	tcase_add_test(tc_core, test_add_user);
 	tcase_add_test(tc_core, test_user_label);
 	suite_add_tcase(s, tc_core);
 
