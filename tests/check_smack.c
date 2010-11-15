@@ -225,6 +225,29 @@ START_TEST(test_set_smack_to_file_symlink)
 }
 END_TEST
 
+START_TEST(test_set_smackexec_to_file)
+{
+	FILE *file;
+	int rc;
+	char *smack;
+
+	file = fopen("set_smack-dummy.txt", "w");
+	fprintf(file, "dummy\n");
+	fclose(file);
+
+	rc = smack_set_smackexec_to_file("set_smack-dummy.txt", "Apple", 0);
+	fail_unless(rc == 0, "Failed to set SMACK64EXEC");
+
+	rc = smack_get_smackexec_from_file("set_smack-dummy.txt", &smack, 0);
+	fail_unless(rc == 0, "Failed to get SMACK64EXEC");
+
+	rc = strcmp(smack, "Apple");
+	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
+
+	free(smack);
+}
+END_TEST
+
 Suite *ruleset_suite (void)
 {
 	Suite *s;
@@ -248,6 +271,7 @@ Suite *ruleset_suite (void)
 	tc_core = tcase_create("Security attributes");
 	tcase_add_test(tc_core, test_set_smack_to_file);
 	tcase_add_test(tc_core, test_set_smack_to_file_symlink);
+	tcase_add_test(tc_core, test_set_smackexec_to_file);
 	suite_add_tcase(s, tc_core);
 
 	return s;

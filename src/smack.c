@@ -36,6 +36,7 @@
 #define SMACK_ACC_LEN 4
 
 #define SMACK64 "security.SMACK64"
+#define SMACK64EXEC "security.SMACK64EXEC"
 #define SMACK64_LEN 23
 
 #define SMACK_PROC_PATH "/proc/%d/attr/current"
@@ -396,6 +397,52 @@ int smack_get_smack_from_proc(int pid, char **smack)
 	return *smack != NULL ? 0 : - 1;
 }
 
+int smack_set_smackexec_to_file(const char *path, const char *smack, int flags)
+{
+	size_t size;
+	int ret;
+
+	size = strlen(smack);
+	if (size > SMACK64_LEN)
+		return -1;
+
+	if ((flags & SMACK_XATTR_SYMLINK) == 0)
+		ret = setxattr(path, SMACK64EXEC, smack, size, 0);
+	else
+		ret = lsetxattr(path, SMACK64EXEC, smack, size, 0);
+
+	return ret;
+}
+
+int smack_get_smackexec_from_file(const char *path, char **smack, int flags)
+{
+	ssize_t ret;
+	char *buf;
+
+	if ((flags & SMACK_XATTR_SYMLINK) == 0)
+		ret = getxattr(path, SMACK64EXEC, NULL, 0);
+	else
+		ret = lgetxattr(path, SMACK64EXEC, NULL, 0);
+
+	if (ret < 0)
+		return -1;
+
+	buf = malloc(ret + 1);
+
+	if ((flags & SMACK_XATTR_SYMLINK) == 0)
+		ret = getxattr(path, SMACK64EXEC, buf, ret);
+	else
+		ret = lgetxattr(path, SMACK64EXEC, buf, ret);
+
+	if (ret < 0) {
+		free(buf);
+		return -1;
+	}
+
+	buf[ret] = '\0';
+	*smack = buf;
+	return 0;
+}
 
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str,

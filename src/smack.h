@@ -204,6 +204,30 @@ extern int smack_get_smack_from_file(const char *path, char **smack,
  */
 extern int smack_get_smack_from_proc(int pid, char **smack);
 
+/*!
+ * Set SMACK64EXEC security attribute for a given path.
+ *
+ * @param path path to a file
+ * @param smack new value
+ * @param flags set flags
+ * @return 0 on success
+ */
+extern int smack_set_smackexec_to_file(const char *path, const char *smack,
+				       int flags);
+
+/*!
+ * Get SMACK64EXEC security attribute for a given path.
+ * Allocated memory must be freed by the caller.
+ *
+ * @param path path to a file
+ * @param smack current value
+ * @param flags set flags
+ * @return 0 on success
+ */
+extern int smack_get_smackexec_from_file(const char *path, char **smack,
+					 int flags);
+
+
 #ifdef __cplusplus
 }
 #endif
