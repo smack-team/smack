@@ -130,6 +130,19 @@ int smack_add_user(smack_users_t handle, const char *user, const char *label)
 	return ret == 0 ? 0  : -1;
 }
 
+int smack_remove_user(smack_users_t handle, const char *user)
+{
+	struct smack_user *u = NULL;
+
+	HASH_FIND_STR(handle->users, user, u);
+	if (u == NULL)
+		return -1;
+
+	HASH_DEL(handle->users, u);
+	free(u);
+	return 0;
+}
+
 const char *smack_get_user_label(smack_users_t handle, const char *user)
 {
 	struct smack_user *u;

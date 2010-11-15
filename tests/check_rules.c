@@ -98,7 +98,8 @@ START_TEST(test_remove_rule)
 	fail_unless(rules != NULL, "Ruleset creation failed");
 	rc = smack_read_rules_from_file(rules, "data/remove_rule-in.txt", NULL);
 	fail_unless(rc == 0, "Failed to read ruleset");
-	smack_remove_rule(rules, "Orange", "Apple");
+	rc = smack_remove_rule(rules, "Orange", "Apple");
+	fail_unless(rc == 0, "Failed to remove rule");
 	rc = smack_write_rules_to_file(rules, "remove_rule-result.txt", SMACK_FORMAT_KERNEL);
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("remove_rule-result.txt", "data/remove_rule-excepted.txt");
@@ -156,10 +157,11 @@ START_TEST(test_have_access_removed_rule)
 {
 	int rc;
 	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
+	fail_unless(rules != NULL, "Rules creation failed");
 	rc = smack_read_rules_from_file(rules, "data/have_access_rule-in.txt", "Orange");
-	fail_unless(rc == 0, "Failed to read ruleset");
-	smack_remove_rule(rules, "Orange", "Apple");
+	fail_unless(rc == 0, "Failed to read rules");
+	rc = smack_remove_rule(rules, "Orange", "Apple");
+	fail_unless(rc == 0, "Failed to remove rule");
 	rc = smack_have_access_rule(rules, "Orange", "Apple", "a");
 	fail_unless(!rc, "Has access to a removed rule");
 	smack_destroy_rules(rules);

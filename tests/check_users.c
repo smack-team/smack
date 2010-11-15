@@ -46,6 +46,27 @@ START_TEST(test_add_user)
 }
 END_TEST
 
+START_TEST(test_remove_user)
+{
+	int rc;
+	smack_users_t users = smack_create_users();
+	fail_unless(users != NULL, "Users creation failed");
+	rc = smack_read_users_from_file(users, "data/add_user-in.txt");
+	fail_unless(rc == 0, "Failed to read users");
+
+	rc = smack_remove_user(users, "bar");
+	fail_unless(rc == 0, "Failed to remove user");
+
+	rc = smack_write_users_to_file(users, "remove_user-result.txt");
+	fail_unless(rc == 0, "Failed to write ruleset");
+
+	rc = files_equal("remove_user-result.txt", "data/remove_user-excepted.txt");
+	fail_unless(rc == 1, "Unexcepted result");
+
+	smack_destroy_users(users);
+}
+END_TEST
+
 START_TEST(test_user_label)
 {
 	int rc;
@@ -74,6 +95,7 @@ Suite *ruleset_suite (void)
 
 	tc_core = tcase_create("Users");
 	tcase_add_test(tc_core, test_add_user);
+	tcase_add_test(tc_core, test_remove_user);
 	tcase_add_test(tc_core, test_user_label);
 	suite_add_tcase(s, tc_core);
 

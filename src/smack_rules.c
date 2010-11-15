@@ -167,22 +167,23 @@ int smack_add_rule(smack_rules_t handle, const char *subject,
 	return ret == 0 ? 0  : -1;
 }
 
-void smack_remove_rule(smack_rules_t handle, const char *subject,
-		       const char *object)
+int smack_remove_rule(smack_rules_t handle, const char *subject,
+		      const char *object)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 
 	HASH_FIND_STR(handle->subjects, subject, s);
 	if (s == NULL)
-		return;
+		return -1;
 
 	HASH_FIND_STR(s->objects, object, o);
 	if (o == NULL)
-		return;
+		return -1;
 
 	HASH_DEL(s->objects, o);
 	free(o);
+	return 0;
 }
 
 void smack_remove_rules_by_subject(smack_rules_t handle, const char *subject)

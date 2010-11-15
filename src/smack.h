@@ -107,9 +107,10 @@ extern int smack_add_rule(smack_rules_t handle, const char *subject,
  * @param handle handle to a rules
  * @param subject subject of the rule
  * @param object object of the rule
+ * @return 0 if user was found from user db.
  */
-extern void smack_remove_rule(smack_rules_t handle, const char *subject,
-			      const char *object);
+extern int smack_remove_rule(smack_rules_t handle, const char *subject,
+			     const char *object);
 
 /*!
  * Remove all rules with the given subject from a rule set.
@@ -183,6 +184,15 @@ extern int smack_write_users_to_file(smack_users_t handle, const char *path);
  */
 extern int smack_add_user(smack_users_t handle, const char *user,
 			  const char *label);
+
+/*! 
+ * Remove user from the user db.
+ *
+ * @param handle handle to the users db
+ * @param user user name
+ * @return 0 if user was found from user db.
+ */
+extern int smack_remove_user(smack_users_t handle, const char *user);
 
 /*!
  * Get label of user.
