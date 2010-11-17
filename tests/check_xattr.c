@@ -30,7 +30,7 @@ static int files_equal(const char *filename1, const char *filename2);
 START_TEST(test_set_smack_to_file)
 {
 	FILE *file;
-	int rc;
+	int rc = NULL;
 	char *smack;
 
 	file = fopen("set_smack-dummy.txt", "w");
@@ -54,7 +54,7 @@ START_TEST(test_set_smack_to_file_symlink)
 {
 	FILE *file;
 	int rc;
-	char *smack;
+	char *smack = NULL;
 
 	symlink("unknown.txt", "set_smack-symlink.txt");
 
@@ -75,7 +75,7 @@ START_TEST(test_set_smackexec_to_file)
 {
 	FILE *file;
 	int rc;
-	char *smack;
+	char *smack = NULL;
 
 	file = fopen("set_smack-dummy.txt", "w");
 	fprintf(file, "dummy\n");

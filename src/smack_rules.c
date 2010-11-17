@@ -38,13 +38,13 @@
 #define SMACK_ACC_LEN 4
 
 struct smack_object {
-	char object[SMACK64_LEN + 1];
+	char *object;
 	unsigned ac;
 	UT_hash_handle hh;
 };
 
 struct smack_subject {
-	char subject[SMACK64_LEN + 1];
+	char *subject;
 	struct smack_object *objects;
 	UT_hash_handle hh;
 };
@@ -246,15 +246,15 @@ static int update_rule(struct smack_subject **subjects,
 	HASH_FIND_STR(*subjects, subject_str, s);
 	if (s == NULL) {
 		s = calloc(1, sizeof(struct smack_subject));
-		strcpy(s->subject, subject_str);
-		HASH_ADD_STR(*subjects, subject, s);
+		s->subject = strdup(subject_str);
+		HASH_ADD_KEYPTR(hh, *subjects, s->subject, strlen(s->subject), s);
 	}
 
 	HASH_FIND_STR(s->objects, object_str, o);
 	if (o == NULL) {
 		o = calloc(1, sizeof(struct smack_object));
-		strcpy(o->object, object_str);
-		HASH_ADD_STR(s->objects, object, o);
+		o->object = strdup(object_str);
+		HASH_ADD_KEYPTR(hh, s->objects, o->object, strlen(o->object), o);
 	}
 
 	o->ac = ac;
@@ -271,9 +271,11 @@ static void destroy_rules(struct smack_subject **subjects)
 		while (s->objects != NULL) {
 			o = s->objects;
 			HASH_DEL(s->objects, o);
+			free(o->object);
 			free(o);
 		}
 		HASH_DEL(*subjects, s);
+		free(s->subject);
 		free(s);
 	}
 }
