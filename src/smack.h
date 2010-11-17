@@ -39,8 +39,7 @@ typedef struct smack_rules *smack_rules_t;
 
 typedef struct smack_users *smack_users_t;
 
-#define SMACK_FORMAT_CONFIG 0
-#define SMACK_FORMAT_KERNEL 1
+#define SMACK_RULES_KERNEL 1
 
 #define SMACK_XATTR_SYMLINK 1
 
@@ -82,11 +81,11 @@ extern int smack_read_rules_from_file(smack_rules_t handle,
  *
  * @param handle handle to a rules
  * @param path path to the rules file
- * @param format file format
+ * @param flags write flags
  * @return 0 on success
  */
 extern int smack_write_rules_to_file(smack_rules_t handle, const char *path,
-				     int format);
+				     int flags);
 
 /*!
  * Add new rule to a rule set. Updates existing rule if there is already rule

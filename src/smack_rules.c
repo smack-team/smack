@@ -58,7 +58,7 @@ static int update_rule(struct smack_subject **subjects,
 		       unsigned ac);
 static void destroy_rules(struct smack_subject **subjects);
 inline unsigned str_to_ac(const char *str);
-inline void ac_to_str(unsigned ac, char *str, int format);
+inline void ac_to_str(unsigned ac, char *str, int flags);
 
 smack_rules_t smack_create_rules(void)
 {
@@ -122,7 +122,7 @@ int smack_read_rules_from_file(smack_rules_t handle, const char *path,
 }
 
 int smack_write_rules_to_file(smack_rules_t handle, const char *path,
-			      int format)
+			      int flags)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -136,15 +136,14 @@ int smack_write_rules_to_file(smack_rules_t handle, const char *path,
 
 	HASH_ITER(hh, handle->subjects, s, stmp) {
 		HASH_ITER(hh, s->objects, o, otmp) {
-			if (format == SMACK_FORMAT_CONFIG) {
-				ac_to_str(o->ac, str, SMACK_FORMAT_CONFIG);
-				err = fprintf(file, "%s %s %s\n",
-					      s->subject, o->object, str);
-			} else if (format == SMACK_FORMAT_KERNEL) {
-				ac_to_str(o->ac, str, SMACK_FORMAT_KERNEL);
+			ac_to_str(o->ac, str, flags);
+
+			if ((flags & SMACK_RULES_KERNEL) != 0)
 				err = fprintf(file, "%-23s %-23s %4s\n",
 					      s->subject, o->object, str);
-			}
+			else
+				err = fprintf(file, "%s %s %s\n",
+					      s->subject, o->object, str);
 
 			if (err < 0) {
 				fclose(file);
@@ -312,16 +311,16 @@ inline unsigned str_to_ac(const char *str)
 	return access;
 }
 
-inline void ac_to_str(unsigned access, char *str, int format)
+inline void ac_to_str(unsigned access, char *str, int flags)
 {
 	int i;
-	if (format == SMACK_FORMAT_KERNEL) {
+	if ((flags & SMACK_RULES_KERNEL) != 0) {
 		str[0] = ((access & SMACK_ACC_R) != 0) ? 'r' : '-';
 		str[1] = ((access & SMACK_ACC_W) != 0) ? 'w' : '-';
 		str[2] = ((access & SMACK_ACC_X) != 0) ? 'x' : '-';
 		str[3] = ((access & SMACK_ACC_A) != 0) ? 'a' : '-';
 		str[4] = '\0';
-	} else if (format == SMACK_FORMAT_CONFIG) {
+	} else {
 		i = 0;
 		if ((access & SMACK_ACC_R) != 0)
 			str[i++] = 'r';
