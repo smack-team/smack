@@ -37,10 +37,19 @@
  */
 typedef struct smack_rules *smack_rules_t;
 
+/*!
+ * Handle to a in-memory representation of set of Smack users.
+ */
 typedef struct smack_users *smack_users_t;
 
+/*!
+ * Flags for rules IO.
+ */
 #define SMACK_RULES_KERNEL 1
 
+/*!
+ * Flags for extended attributes.
+ */
 #define SMACK_XATTR_SYMLINK 1
 
 #ifdef __cplusplus
