@@ -63,17 +63,14 @@ extern void smack_destroy_rules(smack_rules_t handle);
 
 /*!
  * Read rules from a given file. Rules can be optionally filtered by a
- * subject. Old rules are replaced with read ruleset on success full
- * read.
+ * subject.
  *
- * @param handle handle to a rules
  * @param path path to the file containing rules
  * @param subject read only rules for the given subject if not set to NULL.
- * @return 0 on success
+ * @return smack_rules_t instance on success
  */
-extern int smack_read_rules_from_file(smack_rules_t handle,
-				      const char *path,
-				      const char *subject);
+extern smack_rules_t smack_read_rules_from_file(const char *path,
+						const char *subject);
 
 /*!
  * Write rules to a given file.

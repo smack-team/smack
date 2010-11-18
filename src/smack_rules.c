@@ -56,7 +56,6 @@ struct smack_rules {
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
-static void destroy_rules(struct smack_subject **subjects);
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
@@ -70,24 +69,44 @@ smack_rules_t smack_create_rules(void)
 
 void smack_destroy_rules(smack_rules_t handle)
 {
-	destroy_rules(&handle->subjects);
+	struct smack_subject *s;
+	struct smack_object *o;
+
+	while (handle->subjects != NULL) {
+		s = handle->subjects;
+		while (s->objects != NULL) {
+			o = s->objects;
+			HASH_DEL(s->objects, o);
+			free(o->object);
+			free(o);
+		}
+		HASH_DEL(handle->subjects, s);
+		free(s->subject);
+		free(s);
+	}
+
 	free(handle);
 }
 
-int smack_read_rules_from_file(smack_rules_t handle, const char *path,
-			       const char *subject_filter)
+smack_rules_t smack_read_rules_from_file(const char *path,
+					 const char *subject_filter)
 {
 	FILE *file;
 	char *buf = NULL;
 	const char *subject, *object, *access;
 	unsigned ac;
 	size_t size;
-	struct smack_subject *subjects = NULL;
 	int ret = 0;
 
 	file = fopen(path, "r");
 	if (file == NULL)
-		return -1;
+		return NULL;
+
+	smack_rules_t rules = smack_create_rules();
+	if (rules == NULL) {
+		fclose(file);
+		return NULL;
+	}
 
 	while (ret == 0 && getline(&buf, &size, file) != -1) {
 		subject = strtok(buf, " \n");
@@ -100,26 +119,21 @@ int smack_read_rules_from_file(smack_rules_t handle, const char *path,
 		} else if (subject_filter == NULL ||
 			 strcmp(subject, subject_filter) == 0) {
 			ac = str_to_ac(access);
-			ret = update_rule(&subjects, subject, object, ac);
+			ret = update_rule(&rules->subjects, subject, object, ac);
 		}
 
 		free(buf);
 		buf = NULL;
 	}
 
-	if (ferror(file))
-		ret = -1;
-
-	if (ret == 0) {
-		destroy_rules(&handle->subjects);
-		handle->subjects = subjects;
-	} else {
-		destroy_rules(&subjects);
+	if (ret != 0 || ferror(file)) {
+		smack_destroy_rules(rules);
+		rules = NULL;
 	}
 
 	free(buf);
 	fclose(file);
-	return ret;
+	return rules;
 }
 
 int smack_write_rules_to_file(smack_rules_t handle, const char *path)
@@ -286,25 +300,6 @@ static int update_rule(struct smack_subject **subjects,
 
 	o->ac = ac;
 	return 0;
-}
-
-static void destroy_rules(struct smack_subject **subjects)
-{
-	struct smack_subject *s;
-	struct smack_object *o;
-
-	while (*subjects != NULL) {
-		s = *subjects;
-		while (s->objects != NULL) {
-			o = s->objects;
-			HASH_DEL(s->objects, o);
-			free(o->object);
-			free(o);
-		}
-		HASH_DEL(*subjects, s);
-		free(s->subject);
-		free(s);
-	}
 }
 
 inline unsigned str_to_ac(const char *str)

@@ -30,10 +30,8 @@ static int files_equal(const char *filename1, const char *filename2);
 START_TEST(test_add_new_rule)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/add_new_rule-in.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/add_new_rule-in.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_add_rule(rules, "Orange", "Apple", "ra");
 	fail_unless(rc == 0, "Failed to add rule");
 	rc = smack_write_rules_to_kernel(rules, "add_new_rule-result.txt");
@@ -47,10 +45,8 @@ END_TEST
 START_TEST(test_modify_existing_rule)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/modify_existing_rule-in.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/modify_existing_rule-in.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_add_rule(rules, "Foo", "Bar", "wx");
 	fail_unless(rc == 0, "Failed to add rule");
 	rc = smack_write_rules_to_kernel(rules, "modify_existing_rule-result.txt");
@@ -64,10 +60,8 @@ END_TEST
 START_TEST(test_rw_rules_config)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/write_rules_config-excepted.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/write_rules_config-excepted.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_write_rules_to_file(rules, "write_rules_config-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("write_rules_config-result.txt", "data/write_rules_config-excepted.txt");
@@ -79,10 +73,8 @@ END_TEST
 START_TEST(test_rw_rules_kernel)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/write_rules_config-excepted.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/write_rules_config-excepted.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_write_rules_to_kernel(rules, "write_rules_kernel-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("write_rules_kernel-result.txt", "data/write_rules_kernel-excepted.txt");
@@ -94,10 +86,8 @@ END_TEST
 START_TEST(test_remove_rule)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/remove_rule-in.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/remove_rule-in.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_remove_rule(rules, "Orange", "Apple");
 	fail_unless(rc == 0, "Failed to remove rule");
 	rc = smack_write_rules_to_kernel(rules, "remove_rule-result.txt");
@@ -111,10 +101,8 @@ END_TEST
 START_TEST(test_remove_rules_by_subject)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/remove_rules_by_subject-in.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/remove_rules_by_subject-in.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	smack_remove_rules_by_subject(rules, "Foo");
 	rc = smack_write_rules_to_kernel(rules, "remove_rules_by_subject-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
@@ -127,10 +115,8 @@ END_TEST
 START_TEST(test_remove_rules_by_object)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/remove_rules_by_object-in.txt", NULL);
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/remove_rules_by_object-in.txt", NULL);
+	fail_unless(rules != NULL, "Reading rules failed");
 	smack_remove_rules_by_object(rules, "Apple");
 	rc = smack_write_rules_to_kernel(rules, "remove_rules_by_object-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
@@ -143,10 +129,8 @@ END_TEST
 START_TEST(test_have_access_rule)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Ruleset creation failed");
-	rc = smack_read_rules_from_file(rules, "data/have_access_rule-in.txt", "Orange");
-	fail_unless(rc == 0, "Failed to read ruleset");
+	smack_rules_t rules = smack_read_rules_from_file("data/have_access_rule-in.txt", "Orange");
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_have_access_rule(rules, "Orange", "Apple", "a");
 	fail_unless(rc, "Have access \"a\" failed");
 	smack_destroy_rules(rules);
@@ -156,10 +140,8 @@ END_TEST
 START_TEST(test_have_access_removed_rule)
 {
 	int rc;
-	smack_rules_t rules = smack_create_rules();
-	fail_unless(rules != NULL, "Rules creation failed");
-	rc = smack_read_rules_from_file(rules, "data/have_access_rule-in.txt", "Orange");
-	fail_unless(rc == 0, "Failed to read rules");
+	smack_rules_t rules = smack_read_rules_from_file("data/have_access_rule-in.txt", "Orange");
+	fail_unless(rules != NULL, "Reading rules failed");
 	rc = smack_remove_rule(rules, "Orange", "Apple");
 	fail_unless(rc == 0, "Failed to remove rule");
 	rc = smack_have_access_rule(rules, "Orange", "Apple", "a");
