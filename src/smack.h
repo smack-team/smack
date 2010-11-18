@@ -42,11 +42,6 @@ typedef struct smack_rules *smack_rules_t;
  */
 typedef struct smack_users *smack_users_t;
 
-/*!
- * Flags for extended attributes.
- */
-#define SMACK_XATTR_SYMLINK 1
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -218,15 +213,13 @@ extern int smack_remove_user(smack_users_t handle, const char *user);
 const char *smack_get_user_label(smack_users_t handle, const char *user);
 
 /*!
- * Set SMACK64 security attribute for a given path.
+ * Set SMACK64 security attribute for a given file.
  *
  * @param path path to a file
  * @param smack new value
- * @param flags set flags
  * @return 0 on success
  */
-extern int smack_set_smack_to_file(const char *path, const char *smack,
-				   int flags);
+extern int smack_set_smack_to_file(const char *path, const char *smack);
 
 /*!
  * Get SMACK64 security attribute for a given path.
@@ -234,11 +227,28 @@ extern int smack_set_smack_to_file(const char *path, const char *smack,
  *
  * @param path path to a file
  * @param smack current value
- * @param flags set flags
  * @return 0 on success
  */
-extern int smack_get_smack_from_file(const char *path, char **smack,
-				     int flags);
+extern int smack_get_smack_from_file(const char *path, char **smack);
+
+/*!
+ * Set SMACK64 security attribute for a given file or symbolic link.
+ *
+ * @param path path to a file
+ * @param smack new value
+ * @return 0 on success
+ */
+extern int smack_set_smack_to_file_or_symlink(const char *path, const char *smack);
+
+/*!
+ * Get SMACK64 security attribute for a given file or symlink.
+ * Allocated memory must be freed by the caller.
+ *
+ * @param path path to a file
+ * @param smack current value
+ * @return 0 on success
+ */
+extern int smack_get_smack_from_file_or_symlink(const char *path, char **smack);
 
 /*!
  * Get SMACK64 security attribute for a given pid.
@@ -254,11 +264,9 @@ extern int smack_get_smack_from_proc(int pid, char **smack);
  *
  * @param path path to a file
  * @param smack new value
- * @param flags set flags
  * @return 0 on success
  */
-extern int smack_set_smackexec_to_file(const char *path, const char *smack,
-				       int flags);
+extern int smack_set_smackexec_to_file(const char *path, const char *smack);
 
 /*!
  * Get SMACK64EXEC security attribute for a given path.
@@ -269,8 +277,7 @@ extern int smack_set_smackexec_to_file(const char *path, const char *smack,
  * @param flags set flags
  * @return 0 on success
  */
-extern int smack_get_smackexec_from_file(const char *path, char **smack,
-					 int flags);
+extern int smack_get_smackexec_from_file(const char *path, char **smack);
 
 
 #ifdef __cplusplus

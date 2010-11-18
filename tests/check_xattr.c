@@ -30,17 +30,17 @@ static int files_equal(const char *filename1, const char *filename2);
 START_TEST(test_set_smack_to_file)
 {
 	FILE *file;
-	int rc = NULL;
-	char *smack;
+	int rc = 0;
+	char *smack = NULL;
 
 	file = fopen("set_smack-dummy.txt", "w");
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_smack_to_file("set_smack-dummy.txt", "Apple", 0);
+	rc = smack_set_smack_to_file("set_smack-dummy.txt", "Apple");
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_smack_from_file("set_smack-dummy.txt", &smack, 0);
+	rc = smack_get_smack_from_file("set_smack-dummy.txt", &smack);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -53,15 +53,15 @@ END_TEST
 START_TEST(test_set_smack_to_file_symlink)
 {
 	FILE *file;
-	int rc;
+	int rc = 0;
 	char *smack = NULL;
 
 	symlink("unknown.txt", "set_smack-symlink.txt");
 
-	rc = smack_set_smack_to_file("set_smack-symlink.txt", "Apple", SMACK_XATTR_SYMLINK);
+	rc = smack_set_smack_to_file_or_symlink("set_smack-symlink.txt", "Apple");
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_smack_from_file("set_smack-symlink.txt", &smack, SMACK_XATTR_SYMLINK);
+	rc = smack_get_smack_from_file_or_symlink("set_smack-symlink.txt", &smack);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -81,10 +81,10 @@ START_TEST(test_set_smackexec_to_file)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_smackexec_to_file("set_smack-dummy.txt", "Apple", 0);
+	rc = smack_set_smackexec_to_file("set_smack-dummy.txt", "Apple");
 	fail_unless(rc == 0, "Failed to set SMACK64EXEC");
 
-	rc = smack_get_smackexec_from_file("set_smack-dummy.txt", &smack, 0);
+	rc = smack_get_smackexec_from_file("set_smack-dummy.txt", &smack);
 	fail_unless(rc == 0, "Failed to get SMACK64EXEC");
 
 	rc = strcmp(smack, "Apple");
