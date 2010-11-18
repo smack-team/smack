@@ -58,7 +58,8 @@ static int update_rule(struct smack_subject **subjects,
 		       unsigned ac);
 static void destroy_rules(struct smack_subject **subjects);
 inline unsigned str_to_ac(const char *str);
-inline void ac_to_str(unsigned ac, char *str, int flags);
+inline void ac_to_config_str(unsigned ac, char *str);
+inline void ac_to_kernel_str(unsigned ac, char *str);
 
 smack_rules_t smack_create_rules(void)
 {
@@ -121,8 +122,37 @@ int smack_read_rules_from_file(smack_rules_t handle, const char *path,
 	return ret;
 }
 
-int smack_write_rules_to_file(smack_rules_t handle, const char *path,
-			      int flags)
+int smack_write_rules_to_file(smack_rules_t handle, const char *path)
+{
+	struct smack_subject *s, *stmp;
+	struct smack_object *o, *otmp;
+	FILE *file;
+	char str[SMACK_ACC_LEN + 1];
+	int err = 0;
+
+	file = fopen(path, "w+");
+	if (!file)
+		return -1;
+
+	HASH_ITER(hh, handle->subjects, s, stmp) {
+		HASH_ITER(hh, s->objects, o, otmp) {
+			ac_to_config_str(o->ac, str);
+
+			err = fprintf(file, "%s %s %s\n",
+				      s->subject, o->object, str);
+
+			if (err < 0) {
+				fclose(file);
+				return errno;
+			}
+		}
+	}
+
+	fclose(file);
+	return 0;
+}
+
+int smack_write_rules_to_kernel(smack_rules_t handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -136,14 +166,10 @@ int smack_write_rules_to_file(smack_rules_t handle, const char *path,
 
 	HASH_ITER(hh, handle->subjects, s, stmp) {
 		HASH_ITER(hh, s->objects, o, otmp) {
-			ac_to_str(o->ac, str, flags);
+			ac_to_kernel_str(o->ac, str);
 
-			if ((flags & SMACK_RULES_KERNEL) != 0)
-				err = fprintf(file, "%-23s %-23s %4s\n",
-					      s->subject, o->object, str);
-			else
-				err = fprintf(file, "%s %s %s\n",
-					      s->subject, o->object, str);
+			err = fprintf(file, "%-23s %-23s %4s\n",
+				      s->subject, o->object, str);
 
 			if (err < 0) {
 				fclose(file);
@@ -154,6 +180,7 @@ int smack_write_rules_to_file(smack_rules_t handle, const char *path,
 
 	fclose(file);
 	return 0;
+
 }
 
 int smack_add_rule(smack_rules_t handle, const char *subject, 
@@ -313,26 +340,27 @@ inline unsigned str_to_ac(const char *str)
 	return access;
 }
 
-inline void ac_to_str(unsigned access, char *str, int flags)
+inline void ac_to_config_str(unsigned access, char *str)
 {
 	int i;
-	if ((flags & SMACK_RULES_KERNEL) != 0) {
-		str[0] = ((access & SMACK_ACC_R) != 0) ? 'r' : '-';
-		str[1] = ((access & SMACK_ACC_W) != 0) ? 'w' : '-';
-		str[2] = ((access & SMACK_ACC_X) != 0) ? 'x' : '-';
-		str[3] = ((access & SMACK_ACC_A) != 0) ? 'a' : '-';
-		str[4] = '\0';
-	} else {
-		i = 0;
-		if ((access & SMACK_ACC_R) != 0)
-			str[i++] = 'r';
-		if ((access & SMACK_ACC_W) != 0)
-			str[i++] = 'w';
-		if ((access & SMACK_ACC_X) != 0)
-			str[i++] = 'x';
-		if ((access & SMACK_ACC_A) != 0)
-			str[i++] = 'a';
-		str[i] = '\0';
-	}
+	i = 0;
+	if ((access & SMACK_ACC_R) != 0)
+		str[i++] = 'r';
+	if ((access & SMACK_ACC_W) != 0)
+		str[i++] = 'w';
+	if ((access & SMACK_ACC_X) != 0)
+		str[i++] = 'x';
+	if ((access & SMACK_ACC_A) != 0)
+		str[i++] = 'a';
+	str[i] = '\0';
+}
+
+inline void ac_to_kernel_str(unsigned access, char *str)
+{
+	str[0] = ((access & SMACK_ACC_R) != 0) ? 'r' : '-';
+	str[1] = ((access & SMACK_ACC_W) != 0) ? 'w' : '-';
+	str[2] = ((access & SMACK_ACC_X) != 0) ? 'x' : '-';
+	str[3] = ((access & SMACK_ACC_A) != 0) ? 'a' : '-';
+	str[4] = '\0';
 }
 
