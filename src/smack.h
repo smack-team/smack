@@ -156,6 +156,7 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  * Set SMACK64 security attribute for a given file.
  *
  * @param path path to a file
+ * @param attr attribute name
  * @param smack new value
  * @return 0 on success
  */
@@ -167,6 +168,7 @@ extern int smack_xattr_set_to_file(const char *path, const char *attr,
  * Allocated memory must be freed by the caller.
  *
  * @param path path to a file
+ * @param attr attribute name
  * @param smack current value
  * @return 0 on success
  */
@@ -194,10 +196,10 @@ extern SmackLabelSet smack_label_set_new(void);
  * Read labels from a given file.
  *
  * @param path path to the file containing label set
+ *
  * @return SmackLabelSet instance on success
  */
-extern SmackLabelSet smack_label_set_new_from_file(const char *path,
-						   const char *subject);
+extern SmackLabelSet smack_label_set_new_from_file(const char *path);
 
 /*!
  * Free resources allocated by labels.
@@ -207,31 +209,41 @@ extern SmackLabelSet smack_label_set_new_from_file(const char *path,
 void smack_label_set_delete(SmackLabelSet handle);
 
 /*!
+ * Write labels to a given file.
+ *
+ * @param handle handle to label set
+ * @param path path to the label set file
+ * @return 0 on success
+ */
+extern int smack_label_set_save_to_file(SmackLabelSet handle, const char *path);
+
+
+/*!
  * Add new label to a label set.
  *
  * @param handle handle to a label set
- * @param long_label long label
+ * @param long_name long label
  * @return 0 on success
  */
-extern int smack_label_set_add(SmackLabelSet handle, const char *long_label);
+extern int smack_label_set_add(SmackLabelSet handle, const char *long_name);
 
 /*!
  * Get short label.
  *
  * @param handle handle to a label set
- * @param long_label long label
+ * @param long_name long label
  */
-extern const char *smack_label_set_to_short_label(SmackLabelSet handle,
-						  const char *long_label);
+extern const char *smack_label_set_to_short_name(SmackLabelSet handle,
+						  const char *long_name);
 
 /*!
  * Get long label.
  *
  * @param handle handle to a label set
- * @param short_label short_label
+ * @param short_name short_name
  */
-extern const char *smack_label_set_to_long_label(SmackLabelSet handle,
-						 const char *short_label);
+extern const char *smack_label_set_to_long_name(SmackLabelSet handle,
+						 const char *short_name);
 
 
 
