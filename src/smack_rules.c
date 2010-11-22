@@ -70,6 +70,7 @@ SmackRuleSet smack_rule_set_new(void)
 SmackRuleSet smack_rule_set_new_from_file(const char *path,
 					 const char *subject_filter)
 {
+	SmackRuleSet rules;
 	FILE *file;
 	char *buf = NULL;
 	const char *subject, *object, *access;
@@ -81,7 +82,7 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 	if (file == NULL)
 		return NULL;
 
-	SmackRuleSet rules = smack_rule_set_new();
+	rules = smack_rule_set_new();
 	if (rules == NULL) {
 		fclose(file);
 		return NULL;

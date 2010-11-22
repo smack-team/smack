@@ -188,7 +188,7 @@ extern int smack_xattr_get_from_proc(int pid, char **smack);
  *
  * @return handle to the rule set. Returns NULL if allocation fails.
  */
-extern SmackLabelSet *smack_label_set_new(void);
+extern SmackLabelSet smack_label_set_new(void);
 
 /*!
  * Read labels from a given file.
@@ -204,7 +204,7 @@ extern SmackLabelSet smack_label_set_new_from_file(const char *path,
  *
  * @param handle handle to a rules
  */
-void smack_label_set_delete(SmackLabelSet *handle);
+void smack_label_set_delete(SmackLabelSet handle);
 
 /*!
  * Add new label to a label set.
