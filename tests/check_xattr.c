@@ -50,27 +50,6 @@ START_TEST(test_set_smack_to_file)
 }
 END_TEST
 
-START_TEST(test_set_smack_to_file_symlink)
-{
-	FILE *file;
-	int rc = 0;
-	char *smack = NULL;
-
-	symlink("unknown.txt", "set_smack-symlink.txt");
-
-	rc = smack_set_smack_to_file_or_symlink("set_smack-symlink.txt", "Apple");
-	fail_unless(rc == 0, "Failed to set SMACK64");
-
-	rc = smack_get_smack_from_file_or_symlink("set_smack-symlink.txt", &smack);
-	fail_unless(rc == 0, "Failed to get SMACK64");
-
-	rc = strcmp(smack, "Apple");
-	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
-}
-END_TEST
-
 START_TEST(test_set_smackexec_to_file)
 {
 	FILE *file;
@@ -103,7 +82,6 @@ Suite *ruleset_suite (void)
 
 	tc_core = tcase_create("Xattr");
 	tcase_add_test(tc_core, test_set_smack_to_file);
-	tcase_add_test(tc_core, test_set_smack_to_file_symlink);
 	tcase_add_test(tc_core, test_set_smackexec_to_file);
 	suite_add_tcase(s, tc_core);
 

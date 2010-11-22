@@ -69,41 +69,6 @@ int smack_get_smack_from_file(const char *path, char **smack)
 	return 0;
 }
 
-int smack_set_smack_to_file_or_symlink(const char *path, const char *smack)
-{
-	size_t size;
-	int ret;
-
-	size = strlen(smack);
-	if (size > SMACK64_LEN)
-		return -1;
-
-	return lsetxattr(path, SMACK64, smack, size, 0);
-}
-
-int smack_get_smack_from_file_or_symlink(const char *path, char **smack)
-{
-	ssize_t ret;
-	char *buf;
-
-	ret = lgetxattr(path, SMACK64, NULL, 0);
-	if (ret < 0)
-		return -1;
-
-	buf = malloc(ret + 1);
-
-	ret = lgetxattr(path, SMACK64, buf, ret);
-	if (ret < 0) {
-		free(buf);
-		return -1;
-	}
-
-	buf[ret] = '\0';
-	*smack = buf;
-	return 0;
-
-}
-
 int smack_set_smackexec_to_file(const char *path, const char *smack)
 {
 	size_t size;

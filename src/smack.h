@@ -37,11 +37,6 @@
  */
 typedef struct smack_rules *smack_rules_t;
 
-/*!
- * Handle to a in-memory representation of set of Smack users.
- */
-typedef struct smack_users *smack_users_t;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,69 +140,6 @@ extern void smack_remove_rules_by_object(smack_rules_t handle,
  */
 extern int smack_have_access_rule(smack_rules_t handle, const char *subject,
 				  const char *object, const char *access);
-/*!
- * Create users database. The returned rule set must be freed with
- * smack_destroy_rules().
- *
- * @return handle to the users db. Returns NULL if creation fails.
- */
-extern smack_users_t smack_create_users();
-
-/*!
- * Free users database.
- *
- * @param handle handle to a rules
- */
-extern void smack_destroy_users(smack_users_t handle);
-
-/*!
- * Read users from a given file.
- *
- * @param handle handle to an users db
- * @param path path to the file containing users
- * @return 0 on success
- */
-extern int smack_read_users_from_file(smack_users_t handle, const char *path);
-
-/*!
- * Write users to a given file.
- *
- * @param handle handle to an users db
- * @param path path to the users file
- * @return 0 on success
- */
-extern int smack_write_users_to_file(smack_users_t handle, const char *path);
-
-/*!
- * Add user to the user db. Updates existing user if user is already in the
- * user db.
- *
- * @param handle handle to the users db
- * @param user user name
- * @param label user label
- */
-extern int smack_add_user(smack_users_t handle, const char *user,
-			  const char *label);
-
-/*! 
- * Remove user from the user db.
- *
- * @param handle handle to the users db
- * @param user user name
- * @return 0 if user was found from user db.
- */
-extern int smack_remove_user(smack_users_t handle, const char *user);
-
-/*!
- * Get label of user.
- *
- * @param handle handle to an users db
- * @param user user name
- *
- * @return pointer to a string containing label of the user. Returns NULL
- * on failure.
- */
-const char *smack_get_user_label(smack_users_t handle, const char *user);
 
 /*!
  * Set SMACK64 security attribute for a given file.
@@ -227,25 +159,6 @@ extern int smack_set_smack_to_file(const char *path, const char *smack);
  * @return 0 on success
  */
 extern int smack_get_smack_from_file(const char *path, char **smack);
-
-/*!
- * Set SMACK64 security attribute for a given file or symbolic link.
- *
- * @param path path to a file
- * @param smack new value
- * @return 0 on success
- */
-extern int smack_set_smack_to_file_or_symlink(const char *path, const char *smack);
-
-/*!
- * Get SMACK64 security attribute for a given file or symlink.
- * Allocated memory must be freed by the caller.
- *
- * @param path path to a file
- * @param smack current value
- * @return 0 on success
- */
-extern int smack_get_smack_from_file_or_symlink(const char *path, char **smack);
 
 /*!
  * Get SMACK64 security attribute for a given pid.
