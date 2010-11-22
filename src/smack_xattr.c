@@ -29,13 +29,12 @@
 #include <stdlib.h>
 #include <uthash.h>
 
-#define SMACK64 "security.SMACK64"
-#define SMACK64EXEC "security.SMACK64EXEC"
 #define SMACK64_LEN 23
 #define SMACK_PROC_PATH "/proc/%d/attr/current"
 #define LINE_BUFFER_SIZE 255
 
-int smack_set_smack_to_file(const char *path, const char *smack)
+
+int smack_xattr_set_to_file(const char *path, const char *attr, const char *smack)
 {
 	size_t size;
 	int ret;
@@ -44,57 +43,23 @@ int smack_set_smack_to_file(const char *path, const char *smack)
 	if (size > SMACK64_LEN)
 		return -1;
 
-	return setxattr(path, SMACK64, smack, size, 0);
-}
-
-int smack_get_smack_from_file(const char *path, char **smack)
-{
-	ssize_t ret;
-	char *buf;
-
-	ret = getxattr(path, SMACK64, NULL, 0);
-	if (ret < 0)
-		return -1;
-
-	buf = malloc(ret + 1);
-
-	ret = getxattr(path, SMACK64, buf, ret);
-	if (ret < 0) {
-		free(buf);
-		return -1;
-	}
-
-	buf[ret] = '\0';
-	*smack = buf;
-	return 0;
-}
-
-int smack_set_smackexec_to_file(const char *path, const char *smack)
-{
-	size_t size;
-	int ret;
-
-	size = strlen(smack);
-	if (size > SMACK64_LEN)
-		return -1;
-
-	ret = setxattr(path, SMACK64EXEC, smack, size, 0);
+	ret = setxattr(path, attr, smack, size, 0);
 
 	return ret;
 }
 
-int smack_get_smackexec_from_file(const char *path, char **smack)
+int smack_xattr_get_from_file(const char *path, const char *attr, char **smack)
 {
 	ssize_t ret;
 	char *buf;
 
-	ret = getxattr(path, SMACK64EXEC, NULL, 0);
+	ret = getxattr(path, attr, NULL, 0);
 	if (ret < 0)
 		return -1;
 
 	buf = malloc(ret + 1);
 
-	ret = getxattr(path, SMACK64EXEC, buf, ret);
+	ret = getxattr(path, attr, buf, ret);
 	if (ret < 0) {
 		free(buf);
 		return -1;
@@ -103,9 +68,13 @@ int smack_get_smackexec_from_file(const char *path, char **smack)
 	buf[ret] = '\0';
 	*smack = buf;
 	return 0;
+
 }
 
-int smack_get_smack_from_proc(int pid, char **smack)
+
+
+
+int smack_xattr_get_from_proc(int pid, char **smack)
 {
 	char buf[LINE_BUFFER_SIZE];
 	FILE *file;

@@ -49,7 +49,7 @@ struct smack_subject {
 	UT_hash_handle hh;
 };
 
-struct smack_rules {
+struct _SmackRuleSet {
 	struct smack_subject *subjects;
 };
 
@@ -60,35 +60,14 @@ inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
 
-smack_rules_t smack_create_rules(void)
+SmackRuleSet smack_rule_set_new(void)
 {
-	struct smack_rules *result =
-		calloc(1, sizeof(struct smack_rules));
+	struct _SmackRuleSet *result =
+		calloc(1, sizeof(struct _SmackRuleSet));
 	return result;
 }
 
-void smack_destroy_rules(smack_rules_t handle)
-{
-	struct smack_subject *s;
-	struct smack_object *o;
-
-	while (handle->subjects != NULL) {
-		s = handle->subjects;
-		while (s->objects != NULL) {
-			o = s->objects;
-			HASH_DEL(s->objects, o);
-			free(o->object);
-			free(o);
-		}
-		HASH_DEL(handle->subjects, s);
-		free(s->subject);
-		free(s);
-	}
-
-	free(handle);
-}
-
-smack_rules_t smack_read_rules_from_file(const char *path,
+SmackRuleSet smack_rule_set_new_from_file(const char *path,
 					 const char *subject_filter)
 {
 	FILE *file;
@@ -102,7 +81,7 @@ smack_rules_t smack_read_rules_from_file(const char *path,
 	if (file == NULL)
 		return NULL;
 
-	smack_rules_t rules = smack_create_rules();
+	SmackRuleSet rules = smack_rule_set_new();
 	if (rules == NULL) {
 		fclose(file);
 		return NULL;
@@ -127,7 +106,7 @@ smack_rules_t smack_read_rules_from_file(const char *path,
 	}
 
 	if (ret != 0 || ferror(file)) {
-		smack_destroy_rules(rules);
+		smack_rule_set_delete(rules);
 		rules = NULL;
 	}
 
@@ -136,7 +115,28 @@ smack_rules_t smack_read_rules_from_file(const char *path,
 	return rules;
 }
 
-int smack_write_rules_to_file(smack_rules_t handle, const char *path)
+void smack_rule_set_delete(SmackRuleSet handle)
+{
+	struct smack_subject *s;
+	struct smack_object *o;
+
+	while (handle->subjects != NULL) {
+		s = handle->subjects;
+		while (s->objects != NULL) {
+			o = s->objects;
+			HASH_DEL(s->objects, o);
+			free(o->object);
+			free(o);
+		}
+		HASH_DEL(handle->subjects, s);
+		free(s->subject);
+		free(s);
+	}
+
+	free(handle);
+}
+
+int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -166,7 +166,7 @@ int smack_write_rules_to_file(smack_rules_t handle, const char *path)
 	return 0;
 }
 
-int smack_write_rules_to_kernel(smack_rules_t handle, const char *path)
+int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -197,7 +197,7 @@ int smack_write_rules_to_kernel(smack_rules_t handle, const char *path)
 
 }
 
-int smack_add_rule(smack_rules_t handle, const char *subject, 
+int smack_rule_set_add(SmackRuleSet handle, const char *subject, 
 		   const char *object, const char *access_str)
 {
 	unsigned access;
@@ -207,7 +207,7 @@ int smack_add_rule(smack_rules_t handle, const char *subject,
 	return ret == 0 ? 0  : -1;
 }
 
-int smack_remove_rule(smack_rules_t handle, const char *subject,
+int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 		      const char *object)
 {
 	struct smack_subject *s = NULL;
@@ -226,7 +226,7 @@ int smack_remove_rule(smack_rules_t handle, const char *subject,
 	return 0;
 }
 
-void smack_remove_rules_by_subject(smack_rules_t handle, const char *subject)
+void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL, *tmp = NULL;
@@ -241,7 +241,7 @@ void smack_remove_rules_by_subject(smack_rules_t handle, const char *subject)
 	}
 }
 
-void smack_remove_rules_by_object(smack_rules_t handle, const char *object)
+void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
 {
 	struct smack_subject *s = NULL, *tmp = NULL;
 	struct smack_object *o = NULL;
@@ -253,7 +253,7 @@ void smack_remove_rules_by_object(smack_rules_t handle, const char *object)
 	}
 }
 
-int smack_have_access_rule(smack_rules_t handle, const char *subject,
+int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 			   const char *object, const char *access_str)
 {
 	struct smack_subject *s = NULL;

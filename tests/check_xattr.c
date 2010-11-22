@@ -37,10 +37,10 @@ START_TEST(test_set_smack_to_file)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_smack_to_file("set_smack-dummy.txt", "Apple");
+	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64, "Apple");
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_get_smack_from_file("set_smack-dummy.txt", &smack);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, &smack);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -60,10 +60,10 @@ START_TEST(test_set_smackexec_to_file)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_set_smackexec_to_file("set_smack-dummy.txt", "Apple");
+	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64EXEC, "Apple");
 	fail_unless(rc == 0, "Failed to set SMACK64EXEC");
 
-	rc = smack_get_smackexec_from_file("set_smack-dummy.txt", &smack);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64EXEC, &smack);
 	fail_unless(rc == 0, "Failed to get SMACK64EXEC");
 
 	rc = strcmp(smack, "Apple");
