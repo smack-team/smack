@@ -43,6 +43,12 @@
  */
 typedef struct _SmackRuleSet *SmackRuleSet;
 
+/*!
+ * Handle to a in-memory representation for long label to 
+ * short label mapping.
+ */
+typedef struct _SmackLabelSet *SmackLabelSet;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,7 +70,7 @@ extern SmackRuleSet smack_rule_set_new(void);
  * @return SmackRuleSet instance on success
  */
 extern SmackRuleSet smack_rule_set_new_from_file(const char *path,
-						const char *subject);
+						 const char *subject);
 
 /*!
  * Free resources allocated by rules.
@@ -102,7 +108,7 @@ extern int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path);
  * @return 0 on success
  */
 extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
-			  const char *object, const char *access);
+			      const char *object, const char *access);
 
 /*!
  * Remove rule from a rule set.
@@ -113,7 +119,7 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
  * @return 0 if user was found from user db.
  */
 extern int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-			     const char *object);
+				 const char *object);
 
 /*!
  * Remove all rules with the given subject from a rule set.
@@ -122,7 +128,7 @@ extern int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
  * @param subject subject of the rule
  */
 extern void smack_rule_set_remove_by_subject(SmackRuleSet handle,
-					  const char *subject);
+					     const char *subject);
 
 /*!
  * Remove all rules with the given object from a rule set.
@@ -131,7 +137,7 @@ extern void smack_rule_set_remove_by_subject(SmackRuleSet handle,
  * @param object object of the rule
  */
 extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
-					 const char *object);
+					    const char *object);
 
 /*!
  * Does the given subject have at least the given access to the given object?
@@ -144,7 +150,7 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
  */
 
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
- 				  const char *object, const char *access);
+ 				      const char *object, const char *access);
 
 /*!
  * Set SMACK64 security attribute for a given file.
@@ -153,7 +159,8 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  * @param smack new value
  * @return 0 on success
  */
-extern int smack_xattr_set_to_file(const char *path, const char *attr, const char *smack);
+extern int smack_xattr_set_to_file(const char *path, const char *attr,
+				   const char *smack);
 
 /*!
  * Get SMACK64 security attribute for a given path.
@@ -163,7 +170,8 @@ extern int smack_xattr_set_to_file(const char *path, const char *attr, const cha
  * @param smack current value
  * @return 0 on success
  */
-extern int smack_xattr_get_from_file(const char *path, const char *attr, char **smack);
+extern int smack_xattr_get_from_file(const char *path, const char *attr,
+				     char **smack);
 
 /*!
  * Get SMACK64 security attribute for a given pid.
@@ -173,6 +181,59 @@ extern int smack_xattr_get_from_file(const char *path, const char *attr, char **
  * @return 0 on success
  */
 extern int smack_xattr_get_from_proc(int pid, char **smack);
+
+/*!
+ * Create a new label set. The returned rule set must be freed with
+ * smack_label_set_delete().
+ *
+ * @return handle to the rule set. Returns NULL if allocation fails.
+ */
+extern SmackLabelSet *smack_label_set_new(void);
+
+/*!
+ * Read labels from a given file.
+ *
+ * @param path path to the file containing label set
+ * @return SmackLabelSet instance on success
+ */
+extern SmackLabelSet smack_label_set_new_from_file(const char *path,
+						   const char *subject);
+
+/*!
+ * Free resources allocated by labels.
+ *
+ * @param handle handle to a rules
+ */
+void smack_label_set_delete(SmackLabelSet *handle);
+
+/*!
+ * Add new label to a label set.
+ *
+ * @param handle handle to a label set
+ * @param long_label long label
+ * @return 0 on success
+ */
+extern int smack_label_set_add(SmackLabelSet handle, const char *long_label);
+
+/*!
+ * Get short label.
+ *
+ * @param handle handle to a label set
+ * @param long_label long label
+ */
+extern const char *smack_label_set_to_short_label(SmackLabelSet handle,
+						  const char *long_label);
+
+/*!
+ * Get long label.
+ *
+ * @param handle handle to a label set
+ * @param short_label short_label
+ */
+extern const char *smack_label_set_to_long_label(SmackLabelSet handle,
+						 const char *short_label);
+
+
 
 #ifdef __cplusplus
 }
