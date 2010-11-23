@@ -27,7 +27,27 @@
 
 static int files_equal(const char *filename1, const char *filename2);
 
-START_TEST(test_add_label)
+START_TEST(test_to_short_and_long_name)
+{
+	int rc;
+	const char *long_name;
+	const char *short_name;
+
+	SmackLabelSet labels = smack_label_set_new();
+	fail_unless(labels != NULL, "Creating labels failed");
+	rc = smack_label_set_add(labels, "ThisIsReallyReallyReallyLongLabelName");
+	fail_unless(rc == 0, "Adding label failed");
+	short_name = smack_label_set_to_short_name(labels, "ThisIsReallyReallyReallyLongLabelName");
+	fail_unless(short_name != NULL, "No short name");
+	long_name = smack_label_set_to_long_name(labels, short_name);
+	fail_unless(long_name != NULL, "No long name");
+	rc = strcmp(long_name, "ThisIsReallyReallyReallyLongLabelName");
+	fail_unless(rc == 0, "Long name does not match");
+	smack_label_set_delete(labels);
+}
+END_TEST
+
+START_TEST(test_save_label)
 {
 	int rc;
 	SmackLabelSet labels = smack_label_set_new();
@@ -50,7 +70,8 @@ Suite *ruleset_suite (void)
 	s = suite_create("Labels");
 
 	tc_core = tcase_create("Labels");
-	tcase_add_test(tc_core, test_add_label);
+	tcase_add_test(tc_core, test_to_short_and_long_name);
+	tcase_add_test(tc_core, test_save_label);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -234,7 +234,7 @@ extern int smack_label_set_add(SmackLabelSet handle, const char *long_name);
  * @param long_name long label
  */
 extern const char *smack_label_set_to_short_name(SmackLabelSet handle,
-						  const char *long_name);
+						 const char *long_name);
 
 /*!
  * Get long label.
@@ -243,7 +243,7 @@ extern const char *smack_label_set_to_short_name(SmackLabelSet handle,
  * @param short_name short_name
  */
 extern const char *smack_label_set_to_long_name(SmackLabelSet handle,
-						 const char *short_name);
+						const char *short_name);
 
 
 
