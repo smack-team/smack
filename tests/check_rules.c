@@ -25,6 +25,9 @@
 #include <check.h>
 #include "../src/smack.h"
 
+#define LONG_LABEL_1 "FooFooFooFooFooFooFooFooFooFooFooFooFoo"
+#define LONG_LABEL_2 "BarBarBarBarBarBarBarBarBarBarBarBarBar"
+
 static int files_equal(const char *filename1, const char *filename2);
 
 START_TEST(test_add_new_rule)
@@ -41,6 +44,7 @@ START_TEST(test_add_new_rule)
 	smack_rule_set_delete(rules);
 }
 END_TEST
+
 
 START_TEST(test_modify_existing_rule)
 {
@@ -150,6 +154,88 @@ START_TEST(test_have_access_removed_rule)
 }
 END_TEST
 
+START_TEST(test_rule_set_attach_label_set_add_remove_rule)
+{
+	int rc;
+
+	SmackRuleSet rules = smack_rule_set_new();
+	fail_unless(rules != NULL, "Creating rule set failed");
+
+	SmackLabelSet labels = smack_label_set_new();
+	fail_unless(labels != NULL, "Creating label set failed");
+
+	smack_rule_set_attach_label_set(rules, labels);
+
+	rc = smack_label_set_add(labels, LONG_LABEL_1);
+	fail_unless(rc == 0, "Adding label was not succesful");
+
+	rc = smack_label_set_add(labels, LONG_LABEL_2);
+	fail_unless(rc == 0, "Adding label was not succesful");
+
+	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
+	fail_unless(rc == 0, "Adding rule was not succesful");
+
+	rc = smack_rule_set_remove(rules, LONG_LABEL_1, LONG_LABEL_2);
+	fail_unless(rc == 0, "Removign rule was not succesful");
+
+	smack_rule_set_delete(rules);
+	smack_label_set_delete(labels);
+}
+END_TEST
+
+START_TEST(test_rule_set_attach_label_set_add_rule_no_labels)
+{
+	int rc;
+
+	SmackRuleSet rules = smack_rule_set_new();
+	fail_unless(rules != NULL, "Creating rule set failed");
+
+	SmackLabelSet labels = smack_label_set_new();
+	fail_unless(labels != NULL, "Creating label set failed");
+
+	smack_rule_set_attach_label_set(rules, labels);
+
+	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
+	fail_unless(rc != 0, "Adding rule was succesful");
+
+	smack_rule_set_delete(rules);
+	smack_label_set_delete(labels);
+}
+END_TEST
+
+START_TEST(test_rule_set_attach_label_set_save_rules)
+{
+	int rc;
+
+	SmackRuleSet rules = smack_rule_set_new();
+	fail_unless(rules != NULL, "Creating rule set failed");
+
+	SmackLabelSet labels = smack_label_set_new();
+	fail_unless(labels != NULL, "Creating label set failed");
+
+	smack_rule_set_attach_label_set(rules, labels);
+
+	rc = smack_label_set_add(labels, LONG_LABEL_1);
+	fail_unless(rc == 0, "Adding label was not succesful");
+
+	rc = smack_label_set_add(labels, LONG_LABEL_2);
+	fail_unless(rc == 0, "Adding label was not succesful");
+
+	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
+	fail_unless(rc == 0, "Adding rule was not succesful");
+
+	rc = smack_rule_set_save_to_file(rules, "rule_set_attach_label_set_save_rules-result.txt");
+	fail_unless(rc == 0, "Saving rule set was not succesful");
+
+	rc = files_equal("rule_set_attach_label_set_save_rules-result.txt",
+			 "data/rule_set_attach_label_set_save_rules-excepted.txt");
+	fail_unless(rc == 1, "Unexcepted result");
+
+	smack_rule_set_delete(rules);
+	smack_label_set_delete(labels);
+}
+END_TEST
+
 Suite *ruleset_suite (void)
 {
 	Suite *s;
@@ -167,6 +253,9 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_remove_rules_by_object);
 	tcase_add_test(tc_core, test_have_access_rule);
 	tcase_add_test(tc_core, test_have_access_removed_rule);
+	tcase_add_test(tc_core, test_rule_set_attach_label_set_add_remove_rule);
+	tcase_add_test(tc_core, test_rule_set_attach_label_set_add_rule_no_labels);
+	tcase_add_test(tc_core, test_rule_set_attach_label_set_save_rules);
 	suite_add_tcase(s, tc_core);
 
 	return s;

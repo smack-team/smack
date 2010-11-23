@@ -137,7 +137,12 @@ const char *smack_label_set_to_short_name(SmackLabelSet handle,
  					   const char *long_name)
 {
 	struct smack_label *l;
+
 	HASH_FIND(long_name_hh, handle->label_by_long_name, long_name, strlen(long_name), l);
+
+	if (l == NULL)
+		return NULL;
+
 	return l->short_name;
 }
 
@@ -145,7 +150,12 @@ const char *smack_label_set_to_long_name(SmackLabelSet handle,
 					  const char *short_name)
 {
 	struct smack_label *l;
+
 	HASH_FIND(short_name_hh, handle->label_by_short_name, short_name, strlen(short_name), l);
+
+	if (l == NULL)
+		return NULL;
+
 	return l->long_name;
 }
 

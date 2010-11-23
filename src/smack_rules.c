@@ -51,6 +51,7 @@ struct smack_subject {
 
 struct _SmackRuleSet {
 	struct smack_subject *subjects;
+	SmackLabelSet labels;
 };
 
 static int update_rule(struct smack_subject **subjects,
@@ -68,7 +69,7 @@ SmackRuleSet smack_rule_set_new(void)
 }
 
 SmackRuleSet smack_rule_set_new_from_file(const char *path,
-					 const char *subject_filter)
+					  const char *subject_filter)
 {
 	SmackRuleSet rules;
 	FILE *file;
@@ -89,17 +90,18 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 	}
 
 	while (ret == 0 && getline(&buf, &size, file) != -1) {
-		subject = strtok(buf, " \n");
-		object = strtok(NULL, " \n");
-		access = strtok(NULL, " \n");
+		subject = strtok(buf, " \t\n");
+		object = strtok(NULL, " \t\n");
+		access = strtok(NULL, " \t\n");
 
 		if (subject == NULL || object == NULL || access == NULL ||
-		    strtok(NULL, " \n") != NULL) {
+		    strtok(NULL, " \t\n") != NULL) {
 			ret = -1;
 		} else if (subject_filter == NULL ||
 			 strcmp(subject, subject_filter) == 0) {
 			ac = str_to_ac(access);
-			ret = update_rule(&rules->subjects, subject, object, ac);
+			ret = update_rule(&rules->subjects, subject, object,
+					  ac);
 		}
 
 		free(buf);
@@ -138,6 +140,12 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	}
 
 	free(handle);
+}
+
+void smack_rule_set_attach_label_set(SmackRuleSet rules,
+				     SmackLabelSet labels)
+{
+	rules->labels = labels;
 }
 
 int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
@@ -198,24 +206,40 @@ int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path)
 
 	fclose(file);
 	return 0;
-
 }
 
-int smack_rule_set_add(SmackRuleSet handle, const char *subject, 
-		   const char *object, const char *access_str)
+int smack_rule_set_add(SmackRuleSet handle, const char *subject,
+		       const char *object, const char *access_str)
 {
 	unsigned access;
 	int ret;
+
+	if (handle->labels != NULL) {
+		subject = smack_label_set_to_short_name(handle->labels, subject);
+		object = smack_label_set_to_short_name(handle->labels, object);
+
+		if (subject == NULL || object == NULL)
+			return -1;
+	}
+
 	access = str_to_ac(access_str);
 	ret = update_rule(&handle->subjects, subject, object, access);
 	return ret == 0 ? 0  : -1;
 }
 
 int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-		      const char *object)
+			  const char *object)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
+
+	if (handle->labels != NULL) {
+		subject = smack_label_set_to_short_name(handle->labels, subject);
+		object = smack_label_set_to_short_name(handle->labels, object);
+
+		if (subject == NULL || object == NULL)
+			return -1;
+	}
 
 	HASH_FIND_STR(handle->subjects, subject, s);
 	if (s == NULL)
@@ -235,6 +259,13 @@ void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL, *tmp = NULL;
 
+	if (handle->labels != NULL) {
+		subject = smack_label_set_to_short_name(handle->labels, subject);
+
+		if (subject == NULL)
+			return;
+	}
+
 	HASH_FIND_STR(handle->subjects, subject, s);
 	if (s == NULL)
 		return;
@@ -250,6 +281,13 @@ void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
 	struct smack_subject *s = NULL, *tmp = NULL;
 	struct smack_object *o = NULL;
 
+	if (handle->labels != NULL) {
+		object = smack_label_set_to_short_name(handle->labels, object);
+
+		if (object == NULL)
+			return;
+	}
+
 	HASH_ITER(hh, handle->subjects, s, tmp) {
 		HASH_FIND_STR(s->objects, object, o);
 		HASH_DEL(s->objects, o);
@@ -258,11 +296,19 @@ void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
 }
 
 int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
-			   const char *object, const char *access_str)
+			       const char *object, const char *access_str)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 	unsigned ac;
+
+	if (handle->labels != NULL) {
+		subject = smack_label_set_to_short_name(handle->labels, subject);
+		object = smack_label_set_to_short_name(handle->labels, object);
+
+		if (subject == NULL || object == NULL)
+			return -1;
+	}
 
 	ac = str_to_ac(access_str);
 

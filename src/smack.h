@@ -80,6 +80,17 @@ extern SmackRuleSet smack_rule_set_new_from_file(const char *path,
 extern void smack_rule_set_delete(SmackRuleSet handle);
 
 /*!
+ * Attach label set to rule set to enabled transparent long name conversion.
+ * Note: does not take ownership of label set so caller must take care of 
+ * freeing it.
+ *
+ * @param rules rule set
+ * @param labels label set
+ */
+extern void smack_rule_set_attach_label_set(SmackRuleSet rules,
+					    SmackLabelSet labels);
+
+/*!
  * Write rules to a given file.
  *
  * @param handle handle to a rules
