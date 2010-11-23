@@ -78,6 +78,9 @@ void smack_label_set_delete(SmackLabelSet handle)
 {
 	struct smack_label *l, *tmp;
 
+	if (handle == NULL)
+		return;
+
 	HASH_ITER(long_name_hh, handle->label_by_long_name, l, tmp) {
 		HASH_DELETE(long_name_hh, handle->label_by_long_name, l);
 		HASH_DELETE(short_name_hh, handle->label_by_short_name, l);

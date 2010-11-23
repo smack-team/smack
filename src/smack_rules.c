@@ -121,6 +121,9 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	struct smack_subject *s;
 	struct smack_object *o;
 
+	if (handle == NULL)
+		return;
+
 	while (handle->subjects != NULL) {
 		s = handle->subjects;
 		while (s->objects != NULL) {
