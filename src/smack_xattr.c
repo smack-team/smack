@@ -21,17 +21,14 @@
  * Jarkko Sakkinen <ext-jarkko.2.sakkinen@nokia.com>
  */
 
-#include "smack.h"
 #include <sys/types.h>
 #include <attr/xattr.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <uthash.h>
-
-#define SMACK64_LEN 23
-#define SMACK_PROC_PATH "/proc/%d/attr/current"
-#define LINE_BUFFER_SIZE 255
+#include "smack.h"
+#include "smack_internal.h"
 
 int smack_xattr_set_to_file(const char *path, const char *attr,
 			    const char *smack, SmackLabelSet labels)
@@ -84,16 +81,16 @@ int smack_xattr_get_from_file(const char *path, const char *attr,
 
 int smack_xattr_get_from_proc(int pid, char **smack, SmackLabelSet labels)
 {
-	char buf[LINE_BUFFER_SIZE];
+	char buf[512];
 	FILE *file;
 
-	snprintf(buf, LINE_BUFFER_SIZE, SMACK_PROC_PATH, pid);
+	snprintf(buf, sizeof(buf), SMACK_PROC_PATH, pid);
 
 	file = fopen(buf, "r");
 	if (file == NULL)
 		return -1;
 
-	if (fgets(buf, LINE_BUFFER_SIZE, file) == NULL) {
+	if (fgets(buf, sizeof(buf), file) == NULL) {
 		fclose(file);
 		return -1;
 	}

@@ -28,14 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uthash.h>
-
-#define SMACK64_LEN 23
-
-#define SMACK_ACC_R 1
-#define SMACK_ACC_W 2
-#define SMACK_ACC_X 4
-#define SMACK_ACC_A 16
-#define SMACK_ACC_LEN 4
+#include "smack_internal.h"
 
 struct smack_object {
 	char *object;
@@ -153,7 +146,7 @@ int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
 	FILE *file;
-	char str[SMACK_ACC_LEN + 1];
+	char str[ACC_LEN + 1];
 	int err = 0;
 
 	file = fopen(path, "w+");
@@ -364,19 +357,19 @@ inline unsigned str_to_ac(const char *str)
 		switch (str[i]) {
 		case 'r':
 		case 'R':
-			access |= SMACK_ACC_R;
+			access |= ACC_R;
 			break;
 		case 'w':
 		case 'W':
-			access |= SMACK_ACC_W;
+			access |= ACC_W;
 			break;
 		case 'x':
 		case 'X':
-			access |= SMACK_ACC_X;
+			access |= ACC_X;
 			break;
 		case 'a':
 		case 'A':
-			access |= SMACK_ACC_A;
+			access |= ACC_A;
 			break;
 		default:
 			break;
@@ -389,23 +382,23 @@ inline void ac_to_config_str(unsigned access, char *str)
 {
 	int i;
 	i = 0;
-	if ((access & SMACK_ACC_R) != 0)
+	if ((access & ACC_R) != 0)
 		str[i++] = 'r';
-	if ((access & SMACK_ACC_W) != 0)
+	if ((access & ACC_W) != 0)
 		str[i++] = 'w';
-	if ((access & SMACK_ACC_X) != 0)
+	if ((access & ACC_X) != 0)
 		str[i++] = 'x';
-	if ((access & SMACK_ACC_A) != 0)
+	if ((access & ACC_A) != 0)
 		str[i++] = 'a';
 	str[i] = '\0';
 }
 
 inline void ac_to_kernel_str(unsigned access, char *str)
 {
-	str[0] = ((access & SMACK_ACC_R) != 0) ? 'r' : '-';
-	str[1] = ((access & SMACK_ACC_W) != 0) ? 'w' : '-';
-	str[2] = ((access & SMACK_ACC_X) != 0) ? 'x' : '-';
-	str[3] = ((access & SMACK_ACC_A) != 0) ? 'a' : '-';
+	str[0] = ((access & ACC_R) != 0) ? 'r' : '-';
+	str[1] = ((access & ACC_W) != 0) ? 'w' : '-';
+	str[2] = ((access & ACC_X) != 0) ? 'x' : '-';
+	str[3] = ((access & ACC_A) != 0) ? 'a' : '-';
 	str[4] = '\0';
 }
 

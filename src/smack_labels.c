@@ -4,8 +4,8 @@
 #include <string.h>
 #include <uthash.h>
 #include "smack.h"
+#include "smack_internal.h"
 
-#define SMACK64_LEN 23
 struct smack_label {
 	char *long_name;
 	char *short_name;
