@@ -119,8 +119,9 @@ int smack_label_set_add(SmackLabelSet handle, const char *long_name)
 	char sl[SMACK64_LEN + 1];
 	int pos, len ,ret;
 
-	if (long_name == NULL || strlen(long_name) == 0)
-		return -EPERM;
+	if (strlen(long_name) == 0 ||
+	    get_known_label(long_name) != NULL)
+		return -EINVAL;
 
 	len = strlen(long_name);
 	pos = (len > SMACK64_LEN) ? len - SMACK64_LEN : 0;
@@ -130,7 +131,7 @@ int smack_label_set_add(SmackLabelSet handle, const char *long_name)
 	ret = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
 			long_name, sl);
 
-	return ret == 0 ? 0  : -1;
+	return ret;
 }
 
 int smack_label_set_remove(SmackLabelSet handle, const char *long_name)
@@ -154,6 +155,11 @@ int smack_label_set_remove(SmackLabelSet handle, const char *long_name)
 const char *smack_label_set_get(SmackLabelSet handle, const char *long_name)
 {
 	struct smack_label *l;
+	const char *res;
+
+	res = get_known_label(long_name);
+	if (res != NULL)
+		return res;
 
 	HASH_FIND(long_name_hh, handle->label_by_long_name, long_name, strlen(long_name), l);
 
@@ -167,6 +173,11 @@ const char *smack_label_set_to_short_name(SmackLabelSet handle,
 					  const char *long_name)
 {
 	struct smack_label *l;
+	const char *res;
+
+	res = get_known_label(long_name);
+	if (res != NULL)
+		return res;
 
 	HASH_FIND(long_name_hh, handle->label_by_long_name, long_name, strlen(long_name), l);
 
@@ -180,6 +191,11 @@ const char *smack_label_set_to_long_name(SmackLabelSet handle,
 					 const char *short_name)
 {
 	struct smack_label *l;
+	const char *res;
+
+	res = get_known_label(short_name);
+	if (res != NULL)
+		return res;
 
 	HASH_FIND(short_name_hh, handle->label_by_short_name, short_name, strlen(short_name), l);
 
