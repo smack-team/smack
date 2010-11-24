@@ -25,9 +25,11 @@
 #include <check.h>
 #include "../src/smack.h"
 
+#define LONG_LABEL_1 "FooFooFooFooFooFooFooFooFooFooFooFooFoo"
+
 static int files_equal(const char *filename1, const char *filename2);
 
-START_TEST(test_set_smack_to_file)
+START_TEST(test_xattr_set_to_file_smack)
 {
 	FILE *file;
 	int rc = 0;
@@ -37,10 +39,10 @@ START_TEST(test_set_smack_to_file)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64, "Apple");
+	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64, "Apple", NULL);
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, &smack);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, &smack, NULL);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
@@ -50,7 +52,7 @@ START_TEST(test_set_smack_to_file)
 }
 END_TEST
 
-START_TEST(test_set_smackexec_to_file)
+START_TEST(test_xattr_set_to_file_smackexec)
 {
 	FILE *file;
 	int rc;
@@ -60,16 +62,48 @@ START_TEST(test_set_smackexec_to_file)
 	fprintf(file, "dummy\n");
 	fclose(file);
 
-	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64EXEC, "Apple");
+	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64EXEC, "Apple", NULL);
 	fail_unless(rc == 0, "Failed to set SMACK64EXEC");
 
-	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64EXEC, &smack);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64EXEC, &smack, NULL);
 	fail_unless(rc == 0, "Failed to get SMACK64EXEC");
 
 	rc = strcmp(smack, "Apple");
 	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
 
 	free(smack);
+}
+END_TEST
+
+START_TEST(test_xattr_set_to_file_smack_long_label)
+{
+	FILE *file;
+	int rc = 0;
+	SmackLabelSet labels;
+	char *smack = NULL;
+
+	file = fopen("set_smack-dummy.txt", "w");
+	fprintf(file, "dummy\n");
+	fclose(file);
+
+	labels = smack_label_set_new();
+	fail_unless(labels != NULL, "Creating label set failed");
+
+	smack_label_set_add(labels, LONG_LABEL_1);
+	fail_unless(rc == 0, "Adding label was not succesful");
+
+	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64, LONG_LABEL_1, labels);
+	fail_unless(rc == 0, "Failed to set SMACK64");
+
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, &smack, labels);
+	fail_unless(rc == 0, "Failed to get SMACK64");
+
+	rc = strcmp(smack, LONG_LABEL_1);
+	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
+
+	free(smack);
+
+	smack_label_set_delete(labels);
 }
 END_TEST
 
@@ -81,8 +115,9 @@ Suite *ruleset_suite (void)
 	s = suite_create("Xattr");
 
 	tc_core = tcase_create("Xattr");
-	tcase_add_test(tc_core, test_set_smack_to_file);
-	tcase_add_test(tc_core, test_set_smackexec_to_file);
+	tcase_add_test(tc_core, test_xattr_set_to_file_smack);
+	tcase_add_test(tc_core, test_xattr_set_to_file_smackexec);
+	tcase_add_test(tc_core, test_xattr_set_to_file_smack_long_label);
 	suite_add_tcase(s, tc_core);
 
 	return s;

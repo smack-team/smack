@@ -169,10 +169,12 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  * @param path path to a file
  * @param attr attribute name
  * @param smack new value
+ * @param labels label set. Not used if set to NULL. Otherwise, converts
+ * to short name.
  * @return 0 on success
  */
 extern int smack_xattr_set_to_file(const char *path, const char *attr,
-				   const char *smack);
+				   const char *smack, SmackLabelSet labels);
 
 /*!
  * Get SMACK64 security attribute for a given path.
@@ -181,19 +183,24 @@ extern int smack_xattr_set_to_file(const char *path, const char *attr,
  * @param path path to a file
  * @param attr attribute name
  * @param smack current value
+ * @param labels label set. Not used if set to NULL. Otherwise, converts
+ * to long name.
  * @return 0 on success
  */
 extern int smack_xattr_get_from_file(const char *path, const char *attr,
-				     char **smack);
+				     char **smack, SmackLabelSet labels);
 
 /*!
  * Get SMACK64 security attribute for a given pid.
  *
  * @param pid pid of a process
  * @param smack current value
+ * @param labels label set. Not used if set to NULL. Otherwise, converts
+ * to long name.
  * @return 0 on success
  */
-extern int smack_xattr_get_from_proc(int pid, char **smack);
+extern int smack_xattr_get_from_proc(int pid, char **smack,
+				     SmackLabelSet labels);
 
 /*!
  * Create a new label set. The returned rule set must be freed with

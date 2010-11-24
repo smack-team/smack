@@ -33,11 +33,17 @@
 #define SMACK_PROC_PATH "/proc/%d/attr/current"
 #define LINE_BUFFER_SIZE 255
 
-
-int smack_xattr_set_to_file(const char *path, const char *attr, const char *smack)
+int smack_xattr_set_to_file(const char *path, const char *attr,
+			    const char *smack, SmackLabelSet labels)
 {
 	size_t size;
 	int ret;
+
+	if (labels != NULL)
+		smack = smack_label_set_to_short_name(labels, smack);
+
+	if (smack == NULL)
+		return -1;
 
 	size = strlen(smack);
 	if (size > SMACK64_LEN)
@@ -48,33 +54,35 @@ int smack_xattr_set_to_file(const char *path, const char *attr, const char *smac
 	return ret;
 }
 
-int smack_xattr_get_from_file(const char *path, const char *attr, char **smack)
+int smack_xattr_get_from_file(const char *path, const char *attr,
+			      char **smack, SmackLabelSet labels)
 {
 	ssize_t ret;
-	char *buf;
+	char short_name[SMACK64_LEN + 2];
+	const char *result;
 
-	ret = getxattr(path, attr, NULL, 0);
+	ret = getxattr(path, attr, short_name, SMACK64_LEN + 1);
 	if (ret < 0)
 		return -1;
 
-	buf = malloc(ret + 1);
+	short_name[ret] = '\0';
 
-	ret = getxattr(path, attr, buf, ret);
-	if (ret < 0) {
-		free(buf);
+	if (labels == NULL)
+		result = short_name;
+	else
+		result = smack_label_set_to_long_name(labels, short_name);
+
+	if (result == NULL)
 		return -1;
-	}
 
-	buf[ret] = '\0';
-	*smack = buf;
+	*smack = strdup(result);
+	if (*smack == NULL)
+		return -1;
+
 	return 0;
-
 }
 
-
-
-
-int smack_xattr_get_from_proc(int pid, char **smack)
+int smack_xattr_get_from_proc(int pid, char **smack, SmackLabelSet labels)
 {
 	char buf[LINE_BUFFER_SIZE];
 	FILE *file;
@@ -94,3 +102,4 @@ int smack_xattr_get_from_proc(int pid, char **smack)
 	*smack = strdup(buf);
 	return *smack != NULL ? 0 : - 1;
 }
+
