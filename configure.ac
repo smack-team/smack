@@ -28,7 +28,7 @@ AC_CHECK_HEADER([attr/xattr.h],[
 	AC_CHECK_LIB([attr],[getxattr],[],[
 		AC_MSG_ERROR([Cannot find getxattr in libattr])])
 ],[
-	AC_MSG_ERROR([Cannot find attr/xattr.h])
+	AC_MSG_ERROR([Cannot find libattr header attr/xattr.h])
 ])
 
 AC_CHECK_HEADERS([utarray.h  uthash.h  utlist.h  utstring.h],,
