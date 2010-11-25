@@ -22,8 +22,17 @@ fi
 AM_CONDITIONAL([HAVE_DOXYGEN],[test ! -z "$DOXYGEN"])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
-AC_CHECK_HEADERS([utarray.h  uthash.h  utlist.h  utstring.h])
+AC_CHECK_HEADER([attr/xattr.h],[
+	AC_CHECK_LIB([attr],[setxattr],[],[
+		AC_MSG_ERROR([Cannot find setxattr in libattr])])
+	AC_CHECK_LIB([attr],[getxattr],[],[
+		AC_MSG_ERROR([Cannot find getxattr in libattr])])
+],[
+	AC_MSG_ERROR([Cannot find attr/xattr.h])
+])
 
+AC_CHECK_HEADERS([utarray.h  uthash.h  utlist.h  utstring.h],,
+	[AC_MSG_ERROR(Cannot find uthash headers)])
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.spec])
