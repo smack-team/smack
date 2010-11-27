@@ -36,7 +36,7 @@ START_TEST(test_to_short_and_long_name)
 	SmackLabelSet labels = smack_label_set_new();
 	fail_unless(labels != NULL, "Creating labels failed");
 	rc = smack_label_set_add(labels, "ThisIsReallyReallyReallyLongLabelName");
-	fail_unless(rc == 0, "Adding label failed");
+	fail_unless(rc != 0, "Adding label failed");
 	short_name = smack_label_set_to_short_name(labels, "ThisIsReallyReallyReallyLongLabelName");
 	fail_unless(short_name != NULL, "No short name");
 	long_name = smack_label_set_to_long_name(labels, short_name);
@@ -53,7 +53,7 @@ START_TEST(test_save_label)
 	SmackLabelSet labels = smack_label_set_new();
 	fail_unless(labels != NULL, "Creating labels failed");
 	rc = smack_label_set_add(labels, "ThisIsReallyReallyReallyLongLabelName");
-	fail_unless(rc == 0, "Adding label failed");
+	fail_unless(rc != 0, "Adding label failed");
 	rc = smack_label_set_save_to_file(labels, "add_label-result.txt");
 	fail_unless(rc == 0, "Failed to write labelset");
 	rc = files_equal("add_label-result.txt", "data/add_label-excepted.txt");

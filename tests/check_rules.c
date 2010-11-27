@@ -167,10 +167,10 @@ START_TEST(test_rule_set_attach_label_set_add_remove_rule)
 	smack_rule_set_attach_label_set(rules, labels);
 
 	rc = smack_label_set_add(labels, LONG_LABEL_1);
-	fail_unless(rc == 0, "Adding label was not succesful");
+	fail_unless(rc != 0, "Adding label was not succesful");
 
 	rc = smack_label_set_add(labels, LONG_LABEL_2);
-	fail_unless(rc == 0, "Adding label was not succesful");
+	fail_unless(rc != 0, "Adding label was not succesful");
 
 	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
 	fail_unless(rc == 0, "Adding rule was not succesful");
@@ -216,10 +216,10 @@ START_TEST(test_rule_set_attach_label_set_save_rules)
 	smack_rule_set_attach_label_set(rules, labels);
 
 	rc = smack_label_set_add(labels, LONG_LABEL_1);
-	fail_unless(rc == 0, "Adding label was not succesful");
+	fail_unless(rc != 0, "Adding label was not succesful");
 
 	rc = smack_label_set_add(labels, LONG_LABEL_2);
-	fail_unless(rc == 0, "Adding label was not succesful");
+	fail_unless(rc != 0, "Adding label was not succesful");
 
 	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
 	fail_unless(rc == 0, "Adding rule was not succesful");

@@ -44,8 +44,9 @@
 typedef struct _SmackRuleSet *SmackRuleSet;
 
 /*!
- * Handle to a in-memory representation for long label to 
- * short label mapping.
+ * Handle to a in-memory representation for label repository that contains
+ * mapping between long and short names for labels. Short names are essentially
+ * standard Smack labels.
  */
 typedef struct _SmackLabelSet *SmackLabelSet;
 
@@ -239,10 +240,12 @@ extern int smack_label_set_save_to_file(SmackLabelSet handle, const char *path);
  * Add new label to a label set.
  *
  * @param handle handle to a label set
- * @param long_name long label
- * @return 0 on success
+ * @param long_name long name for the label as input
+ *
+ * @return pointer to the short name is returned when the operation is
+ * succesful. Otherwise, NULL is returned.
  */
-extern int smack_label_set_add(SmackLabelSet handle, const char *long_name);
+extern const char *smack_label_set_add(SmackLabelSet handle, const char *long_name);
 
 /*!
  * Remove a label from a label set.
@@ -252,14 +255,6 @@ extern int smack_label_set_add(SmackLabelSet handle, const char *long_name);
  * @return 0 on success
  */
 extern int smack_label_set_remove(SmackLabelSet handle, const char *long_name);
-
-/*!
- * Get pointer to the instance of a given long label inside label set.
- *
- * @param handle handle to a label set
- * @param long_name long name of the label
- */
-extern const char *smack_label_set_get(SmackLabelSet handle, const char *long_name);
 
 /*!
  * Get short label.

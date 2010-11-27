@@ -18,10 +18,10 @@ struct _SmackLabelSet {
 	struct smack_label *label_by_short_name;
 };
 
-static int add_label(struct smack_label **label_by_long_name,
-		     struct smack_label **label_by_short_name,
-		     const char *long_name,
-		     const char *short_name);
+static struct smack_label *add_label(struct smack_label **label_by_long_name,
+				     struct smack_label **label_by_short_name,
+				     const char *long_name,
+				     const char *short_name);
 
 SmackLabelSet smack_label_set_new(void)
 {
@@ -37,6 +37,7 @@ extern SmackLabelSet smack_label_set_new_from_file(const char *path)
 	char *buf = NULL;
 	const char *ll, *sl;
 	size_t size;
+	struct smack_label *l;
 	int ret = 0;
 
 	file = fopen(path, "r");
@@ -53,11 +54,19 @@ extern SmackLabelSet smack_label_set_new_from_file(const char *path)
 		ll = strtok(buf, " \t\n");
 		sl = strtok(NULL, " \t\n");
 
-		if (ll == NULL || sl == NULL || strtok(NULL, " \t\n") != NULL) {
+		if (ll == NULL || sl == NULL ||
+		    strtok(NULL, " \t\n") != NULL ||
+		    strlen(sl) > SMACK64_LEN) {
 			ret = -1;
-		} else {
-			ret = add_label(&labels->label_by_long_name, &labels->label_by_short_name,
-					ll, sl);
+		    break;
+		}
+
+		l = add_label(&labels->label_by_long_name,
+			      &labels->label_by_short_name,
+			      ll, sl);
+		if (l == NULL) {
+			ret = -1;
+			break;
 		}
 
 		free(buf);
@@ -114,24 +123,25 @@ int smack_label_set_save_to_file(SmackLabelSet handle, const char *path)
 	return 0;
 }
 
-int smack_label_set_add(SmackLabelSet handle, const char *long_name)
+const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
 {
 	char sl[SMACK64_LEN + 1];
 	int pos, len ,ret;
+	struct smack_label *l;
 
 	if (strlen(long_name) == 0 ||
 	    get_known_label(long_name) != NULL)
-		return -EINVAL;
+		return NULL;
 
 	len = strlen(long_name);
 	pos = (len > SMACK64_LEN) ? len - SMACK64_LEN : 0;
 
 	strcpy(sl, &long_name[pos]);
 
-	ret = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
-			long_name, sl);
+	l  = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
+		       long_name, sl);
 
-	return ret;
+	return l->short_name;
 }
 
 int smack_label_set_remove(SmackLabelSet handle, const char *long_name)
@@ -150,23 +160,6 @@ int smack_label_set_remove(SmackLabelSet handle, const char *long_name)
 	free(l);
 
 	return 0;
-}
-
-const char *smack_label_set_get(SmackLabelSet handle, const char *long_name)
-{
-	struct smack_label *l;
-	const char *res;
-
-	res = get_known_label(long_name);
-	if (res != NULL)
-		return res;
-
-	HASH_FIND(long_name_hh, handle->label_by_long_name, long_name, strlen(long_name), l);
-
-	if (l == NULL)
-		return NULL;
-
-	return l->long_name;
 }
 
 const char *smack_label_set_to_short_name(SmackLabelSet handle,
@@ -205,29 +198,26 @@ const char *smack_label_set_to_long_name(SmackLabelSet handle,
 	return l->long_name;
 }
 
-static int add_label(struct smack_label **label_by_long_name,
-		     struct smack_label **label_by_short_name,
-		     const char *long_name,
-		     const char *short_name)
+static struct smack_label *add_label(struct smack_label **label_by_long_name,
+				     struct smack_label **label_by_short_name,
+				     const char *long_name,
+				     const char *short_name)
 {
 	struct smack_label *l;
-
-	if (strlen(short_name) > SMACK64_LEN)
-		return -ERANGE;
 
 	HASH_FIND(long_name_hh, *label_by_long_name, long_name,
 		  strlen(long_name), l);
 	if (l != NULL)
-		return -EEXIST;
+		return NULL;
 
 	HASH_FIND(short_name_hh, *label_by_short_name, short_name,
 		  strlen(short_name), l);
 	if (l != NULL)
-		return -EEXIST;
+		return NULL;
 
 	l = calloc(1, sizeof(struct smack_label));
 	if (l == NULL)
-		return -ENOMEM;
+		return NULL;
 
 	l->long_name = strdup(long_name);
 	l->short_name = strdup(short_name);
@@ -236,12 +226,12 @@ static int add_label(struct smack_label **label_by_long_name,
 		free(l->long_name);
 		free(l->short_name);
 		free(l);
-		return -ENOMEM;
+		return NULL;
 	}
 
 	HASH_ADD_KEYPTR(long_name_hh, *label_by_long_name, l->long_name, strlen(l->long_name), l);
 	HASH_ADD_KEYPTR(short_name_hh, *label_by_short_name, l->short_name, strlen(l->short_name), l);
 
-	return 0;
+	return l;
 }
 
