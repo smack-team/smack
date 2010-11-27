@@ -128,10 +128,9 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
  * @param handle handle to a rules
  * @param subject subject of the rule
  * @param object object of the rule
- * @return 0 if user was found from user db.
  */
-extern int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-				 const char *object);
+extern void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
+				  const char *object);
 
 /*!
  * Remove all rules with the given subject from a rule set.
@@ -160,7 +159,6 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
  * @param access string defining access type
  * @return boolean value
  */
-
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  				      const char *object, const char *access);
 
@@ -206,14 +204,14 @@ extern int smack_label_set_save_to_file(SmackLabelSet handle, const char *path);
  * @return pointer to the short name is returned when the operation is
  * succesful. Otherwise, NULL is returned.
  */
-extern const char *smack_label_set_add(SmackLabelSet handle, const char *long_name);
+extern const char *smack_label_set_add(SmackLabelSet handle,
+				       const char *long_name);
 
 /*!
  * Remove a label from a label set.
  *
  * @param handle handle to a label set
  * @param long_name long label
- * @return 0 on success
  */
 extern void smack_label_set_remove(SmackLabelSet handle, const char *long_name);
 

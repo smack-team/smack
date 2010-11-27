@@ -92,8 +92,7 @@ START_TEST(test_remove_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/remove_rule-in.txt", NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
-	rc = smack_rule_set_remove(rules, "Orange", "Apple");
-	fail_unless(rc == 0, "Failed to remove rule");
+	smack_rule_set_remove(rules, "Orange", "Apple");
 	rc = smack_rule_set_save_to_kernel(rules, "remove_rule-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("remove_rule-result.txt", "data/remove_rule-excepted.txt");
@@ -146,8 +145,7 @@ START_TEST(test_have_access_removed_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/have_access_rule-in.txt", "Orange");
 	fail_unless(rules != NULL, "Reading rules failed");
-	rc = smack_rule_set_remove(rules, "Orange", "Apple");
-	fail_unless(rc == 0, "Failed to remove rule");
+	smack_rule_set_remove(rules, "Orange", "Apple");
 	rc = smack_rule_set_have_access(rules, "Orange", "Apple", "a");
 	fail_unless(!rc, "Has access to a removed rule");
 	smack_rule_set_delete(rules);
@@ -157,6 +155,7 @@ END_TEST
 START_TEST(test_rule_set_attach_label_set_add_remove_rule)
 {
 	int rc;
+	const char *sn;
 
 	SmackRuleSet rules = smack_rule_set_new();
 	fail_unless(rules != NULL, "Creating rule set failed");
@@ -166,17 +165,25 @@ START_TEST(test_rule_set_attach_label_set_add_remove_rule)
 
 	smack_rule_set_attach_label_set(rules, labels);
 
-	rc = smack_label_set_add(labels, LONG_LABEL_1);
-	fail_unless(rc != 0, "Adding label was not succesful");
+	sn = smack_label_set_add(labels, LONG_LABEL_1);
+	fail_unless(sn != NULL, "Adding label was not succesful");
 
-	rc = smack_label_set_add(labels, LONG_LABEL_2);
-	fail_unless(rc != 0, "Adding label was not succesful");
+	sn = smack_label_set_add(labels, LONG_LABEL_2);
+	fail_unless(sn != NULL, "Adding label was not succesful");
 
 	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
 	fail_unless(rc == 0, "Adding rule was not succesful");
 
-	rc = smack_rule_set_remove(rules, LONG_LABEL_1, LONG_LABEL_2);
-	fail_unless(rc == 0, "Removign rule was not succesful");
+	rc = smack_rule_set_add(rules, LONG_LABEL_2, LONG_LABEL_1, "rwa");
+	fail_unless(rc == 0, "Adding rule was not succesful");
+
+	smack_rule_set_remove(rules, LONG_LABEL_1, LONG_LABEL_2);
+
+	rc = smack_rule_set_have_access(rules, LONG_LABEL_2, LONG_LABEL_1, "a");
+	fail_unless(rc, "Access failure");
+
+	rc = smack_rule_set_have_access(rules, LONG_LABEL_1, LONG_LABEL_2, "r");
+	fail_unless(!rc, "Access failure");
 
 	smack_rule_set_delete(rules);
 	smack_label_set_delete(labels);
@@ -203,39 +210,6 @@ START_TEST(test_rule_set_attach_label_set_add_rule_no_labels)
 }
 END_TEST
 
-START_TEST(test_rule_set_attach_label_set_save_rules)
-{
-	int rc;
-
-	SmackRuleSet rules = smack_rule_set_new();
-	fail_unless(rules != NULL, "Creating rule set failed");
-
-	SmackLabelSet labels = smack_label_set_new();
-	fail_unless(labels != NULL, "Creating label set failed");
-
-	smack_rule_set_attach_label_set(rules, labels);
-
-	rc = smack_label_set_add(labels, LONG_LABEL_1);
-	fail_unless(rc != 0, "Adding label was not succesful");
-
-	rc = smack_label_set_add(labels, LONG_LABEL_2);
-	fail_unless(rc != 0, "Adding label was not succesful");
-
-	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
-	fail_unless(rc == 0, "Adding rule was not succesful");
-
-	rc = smack_rule_set_save_to_file(rules, "rule_set_attach_label_set_save_rules-result.txt");
-	fail_unless(rc == 0, "Saving rule set was not succesful");
-
-	rc = files_equal("rule_set_attach_label_set_save_rules-result.txt",
-			 "data/rule_set_attach_label_set_save_rules-excepted.txt");
-	fail_unless(rc == 1, "Unexcepted result");
-
-	smack_rule_set_delete(rules);
-	smack_label_set_delete(labels);
-}
-END_TEST
-
 Suite *ruleset_suite (void)
 {
 	Suite *s;
@@ -255,7 +229,6 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_have_access_removed_rule);
 	tcase_add_test(tc_core, test_rule_set_attach_label_set_add_remove_rule);
 	tcase_add_test(tc_core, test_rule_set_attach_label_set_add_rule_no_labels);
-	tcase_add_test(tc_core, test_rule_set_attach_label_set_save_rules);
 	suite_add_tcase(s, tc_core);
 
 	return s;

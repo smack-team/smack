@@ -220,7 +220,7 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 	return ret == 0 ? 0  : -1;
 }
 
-int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
+void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 			  const char *object)
 {
 	struct smack_subject *s = NULL;
@@ -231,20 +231,20 @@ int smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 		object = smack_label_set_to_short_name(handle->labels, object);
 
 		if (subject == NULL || object == NULL)
-			return -1;
+			return;
 	}
 
 	HASH_FIND_STR(handle->subjects, subject, s);
 	if (s == NULL)
-		return -1;
+		return;
 
 	HASH_FIND_STR(s->objects, object, o);
 	if (o == NULL)
-		return -1;
+		return;
 
 	HASH_DEL(s->objects, o);
 	free(o);
-	return 0;
+	return;
 }
 
 void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
