@@ -144,22 +144,20 @@ const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
 	return l->short_name;
 }
 
-int smack_label_set_remove(SmackLabelSet handle, const char *long_name)
+void smack_label_set_remove(SmackLabelSet handle, const char *long_name)
 {
 	struct smack_label *l;
 
 	HASH_FIND(long_name_hh, handle->label_by_long_name, long_name, strlen(long_name), l);
 
 	if (l == NULL)
-		return -1;
+		return;
 
 	HASH_DELETE(long_name_hh, handle->label_by_long_name, l);
 	HASH_DELETE(short_name_hh, handle->label_by_short_name, l);
 	free(l->long_name);
 	free(l->short_name);
 	free(l);
-
-	return 0;
 }
 
 const char *smack_label_set_to_short_name(SmackLabelSet handle,

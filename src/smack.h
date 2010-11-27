@@ -215,7 +215,7 @@ extern const char *smack_label_set_add(SmackLabelSet handle, const char *long_na
  * @param long_name long label
  * @return 0 on success
  */
-extern int smack_label_set_remove(SmackLabelSet handle, const char *long_name);
+extern void smack_label_set_remove(SmackLabelSet handle, const char *long_name);
 
 /*!
  * Get short label.
