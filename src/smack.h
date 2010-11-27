@@ -165,45 +165,6 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  				      const char *object, const char *access);
 
 /*!
- * Set SMACK64 security attribute for a given file.
- *
- * @param path path to a file
- * @param attr attribute name
- * @param smack new value
- * @param labels label set. Not used if set to NULL. Otherwise, converts
- * to short name.
- * @return 0 on success
- */
-extern int smack_xattr_set_to_file(const char *path, const char *attr,
-				   const char *smack, SmackLabelSet labels);
-
-/*!
- * Get SMACK64 security attribute for a given path.
- * Allocated memory must be freed by the caller.
- *
- * @param path path to a file
- * @param attr attribute name
- * @param smack current value
- * @param labels label set. Not used if set to NULL. Otherwise, converts
- * to long name.
- * @return 0 on success
- */
-extern int smack_xattr_get_from_file(const char *path, const char *attr,
-				     char **smack, SmackLabelSet labels);
-
-/*!
- * Get SMACK64 security attribute for a given pid.
- *
- * @param pid pid of a process
- * @param smack current value
- * @param labels label set. Not used if set to NULL. Otherwise, converts
- * to long name.
- * @return 0 on success
- */
-extern int smack_xattr_get_from_proc(int pid, char **smack,
-				     SmackLabelSet labels);
-
-/*!
  * Create a new label set. The returned rule set must be freed with
  * smack_label_set_delete().
  *
@@ -273,6 +234,45 @@ extern const char *smack_label_set_to_short_name(SmackLabelSet handle,
  */
 extern const char *smack_label_set_to_long_name(SmackLabelSet handle,
 						const char *short_name);
+
+/*!
+ * Set SMACK64 security attribute for a given file.
+ *
+ * @param path path to a file
+ * @param attr attribute name
+ * @param smack new value
+ * @param labels label set. Not used if set to NULL. Otherwise, converts
+ * to short name.
+ * @return 0 on success
+ */
+extern int smack_xattr_set_to_file(const char *path, const char *attr,
+				   const char *smack, SmackLabelSet labels);
+
+/*!
+ * Get SMACK64 security attribute for a given path.
+ * Allocated memory must be freed by the caller.
+ *
+ * @param path path to a file
+ * @param attr attribute name
+ * @param smack current value
+ * @param labels label set. Not used if set to NULL. Otherwise, converts
+ * to long name.
+ * @return 0 on success
+ */
+extern int smack_xattr_get_from_file(const char *path, const char *attr,
+				     char **smack, SmackLabelSet labels);
+
+/*!
+ * Get SMACK64 security attribute for a given pid.
+ *
+ * @param pid pid of a process
+ * @param smack current value
+ * @param labels label set. Not used if set to NULL. Otherwise, converts
+ * to long name.
+ * @return 0 on success
+ */
+extern int smack_xattr_get_from_proc(int pid, char **smack,
+				     SmackLabelSet labels);
 
 #ifdef __cplusplus
 }
