@@ -81,17 +81,6 @@ extern SmackRuleSet smack_rule_set_new_from_file(const char *path,
 extern void smack_rule_set_delete(SmackRuleSet handle);
 
 /*!
- * Attach label set to rule set to enabled transparent long name conversion.
- * Note: does not take ownership of label set so caller must take care of 
- * freeing it.
- *
- * @param rules rule set
- * @param labels label set
- */
-extern void smack_rule_set_attach_label_set(SmackRuleSet rules,
-					    SmackLabelSet labels);
-
-/*!
  * Write rules to a given file.
  *
  * @param handle handle to a rules
@@ -113,54 +102,86 @@ extern int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path);
  * Add new rule to a rule set. Updates existing rule if there is already rule
  * for the given subject and object.
  *
- * @param handle handle to a rules
+ * Takes subject and object as long names and maps them to short names if the
+ * parameter labels is given (not set to NULL). In this case, if short labels
+ * are not found, this function fails and executes no action.
+ *
+ * @param handle handle to a rule set
  * @param subject subject of the rule
  * @param object object of the rule
- * @param access string defining access type
+ * @param access access string (rwxa)
+ * @param labels handle to a label set
  * @return 0 on success
  */
 extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
-			      const char *object, const char *access);
+			      const char *object, const char *access,
+			      SmackLabelSet labels);
 
 /*!
  * Remove rule from a rule set.
  *
- * @param handle handle to a rules
+ * Takes subject and object as long names and maps them to short names if the
+ * parameter labels is given (not set to NULL). In this case, if short labels
+ * are not found, this function fails and executes no action.
+ *
+ * @param handle handle to a rule set
  * @param subject subject of the rule
  * @param object object of the rule
+ * @param labels handle to a label set
+ * @return 0 on success
  */
 extern void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-				  const char *object);
+				  const char *object, SmackLabelSet labels);
 
 /*!
  * Remove all rules with the given subject from a rule set.
  *
- * @param handle handle to a rules
+ * Takes subject as long name and maps it to short name if the
+ * parameter labels is given (not set to NULL). In this case,
+ * if short label is not found, this function fails and executes
+ * no action.
+ *
+ * @param handle handle to a rule set
  * @param subject subject of the rule
+ * @param labels handle to a label set
  */
 extern void smack_rule_set_remove_by_subject(SmackRuleSet handle,
-					     const char *subject);
+					     const char *subject,
+					     SmackLabelSet labels);
 
 /*!
  * Remove all rules with the given object from a rule set.
+ 
+ * Takes subject as long name and maps it to short name if the
+ * parameter labels is given (not set to NULL). In this case,
+ * if short label is not found, this function fails and executes
+ * no action.
  *
- * @param handle handle to a rules
+ * @param handle handle to a rule set
  * @param object object of the rule
+ * @param labels handle to a label set
  */
 extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
-					    const char *object);
+					    const char *object,
+					    SmackLabelSet labels);
 
 /*!
- * Does the given subject have at least the given access to the given object?
+ * Check access to a give object.
  *
- * @param handle handle to a rules
+ * Takes subject and object as long names and maps them to short names if the
+ * parameter labels is given (not set to NULL). In this case, if short labels
+ * are not found, this function fails and executes no action.
+ *
+ * @param handle handle to a rule set
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access string defining access type
+ * @param labels handle to a label set
  * @return boolean value
  */
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
- 				      const char *object, const char *access);
+ 				      const char *object, const char *access,
+				      SmackLabelSet labels);
 
 /*!
  * Create a new label set. The returned rule set must be freed with

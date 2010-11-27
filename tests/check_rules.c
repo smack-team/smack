@@ -35,7 +35,7 @@ START_TEST(test_add_new_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/add_new_rule-in.txt", NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
-	rc = smack_rule_set_add(rules, "Orange", "Apple", "ra");
+	rc = smack_rule_set_add(rules, "Orange", "Apple", "ra", NULL);
 	fail_unless(rc == 0, "Failed to add rule");
 	rc = smack_rule_set_save_to_kernel(rules, "add_new_rule-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
@@ -51,7 +51,7 @@ START_TEST(test_modify_existing_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/modify_existing_rule-in.txt", NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
-	rc = smack_rule_set_add(rules, "Foo", "Bar", "wx");
+	rc = smack_rule_set_add(rules, "Foo", "Bar", "wx", NULL);
 	fail_unless(rc == 0, "Failed to add rule");
 	rc = smack_rule_set_save_to_kernel(rules, "modify_existing_rule-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
@@ -92,7 +92,7 @@ START_TEST(test_remove_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/remove_rule-in.txt", NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
-	smack_rule_set_remove(rules, "Orange", "Apple");
+	smack_rule_set_remove(rules, "Orange", "Apple", NULL);
 	rc = smack_rule_set_save_to_kernel(rules, "remove_rule-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("remove_rule-result.txt", "data/remove_rule-excepted.txt");
@@ -106,7 +106,7 @@ START_TEST(test_remove_rules_by_subject)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/remove_rules_by_subject-in.txt", NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
-	smack_rule_set_remove_by_subject(rules, "Foo");
+	smack_rule_set_remove_by_subject(rules, "Foo", NULL);
 	rc = smack_rule_set_save_to_kernel(rules, "remove_rules_by_subject-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("remove_rules_by_subject-result.txt", "data/remove_rules_by_subject-excepted.txt");
@@ -120,7 +120,7 @@ START_TEST(test_remove_rules_by_object)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/remove_rules_by_object-in.txt", NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
-	smack_rule_set_remove_by_object(rules, "Apple");
+	smack_rule_set_remove_by_object(rules, "Apple", NULL);
 	rc = smack_rule_set_save_to_kernel(rules, "remove_rules_by_object-result.txt");
 	fail_unless(rc == 0, "Failed to write ruleset");
 	rc = files_equal("remove_rules_by_object-result.txt", "data/remove_rules_by_object-excepted.txt");
@@ -134,7 +134,7 @@ START_TEST(test_have_access_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/have_access_rule-in.txt", "Orange");
 	fail_unless(rules != NULL, "Reading rules failed");
-	rc = smack_rule_set_have_access(rules, "Orange", "Apple", "a");
+	rc = smack_rule_set_have_access(rules, "Orange", "Apple", "a", NULL);
 	fail_unless(rc, "Have access \"a\" failed");
 	smack_rule_set_delete(rules);
 }
@@ -145,14 +145,14 @@ START_TEST(test_have_access_removed_rule)
 	int rc;
 	SmackRuleSet rules = smack_rule_set_new_from_file("data/have_access_rule-in.txt", "Orange");
 	fail_unless(rules != NULL, "Reading rules failed");
-	smack_rule_set_remove(rules, "Orange", "Apple");
-	rc = smack_rule_set_have_access(rules, "Orange", "Apple", "a");
+	smack_rule_set_remove(rules, "Orange", "Apple", NULL);
+	rc = smack_rule_set_have_access(rules, "Orange", "Apple", "a", NULL);
 	fail_unless(!rc, "Has access to a removed rule");
 	smack_rule_set_delete(rules);
 }
 END_TEST
 
-START_TEST(test_rule_set_attach_label_set_add_remove_rule)
+START_TEST(test_rule_set_add_remove_long)
 {
 	int rc;
 	const char *sn;
@@ -163,26 +163,24 @@ START_TEST(test_rule_set_attach_label_set_add_remove_rule)
 	SmackLabelSet labels = smack_label_set_new();
 	fail_unless(labels != NULL, "Creating label set failed");
 
-	smack_rule_set_attach_label_set(rules, labels);
-
 	sn = smack_label_set_add(labels, LONG_LABEL_1);
 	fail_unless(sn != NULL, "Adding label was not succesful");
 
 	sn = smack_label_set_add(labels, LONG_LABEL_2);
 	fail_unless(sn != NULL, "Adding label was not succesful");
 
-	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
+	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx", labels);
 	fail_unless(rc == 0, "Adding rule was not succesful");
 
-	rc = smack_rule_set_add(rules, LONG_LABEL_2, LONG_LABEL_1, "rwa");
+	rc = smack_rule_set_add(rules, LONG_LABEL_2, LONG_LABEL_1, "rwa", labels);
 	fail_unless(rc == 0, "Adding rule was not succesful");
 
-	smack_rule_set_remove(rules, LONG_LABEL_1, LONG_LABEL_2);
+	smack_rule_set_remove(rules, LONG_LABEL_1, LONG_LABEL_2, labels);
 
-	rc = smack_rule_set_have_access(rules, LONG_LABEL_2, LONG_LABEL_1, "a");
+	rc = smack_rule_set_have_access(rules, LONG_LABEL_2, LONG_LABEL_1, "a", labels);
 	fail_unless(rc, "Access failure");
 
-	rc = smack_rule_set_have_access(rules, LONG_LABEL_1, LONG_LABEL_2, "r");
+	rc = smack_rule_set_have_access(rules, LONG_LABEL_1, LONG_LABEL_2, "r", labels);
 	fail_unless(!rc, "Access failure");
 
 	smack_rule_set_delete(rules);
@@ -190,7 +188,7 @@ START_TEST(test_rule_set_attach_label_set_add_remove_rule)
 }
 END_TEST
 
-START_TEST(test_rule_set_attach_label_set_add_rule_no_labels)
+START_TEST(test_rule_set_add_long_no_labels)
 {
 	int rc;
 
@@ -200,9 +198,7 @@ START_TEST(test_rule_set_attach_label_set_add_rule_no_labels)
 	SmackLabelSet labels = smack_label_set_new();
 	fail_unless(labels != NULL, "Creating label set failed");
 
-	smack_rule_set_attach_label_set(rules, labels);
-
-	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx");
+	rc = smack_rule_set_add(rules, LONG_LABEL_1, LONG_LABEL_2, "rx", labels);
 	fail_unless(rc != 0, "Adding rule was succesful");
 
 	smack_rule_set_delete(rules);
@@ -227,8 +223,8 @@ Suite *ruleset_suite (void)
 	tcase_add_test(tc_core, test_remove_rules_by_object);
 	tcase_add_test(tc_core, test_have_access_rule);
 	tcase_add_test(tc_core, test_have_access_removed_rule);
-	tcase_add_test(tc_core, test_rule_set_attach_label_set_add_remove_rule);
-	tcase_add_test(tc_core, test_rule_set_attach_label_set_add_rule_no_labels);
+	tcase_add_test(tc_core, test_rule_set_add_remove_long);
+	tcase_add_test(tc_core, test_rule_set_add_long_no_labels);
 	suite_add_tcase(s, tc_core);
 
 	return s;

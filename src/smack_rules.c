@@ -44,7 +44,6 @@ struct smack_subject {
 
 struct _SmackRuleSet {
 	struct smack_subject *subjects;
-	SmackLabelSet labels;
 };
 
 static int update_rule(struct smack_subject **subjects,
@@ -135,12 +134,6 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	free(handle);
 }
 
-void smack_rule_set_attach_label_set(SmackRuleSet rules,
-				     SmackLabelSet labels)
-{
-	rules->labels = labels;
-}
-
 int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
@@ -202,14 +195,15 @@ int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path)
 }
 
 int smack_rule_set_add(SmackRuleSet handle, const char *subject,
-		       const char *object, const char *access_str)
+		       const char *object, const char *access_str,
+		       SmackLabelSet labels)
 {
 	unsigned access;
 	int ret;
 
-	if (handle->labels != NULL) {
-		subject = smack_label_set_to_short_name(handle->labels, subject);
-		object = smack_label_set_to_short_name(handle->labels, object);
+	if (labels != NULL) {
+		subject = smack_label_set_to_short_name(labels, subject);
+		object = smack_label_set_to_short_name(labels, object);
 
 		if (subject == NULL || object == NULL)
 			return -1;
@@ -221,14 +215,14 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 }
 
 void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-			  const char *object)
+			   const char *object, SmackLabelSet labels)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 
-	if (handle->labels != NULL) {
-		subject = smack_label_set_to_short_name(handle->labels, subject);
-		object = smack_label_set_to_short_name(handle->labels, object);
+	if (labels != NULL) {
+		subject = smack_label_set_to_short_name(labels, subject);
+		object = smack_label_set_to_short_name(labels, object);
 
 		if (subject == NULL || object == NULL)
 			return;
@@ -247,13 +241,14 @@ void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 	return;
 }
 
-void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
+void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject,
+				      SmackLabelSet labels)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL, *tmp = NULL;
 
-	if (handle->labels != NULL) {
-		subject = smack_label_set_to_short_name(handle->labels, subject);
+	if (labels != NULL) {
+		subject = smack_label_set_to_short_name(labels, subject);
 
 		if (subject == NULL)
 			return;
@@ -269,13 +264,14 @@ void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
 	}
 }
 
-void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
+void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object,
+				     SmackLabelSet labels)
 {
 	struct smack_subject *s = NULL, *tmp = NULL;
 	struct smack_object *o = NULL;
 
-	if (handle->labels != NULL) {
-		object = smack_label_set_to_short_name(handle->labels, object);
+	if (labels != NULL) {
+		object = smack_label_set_to_short_name(labels, object);
 
 		if (object == NULL)
 			return;
@@ -289,18 +285,19 @@ void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
 }
 
 int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
-			       const char *object, const char *access_str)
+			       const char *object, const char *access_str,
+			       SmackLabelSet labels)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 	unsigned ac;
 
-	if (handle->labels != NULL) {
-		subject = smack_label_set_to_short_name(handle->labels, subject);
-		object = smack_label_set_to_short_name(handle->labels, object);
+	if (labels != NULL) {
+		subject = smack_label_set_to_short_name(labels, subject);
+		object = smack_label_set_to_short_name(labels, object);
 
 		if (subject == NULL || object == NULL)
-			return -1;
+			return;
 	}
 
 	ac = str_to_ac(access_str);
