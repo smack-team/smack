@@ -148,6 +148,9 @@ int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
 
 	HASH_ITER(hh, handle->subjects, s, stmp) {
 		HASH_ITER(hh, s->objects, o, otmp) {
+			if (o->ac == 0)
+				continue;
+
 			ac_to_config_str(o->ac, str);
 
 			err = fprintf(file, "%s %s %s\n",
@@ -236,8 +239,7 @@ void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 	if (o == NULL)
 		return;
 
-	HASH_DEL(s->objects, o);
-	free(o);
+	o->ac = 0;
 	return;
 }
 
@@ -258,10 +260,8 @@ void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject,
 	if (s == NULL)
 		return;
 
-	HASH_ITER(hh, s->objects, o, tmp) {
-		HASH_DEL(s->objects, o);
-		free(o);
-	}
+	HASH_ITER(hh, s->objects, o, tmp)
+		o->ac = 0;
 }
 
 void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object,
@@ -279,8 +279,8 @@ void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object,
 
 	HASH_ITER(hh, handle->subjects, s, tmp) {
 		HASH_FIND_STR(s->objects, object, o);
-		HASH_DEL(s->objects, o);
-		free(o);
+		if (o)
+			o->ac = 0;
 	}
 }
 
