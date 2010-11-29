@@ -90,13 +90,22 @@ extern void smack_rule_set_delete(SmackRuleSet handle);
 extern int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path);
 
 /*!
- * Write rules to SmackFS rules file.
+ * Write rules to /smack/load.
+ *
+ * @param handle handle to a rule set
+ * @param path path to the SmackFS load file
+ * @return 0 on success
+ */
+extern int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path);
+
+/*!
+ * Clear rules from kernel.
  *
  * @param handle handle to a rules
  * @param path path to the rules file
  * @return 0 on success
  */
-extern int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_clear_from_kernel(SmackRuleSet handle, const char *path);
 
 /*!
  * Add new rule to a rule set. Updates existing rule if there is already rule

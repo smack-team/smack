@@ -197,6 +197,36 @@ int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path)
 	return 0;
 }
 
+int smack_rule_set_clear_from_kernel(SmackRuleSet handle, const char *path)
+{
+	struct smack_subject *s, *stmp;
+	struct smack_object *o, *otmp;
+	FILE *file;
+	char str[6];
+	int err = 0;
+
+	file = fopen(path, "w+");
+	if (!file)
+		return -1;
+
+	HASH_ITER(hh, handle->subjects, s, stmp) {
+		HASH_ITER(hh, s->objects, o, otmp) {
+			ac_to_kernel_str(0, str);
+
+			err = fprintf(file, "%-23s %-23s %4s\n",
+				      s->subject, o->object, str);
+
+			if (err < 0) {
+				fclose(file);
+				return errno;
+			}
+		}
+	}
+
+	fclose(file);
+	return 0;
+}
+
 int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 		       const char *object, const char *access_str,
 		       SmackLabelSet labels)
