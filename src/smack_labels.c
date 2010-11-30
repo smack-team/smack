@@ -141,7 +141,7 @@ const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
 	l  = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
 		       long_name, sl);
 
-	return l->short_name;
+	return l != NULL ? l->short_name : NULL;
 }
 
 void smack_label_set_remove(SmackLabelSet handle, const char *long_name)
