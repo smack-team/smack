@@ -33,6 +33,12 @@
 #define SMACK_H
 
 /*!
+ * Smack config file default paths.
+ */
+#define SMACK_ACCESSES_PATH "/etc/smack/accesses"
+#define SMACK_LABELS_PATH "/etc/smack/labels"
+
+/*!
  * Extended attributes.
  */
 #define SMACK64 "security.SMACK64"
