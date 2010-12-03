@@ -97,16 +97,22 @@ extern SmackRuleSet smack_rule_set_new_from_file(const char *path,
 extern void smack_rule_set_delete(SmackRuleSet handle);
 
 /*!
- * Write rules to a given file.
+ * Write rules to a given file. Does not write rules with no access defined.
+ *
+ * Takes subject and object as long names and maps them to short names if the
+ * parameter labels is given (not set to NULL). In this case, if short labels
+ * are not found, this function fails and executes no action.
  *
  * @param handle handle to a rules
  * @param path path to the rules file
+ * @param labels handle to a label set
  * @return 0 on success
  */
-extern int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path,
+				       SmackLabelSet labels);
 
 /*!
- * Write rules to /smack/load.
+ * Write rules to /smack/load. Does not write rules with no access defined.
  *
  * @param handle handle to a rule set
  * @param path path to the SmackFS load file

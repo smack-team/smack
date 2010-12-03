@@ -134,13 +134,17 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	free(handle);
 }
 
-int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
+int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path,
+			        SmackLabelSet labels)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
+	const char *sstr, *ostr;
+	char astr[ACC_LEN + 1];
 	FILE *file;
-	char str[ACC_LEN + 1];
-	int err = 0;
+	int err, ret;
+
+	ret = 0;
 
 	file = fopen(path, "w+");
 	if (!file)
@@ -151,20 +155,33 @@ int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
 			if (o->ac == 0)
 				continue;
 
-			ac_to_config_str(o->ac, str);
+			if (labels != NULL) {
+				sstr = smack_label_set_to_long_name(labels, s->subject);
+				ostr = smack_label_set_to_long_name(labels, o->object);
+			} else {
+				sstr = s->subject;
+				ostr = o->object;
+			}
+
+			if (sstr == NULL || ostr == NULL) {
+				ret = -1;
+				goto out;
+			}
+
+			ac_to_config_str(o->ac, astr);
 
 			err = fprintf(file, "%s %s %s\n",
-				      s->subject, o->object, str);
-
+				      sstr, ostr, astr);
 			if (err < 0) {
-				fclose(file);
-				return errno;
+				ret = -1;
+				goto out;
 			}
 		}
 	}
 
+out:
 	fclose(file);
-	return 0;
+	return ret;
 }
 
 int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path)
