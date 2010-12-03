@@ -17,7 +17,7 @@ Smack user space library
 
 %package devel
 Requires: %{name} = %{version}-%{release}
-Group:    System/Libraries
+Group:    Development/Libraries
 Summary:  Libraries and headers for Smack user space library
 %description devel
 Libraries and headers for Smack user space library
