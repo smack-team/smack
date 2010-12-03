@@ -50,6 +50,9 @@ START_TEST(test_rule_set_read_from_file_and_save_to_kernel)
 		"data/rule_set_read_from_file_and_save_to_kernel-in.txt", NULL, labels);
 	fail_unless(rules != NULL, "Reading rules failed");
 
+	if (rules == NULL)
+		return;
+
 	rc = smack_rule_set_save_to_file(rules,
 		"rule_set_read_from_file_and_save_to_kernel-result.txt",
 		NULL);

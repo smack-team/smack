@@ -125,17 +125,24 @@ int smack_label_set_save_to_file(SmackLabelSet handle, const char *path)
 
 const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
 {
-	char sl[SMACK64_LEN + 1];
-	int pos, len ,ret;
+	char short_name[SMACK64_LEN + 1];
+	int pos, len;
 	struct smack_label *l;
+	uint32_t h;
+	int i, c;
 
-	len = strlen(long_name);
-	pos = (len > SMACK64_LEN) ? len - SMACK64_LEN : 0;
+	// djb2 based on http://www.cse.yorku.ca/~oz/hash.html
+	h = 5381;
 
-	strcpy(sl, &long_name[pos]);
+	for (i = 0; long_name[i] != '\0'; i++) {
+		c = long_name[i];
+		h = ((h << 5) + h) + c;
+	}
+
+	sprintf(short_name, "%04X", h);
 
 	l  = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
-		       long_name, sl);
+		       long_name, short_name);
 
 	return l != NULL ? l->short_name : NULL;
 }

@@ -104,6 +104,11 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 			ostr = object;
 		}
 
+		if (sstr == NULL || ostr == NULL) {
+			ret = -1;
+			break;
+		}
+
 		if (subject_filter == NULL ||
 			 strcmp(sstr, subject_filter) == 0) {
 			ac = str_to_ac(access);
