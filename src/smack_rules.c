@@ -61,15 +61,17 @@ SmackRuleSet smack_rule_set_new(void)
 }
 
 SmackRuleSet smack_rule_set_new_from_file(const char *path,
-					  const char *subject_filter)
+					  const char *subject_filter,
+					  SmackLabelSet labels)
 {
 	SmackRuleSet rules;
 	FILE *file;
 	char *buf = NULL;
 	const char *subject, *object, *access;
+	const char *sstr, *ostr;
 	unsigned ac;
 	size_t size;
-	int ret = 0;
+	int err, ret;
 
 	file = fopen(path, "r");
 	if (file == NULL)
@@ -81,7 +83,9 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 		return NULL;
 	}
 
-	while (ret == 0 && getline(&buf, &size, file) != -1) {
+	ret = 0;
+
+	while (getline(&buf, &size, file) != -1) {
 		subject = strtok(buf, " \t\n");
 		object = strtok(NULL, " \t\n");
 		access = strtok(NULL, " \t\n");
@@ -89,11 +93,26 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 		if (subject == NULL || object == NULL || access == NULL ||
 		    strtok(NULL, " \t\n") != NULL) {
 			ret = -1;
-		} else if (subject_filter == NULL ||
-			 strcmp(subject, subject_filter) == 0) {
+			break;
+		}
+
+		if (labels != NULL) {
+			sstr = smack_label_set_to_short_name(labels, subject);
+			ostr = smack_label_set_to_short_name(labels, object);
+		} else {
+			sstr = subject;
+			ostr = object;
+		}
+
+		if (subject_filter == NULL ||
+			 strcmp(sstr, subject_filter) == 0) {
 			ac = str_to_ac(access);
-			ret = update_rule(&rules->subjects, subject, object,
+			err = update_rule(&rules->subjects, sstr, ostr,
 					  ac);
+			if (err != 0) {
+				ret = -1;
+				break;
+			}
 		}
 
 		free(buf);

@@ -30,6 +30,41 @@
 
 static int files_equal(const char *filename1, const char *filename2);
 
+START_TEST(test_rule_set_read_from_file_and_save_to_kernel)
+{
+	int rc;
+	const char *sn;
+	SmackLabelSet labels;
+	SmackRuleSet rules;
+
+	labels = smack_label_set_new();
+	fail_unless(labels != NULL, "Creating label set failed");
+
+	sn = smack_label_set_add(labels, LONG_LABEL_1);
+	fail_unless(sn != NULL, "Adding label was not succesful");
+
+	sn = smack_label_set_add(labels, LONG_LABEL_2);
+	fail_unless(sn != NULL, "Adding label was not succesful");
+
+	rules = smack_rule_set_new_from_file(
+		"data/rule_set_read_from_file_and_save_to_kernel-in.txt", NULL, labels);
+	fail_unless(rules != NULL, "Reading rules failed");
+
+	rc = smack_rule_set_save_to_file(rules,
+		"rule_set_read_from_file_and_save_to_kernel-result.txt",
+		NULL);
+	fail_unless(rc == 0, "Failed to write ruleset");
+
+	rc = files_equal(
+		"rule_set_read_from_file_and_save_to_kernel-result.txt",
+		"data/rule_set_read_from_file_and_save_to_kernel-excepted.txt");
+	fail_unless(rc == 1, "Unexcepted result");
+
+	smack_rule_set_delete(rules);
+	smack_label_set_delete(labels);
+}
+END_TEST
+
 START_TEST(test_rule_set_add_and_save_to_file)
 {
 	int rc;
@@ -58,6 +93,11 @@ START_TEST(test_rule_set_add_and_save_to_file)
 		labels);
 	fail_unless(rc == 0, "Failed to write ruleset");
 
+	rc = files_equal(
+		"rule_set_add_and_save_to_config-result.txt",
+		"data/rule_set_add_and_save_to_config-excepted.txt");
+	fail_unless(rc == 1, "Unexcepted result");
+
 	smack_rule_set_delete(rules);
 	smack_label_set_delete(labels);
 }
@@ -69,7 +109,7 @@ START_TEST(test_rule_set_remove_and_save_to_kernel)
 	SmackRuleSet rules;
 
 	rules = smack_rule_set_new_from_file(
-		"data/rule_set_remove_and_save_to_kernel-in.txt", NULL);
+		"data/rule_set_remove_and_save_to_kernel-in.txt", NULL, NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
 
 	smack_rule_set_remove(rules, "Orange", "Apple", NULL);
@@ -94,7 +134,7 @@ START_TEST(test_rule_set_remove_by_subject_and_save_to_kernel)
 	
 	rules = smack_rule_set_new_from_file(
 		"data/rule_set_remove_by_subject_and_save_to_kernel-in.txt",
-		NULL);
+		NULL, NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
 
 	smack_rule_set_remove_by_subject(rules, "Foo", NULL);
@@ -119,7 +159,7 @@ START_TEST(test_rule_set_remove_by_object_and_save_to_kernel)
 
 	rules = smack_rule_set_new_from_file(
 		"data/rule_set_remove_by_object_and_save_to_kernel-in.txt",
-		NULL);
+		NULL, NULL);
 	fail_unless(rules != NULL, "Reading rules failed");
 
 	smack_rule_set_remove_by_object(rules, "Apple", NULL);
@@ -199,6 +239,7 @@ Suite *ruleset_suite (void)
 	s = suite_create("Rules");
 
 	tc_core = tcase_create("Rules");
+	tcase_add_test(tc_core, test_rule_set_read_from_file_and_save_to_kernel);
 	tcase_add_test(tc_core, test_rule_set_add_and_save_to_file);
 	tcase_add_test(tc_core, test_rule_set_remove_and_save_to_kernel);
 	tcase_add_test(tc_core, test_rule_set_remove_by_subject_and_save_to_kernel);

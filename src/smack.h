@@ -82,12 +82,17 @@ extern SmackRuleSet smack_rule_set_new(void);
  * Read rules from a given file. Rules can be optionally filtered by a
  * subject.
  *
+ * Takes subject and object as long names and maps them to short names if the
+ * parameter labels is given (not set to NULL). In this case, if short labels
+ * are not found, this function fails and executes no action.
+ *
  * @param path path to the file containing rules
  * @param subject read only rules for the given subject if not set to NULL.
  * @return SmackRuleSet instance on success
  */
 extern SmackRuleSet smack_rule_set_new_from_file(const char *path,
-						 const char *subject);
+						 const char *subject,
+						 SmackLabelSet labels);
 
 /*!
  * Free resources allocated by rules.
