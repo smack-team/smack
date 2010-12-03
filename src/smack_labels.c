@@ -139,7 +139,7 @@ const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
 		h = ((h << 5) + h) + c;
 	}
 
-	sprintf(short_name, "%04X", h);
+	sprintf(short_name, "%08X", h);
 
 	l  = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
 		       long_name, short_name);
