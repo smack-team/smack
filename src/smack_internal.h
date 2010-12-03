@@ -34,6 +34,4 @@
 #define ACC_A 16
 #define ACC_LEN 4
 
-const char *get_known_label(const char *label);
-
 #endif // SMACK_INTERNAL_H
