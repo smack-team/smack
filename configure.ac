@@ -31,6 +31,8 @@ AC_CHECK_HEADER([attr/xattr.h],[
 	AC_MSG_ERROR([Cannot find libattr header attr/xattr.h])
 ])
 
+AC_CHECK_HEADERS([utarray.h  uthash.h  utlist.h  utstring.h],,
+	[AC_MSG_ERROR(Cannot find uthash headers)])
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.spec])
