@@ -43,6 +43,7 @@
  */
 #define SMACK64 "security.SMACK64"
 #define SMACK64EXEC "security.SMACK64EXEC"
+#define SMACK64MMAP "security.SMACK64MMAP"
 
 /*!
  * Handle to a in-memory representation of set of Smack rules.
