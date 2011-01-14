@@ -256,6 +256,16 @@ void smack_label_set_delete(SmackLabelSet handle);
 extern int smack_label_set_save_to_file(SmackLabelSet handle, const char *path);
 
 /*!
+ * Calculate eight byte short name from long name.
+ *
+ * @param long_name long name for the label
+ * @param short_name short name of the label. Given character
+ * array must have size 9 at minimum.
+ */
+extern void smack_label_set_get_short_name(const char *long_name,
+					   char *short_name);
+
+/*!
  * Add new label to a label set.
  *
  * @param handle handle to a label set
@@ -292,6 +302,7 @@ extern const char *smack_label_set_to_short_name(SmackLabelSet handle,
  */
 extern const char *smack_label_set_to_long_name(SmackLabelSet handle,
 						const char *short_name);
+
 
 /*!
  * Set SMACK64 security attribute for a given file.

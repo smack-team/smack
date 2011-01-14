@@ -123,11 +123,9 @@ int smack_label_set_save_to_file(SmackLabelSet handle, const char *path)
 	return 0;
 }
 
-const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
+void smack_label_set_get_short_name(const char *long_name,
+				    char *short_name)
 {
-	char short_name[SMACK64_LEN + 1];
-	int pos, len;
-	struct smack_label *l;
 	uint32_t h;
 	int i, c;
 
@@ -140,8 +138,17 @@ const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
 	}
 
 	sprintf(short_name, "%08X", h);
+}
 
-	l  = add_label(&handle->label_by_long_name, &handle->label_by_short_name,
+const char *smack_label_set_add(SmackLabelSet handle, const char *long_name)
+{
+	char short_name[SMACK64_LEN + 1];
+	struct smack_label *l;
+
+	smack_label_set_get_short_name(long_name, short_name);
+
+	l  = add_label(&handle->label_by_long_name,
+		       &handle->label_by_short_name,
 		       long_name, short_name);
 
 	return l != NULL ? l->short_name : NULL;
