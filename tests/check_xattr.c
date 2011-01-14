@@ -33,7 +33,7 @@ START_TEST(test_xattr_set_to_file_smack)
 {
 	FILE *file;
 	int rc = 0;
-	char *smack = NULL;
+	char smack[100];
 
 	file = fopen("set_smack-dummy.txt", "w");
 	fprintf(file, "dummy\n");
@@ -42,13 +42,11 @@ START_TEST(test_xattr_set_to_file_smack)
 	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64, "Apple", NULL);
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, &smack, NULL);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, smack, 100, NULL);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, "Apple");
 	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
 }
 END_TEST
 
@@ -56,7 +54,7 @@ START_TEST(test_xattr_set_to_file_smackexec)
 {
 	FILE *file;
 	int rc;
-	char *smack = NULL;
+	char smack[100];
 
 	file = fopen("set_smack-dummy.txt", "w");
 	fprintf(file, "dummy\n");
@@ -65,13 +63,11 @@ START_TEST(test_xattr_set_to_file_smackexec)
 	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64EXEC, "Apple", NULL);
 	fail_unless(rc == 0, "Failed to set SMACK64EXEC");
 
-	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64EXEC, &smack, NULL);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64EXEC, smack, 100, NULL);
 	fail_unless(rc == 0, "Failed to get SMACK64EXEC");
 
 	rc = strcmp(smack, "Apple");
 	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
 }
 END_TEST
 
@@ -80,7 +76,7 @@ START_TEST(test_xattr_set_to_file_smack_long_label)
 	FILE *file;
 	int rc = 0;
 	SmackLabelSet labels;
-	char *smack = NULL;
+	char smack[100];
 
 	file = fopen("set_smack-dummy.txt", "w");
 	fprintf(file, "dummy\n");
@@ -95,13 +91,11 @@ START_TEST(test_xattr_set_to_file_smack_long_label)
 	rc = smack_xattr_set_to_file("set_smack-dummy.txt", SMACK64, LONG_LABEL_1, labels);
 	fail_unless(rc == 0, "Failed to set SMACK64");
 
-	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, &smack, labels);
+	rc = smack_xattr_get_from_file("set_smack-dummy.txt", SMACK64, smack, 100, labels);
 	fail_unless(rc == 0, "Failed to get SMACK64");
 
 	rc = strcmp(smack, LONG_LABEL_1);
 	fail_unless(rc == 0, "smack %s not equal to Apple", smack);
-
-	free(smack);
 
 	smack_label_set_delete(labels);
 }

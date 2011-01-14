@@ -32,6 +32,8 @@
 #ifndef SMACK_H
 #define SMACK_H
 
+#include <sys/types.h>
+
 /*!
  * Smack config file default paths.
  */
@@ -310,25 +312,29 @@ extern int smack_xattr_set_to_file(const char *path, const char *attr,
  *
  * @param path path to a file
  * @param attr attribute name
- * @param smack current value
+ * @param smack attribute value
+ * @param size size of the character array reserved for the value
  * @param labels label set. Not used if set to NULL. Otherwise, converts
  * to long name.
  * @return 0 on success
  */
-extern int smack_xattr_get_from_file(const char *path, const char *attr,
-				     char **smack, SmackLabelSet labels);
+extern ssize_t smack_xattr_get_from_file(const char *path, const char *attr,
+					 char *smack, size_t size,
+					 SmackLabelSet labels);
 
 /*!
  * Get SMACK64 security attribute for a given pid.
  *
  * @param pid pid of a process
- * @param smack current value
+ * @param smack attribute value
+ * @param size size of the character array reserved for the value
  * @param labels label set. Not used if set to NULL. Otherwise, converts
  * to long name.
  * @return 0 on success
  */
-extern int smack_xattr_get_from_proc(int pid, char **smack,
-				     SmackLabelSet labels);
+extern ssize_t smack_xattr_get_from_proc(int pid, char *smack,
+					 size_t size,
+					 SmackLabelSet labels);
 
 #ifdef __cplusplus
 }

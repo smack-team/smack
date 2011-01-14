@@ -51,52 +51,78 @@ int smack_xattr_set_to_file(const char *path, const char *attr,
 	return ret;
 }
 
-int smack_xattr_get_from_file(const char *path, const char *attr,
-			      char **smack, SmackLabelSet labels)
+ssize_t smack_xattr_get_from_file(const char *path, const char *attr,
+				  char *smack, size_t size, SmackLabelSet labels)
 {
 	ssize_t ret;
-	char short_name[SMACK64_LEN + 2];
+	char buf[SMACK64_LEN + 2];
 	const char *result;
+	size_t rsize;
 
-	ret = getxattr(path, attr, short_name, SMACK64_LEN + 1);
+	ret = getxattr(path, attr, buf, SMACK64_LEN + 1);
 	if (ret < 0)
 		return -1;
 
-	short_name[ret] = '\0';
+	buf[ret] = '\0';
 
 	if (labels == NULL)
-		result = short_name;
+		result = buf;
 	else
-		result = smack_label_set_to_long_name(labels, short_name);
+		result = smack_label_set_to_long_name(labels, buf);
 
 	if (result == NULL)
 		return -1;
 
-	*smack = strdup(result);
-	if (*smack == NULL)
+	rsize = strlen(result) + 1;
+
+	if (smack == NULL)
+		return rsize;
+	else if (size < rsize)
 		return -1;
+
+	strcpy(smack, result);
 
 	return 0;
 }
 
-int smack_xattr_get_from_proc(int pid, char **smack, SmackLabelSet labels)
+ssize_t smack_xattr_get_from_proc(int pid, char *smack,
+				  size_t size,
+				  SmackLabelSet labels)
 {
 	char buf[512];
 	FILE *file;
+	const char *result;
+	size_t rsize;
 
-	snprintf(buf, sizeof(buf), SMACK_PROC_PATH, pid);
+	snprintf(buf, sizeof(result), SMACK_PROC_PATH, pid);
 
 	file = fopen(buf, "r");
 	if (file == NULL)
 		return -1;
 
-	if (fgets(buf, sizeof(buf), file) == NULL) {
+	if (fgets(buf, sizeof(result), file) == NULL) {
 		fclose(file);
 		return -1;
 	}
 
 	fclose(file);
-	*smack = strdup(buf);
-	return *smack != NULL ? 0 : - 1;
+
+	if (labels == NULL)
+		result = buf;
+	else
+		result = smack_label_set_to_long_name(labels, buf);
+
+	if (result == NULL)
+		return -1;
+
+	rsize = strlen(result) + 1;
+
+	if (smack == NULL)
+		return rsize;
+	else if (size < rsize)
+		return -1;
+
+	strcpy(smack, result);
+	return 0;
 }
 
