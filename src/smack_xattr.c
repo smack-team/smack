@@ -94,7 +94,7 @@ ssize_t smack_xattr_get_from_proc(int pid, char *smack,
 	const char *result;
 	size_t rsize;
 
-	snprintf(buf, sizeof(result), SMACK_PROC_PATH, pid);
+	snprintf(buf, sizeof(buf), SMACK_PROC_PATH, pid);
 
 	file = fopen(buf, "r");
 	if (file == NULL)
