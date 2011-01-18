@@ -368,7 +368,7 @@ int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 		object = smack_label_set_to_short_name(labels, object);
 
 		if (subject == NULL || object == NULL)
-			return;
+			return -1;
 	}
 
 	ac = str_to_ac(access_str);

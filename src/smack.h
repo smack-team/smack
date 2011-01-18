@@ -199,14 +199,14 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
  *
  * Takes subject and object as long names and maps them to short names if the
  * parameter labels is given (not set to NULL). In this case, if short labels
- * are not found, this function fails and executes no action.
+ * are not found, this function returns failure condition.
  *
  * @param handle handle to a rule set
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access string defining access type
  * @param labels handle to a label set
- * @return boolean value
+ * @return 1 if access, 0 if no access and negative number of failure.
  */
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  				      const char *object, const char *access,

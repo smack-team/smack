@@ -23,7 +23,7 @@ static struct smack_label *add_label(struct smack_label **label_by_long_name,
 				     const char *long_name,
 				     const char *short_name);
 
-SmackLabelSet smack_label_set_new(void)
+extern SmackLabelSet smack_label_set_new(void)
 {
 	struct _SmackLabelSet *result =
 		calloc(1, sizeof(struct _SmackLabelSet));
