@@ -64,16 +64,6 @@ extern "C" {
 #endif
 
 /*!
- * Create default config files for Smack. Creates only those files that
- * don't yet exist. NOTE: this is temporary function and will be removed
- * from API at some point.
- *
- * @return 0 when files are created succesfully and negative number on
- * failure.
- */
-extern int smack_create_default_config_files();
-
-/*!
  * Create a new rule set. The returned rule set must be freed with
  * smack_rule_set_delete().
  *
