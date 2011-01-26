@@ -61,15 +61,8 @@ inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
 
-SmackRuleSet smack_rule_set_new(void)
-{
-	struct _SmackRuleSet *result =
-		calloc(1, sizeof(struct _SmackRuleSet));
-	return result;
-}
-
-SmackRuleSet smack_rule_set_new_from_file(const char *path,
-					  const char *subject_filter)
+SmackRuleSet smack_rule_set_new(const char *path,
+				const char *subject_filter)
 {
 	SmackRuleSet rules;
 	FILE *file;
@@ -79,13 +72,16 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 	size_t size;
 	int err, ret;
 
-	file = fopen(path, "r");
-	if (file == NULL)
+	rules = calloc(1, sizeof(struct _SmackRuleSet));
+	if (rules == NULL)
 		return NULL;
 
-	rules = smack_rule_set_new();
-	if (rules == NULL) {
-		fclose(file);
+	if (path == NULL)
+		return rules;
+
+	file = fopen(path, "r");
+	if (file == NULL) {
+		free(rules);
 		return NULL;
 	}
 

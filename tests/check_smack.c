@@ -33,7 +33,7 @@ START_TEST(test_save_to_kernel)
 	const char *sn;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new();
+	rules = smack_rule_set_new(NULL, NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -64,7 +64,7 @@ START_TEST(test_save_to_file)
 	const char *sn;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new();
+	rules = smack_rule_set_new(NULL, NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -94,7 +94,7 @@ START_TEST(test_rule_set_remove_by_subject)
 	int rc;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new();
+	rules = smack_rule_set_new(NULL, NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -117,7 +117,7 @@ START_TEST(test_rule_set_remove_by_object)
 	int rc;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new();
+	rules = smack_rule_set_new(NULL, NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;

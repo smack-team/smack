@@ -42,23 +42,16 @@ extern "C" {
 #endif
 
 /*!
- * Create a new rule set. The returned rule set must be freed with
- * smack_rule_set_delete().
- *
- * @return handle to the rule set. Returns NULL if allocation fails.
- */
-extern SmackRuleSet smack_rule_set_new(void);
-
-/*!
  * Read rules from a given file. Rules can be optionally filtered by a
  * subject.
  *
- * @param path path to the file containing rules
+ * @param path path to the file containing rules. If NULL, empty set is
+ * created.
  * @param subject read only rules for the given subject if not set to NULL.
  * @return SmackRuleSet instance on success
  */
-extern SmackRuleSet smack_rule_set_new_from_file(const char *path,
-						 const char *subject);
+extern SmackRuleSet smack_rule_set_new(const char *path,
+				       const char *subject);
 
 /*!
  * Free resources allocated by rules.
