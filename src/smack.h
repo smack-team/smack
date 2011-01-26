@@ -61,7 +61,7 @@ extern SmackRuleSet smack_rule_set_new(const char *path,
 extern void smack_rule_set_delete(SmackRuleSet handle);
 
 /*!
- * Write rules to a given file. Does not write rules with no access defined.
+ * Write access rules to a given file.
  *
  * @param handle handle to a rules
  * @param path path to the rules file
@@ -70,7 +70,7 @@ extern void smack_rule_set_delete(SmackRuleSet handle);
 extern int smack_rule_set_save_config(SmackRuleSet handle, const char *path);
 
 /*!
- * Write rules to /smack/load. Does not write rules with no access defined.
+ * Apply rules to kernel.
  *
  * @param handle handle to a rule set
  * @param path path to the SmackFS load file
@@ -79,7 +79,7 @@ extern int smack_rule_set_save_config(SmackRuleSet handle, const char *path);
 extern int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path);
 
 /*!
- * Clear rules from kernel.
+ * Clear given set of rules from kernel.
  *
  * @param handle handle to a rules
  * @param path path to the rules file
@@ -101,7 +101,8 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 			      const char *object, const char *access);
 
 /*!
- * Remove rule from a rule set.
+ * Remove rule from a rule set. When rules are applied to kernel, removed
+ * rules will be written with empty access code.
  *
  * @param handle handle to a rule set
  * @param subject subject of the rule
@@ -112,7 +113,8 @@ extern void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 				  const char *object);
 
 /*!
- * Remove all rules with the given subject from a rule set.
+ * Remove all rules with the given subject from a rule set. When rules are
+ * applied to kernel, removed rules will be written with empty access code.
  *
  * @param handle handle to a rule set
  * @param subject subject of the rule
@@ -121,7 +123,8 @@ extern void smack_rule_set_remove_by_subject(SmackRuleSet handle,
 					     const char *subject);
 
 /*!
- * Remove all rules with the given object from a rule set.
+ * Remove all rules with the given object from a rule set. When rules are
+ * applied to kernel, removed rules will be written with empty access code.
  
  * @param handle handle to a rule set
  * @param object object of the rule
@@ -130,7 +133,7 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
 					    const char *object);
 
 /*!
- * Check access to a give object.
+ * Check access to a give object from the give rule set.
  *
  * @param handle handle to a rule set
  * @param subject subject of the rule
