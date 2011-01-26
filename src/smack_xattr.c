@@ -100,7 +100,7 @@ ssize_t smack_xattr_get_from_proc(int pid, char *smack,
 	if (file == NULL)
 		return -1;
 
-	if (fgets(buf, sizeof(result), file) == NULL) {
+	if (fgets(buf, sizeof(buf), file) == NULL) {
 		fclose(file);
 		return -1;
 	}
