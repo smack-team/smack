@@ -28,7 +28,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uthash.h>
-#include "smack_internal.h"
+
+#define SMACK_LEN 23
+
+#define ACC_R 1
+#define ACC_W 2
+#define ACC_X 4
+#define ACC_A 16
+#define ACC_LEN 4
+
 
 struct smack_object {
 	char *object;
@@ -61,14 +69,12 @@ SmackRuleSet smack_rule_set_new(void)
 }
 
 SmackRuleSet smack_rule_set_new_from_file(const char *path,
-					  const char *subject_filter,
-					  SmackLabelSet labels)
+					  const char *subject_filter)
 {
 	SmackRuleSet rules;
 	FILE *file;
 	char *buf = NULL;
 	const char *subject, *object, *access;
-	const char *sstr, *ostr;
 	unsigned ac;
 	size_t size;
 	int err, ret;
@@ -96,23 +102,10 @@ SmackRuleSet smack_rule_set_new_from_file(const char *path,
 			break;
 		}
 
-		if (labels != NULL) {
-			sstr = smack_label_set_to_short_name(labels, subject);
-			ostr = smack_label_set_to_short_name(labels, object);
-		} else {
-			sstr = subject;
-			ostr = object;
-		}
-
-		if (sstr == NULL || ostr == NULL) {
-			ret = -1;
-			break;
-		}
-
 		if (subject_filter == NULL ||
-			 strcmp(sstr, subject_filter) == 0) {
+			strcmp(subject, subject_filter) == 0) {
 			ac = str_to_ac(access);
-			err = update_rule(&rules->subjects, sstr, ostr,
+			err = update_rule(&rules->subjects, subject, object,
 					  ac);
 			if (err != 0) {
 				ret = -1;
@@ -158,12 +151,10 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	free(handle);
 }
 
-int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path,
-			        SmackLabelSet labels)
+int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
-	const char *sstr, *ostr;
 	char astr[ACC_LEN + 1];
 	FILE *file;
 	int err, ret;
@@ -179,23 +170,10 @@ int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path,
 			if (o->ac == 0)
 				continue;
 
-			if (labels != NULL) {
-				sstr = smack_label_set_to_long_name(labels, s->subject);
-				ostr = smack_label_set_to_long_name(labels, o->object);
-			} else {
-				sstr = s->subject;
-				ostr = o->object;
-			}
-
-			if (sstr == NULL || ostr == NULL) {
-				ret = -1;
-				goto out;
-			}
-
 			ac_to_config_str(o->ac, astr);
 
 			err = fprintf(file, "%s %s %s\n",
-				      sstr, ostr, astr);
+				      s->subject, o->object, astr);
 			if (err < 0) {
 				ret = -1;
 				goto out;
@@ -269,19 +247,10 @@ int smack_rule_set_clear_from_kernel(SmackRuleSet handle, const char *path)
 }
 
 int smack_rule_set_add(SmackRuleSet handle, const char *subject,
-		       const char *object, const char *access_str,
-		       SmackLabelSet labels)
+		       const char *object, const char *access_str)
 {
 	unsigned access;
 	int ret;
-
-	if (labels != NULL) {
-		subject = smack_label_set_to_short_name(labels, subject);
-		object = smack_label_set_to_short_name(labels, object);
-
-		if (subject == NULL || object == NULL)
-			return -1;
-	}
 
 	access = str_to_ac(access_str);
 	ret = update_rule(&handle->subjects, subject, object, access);
@@ -289,18 +258,10 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 }
 
 void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-			   const char *object, SmackLabelSet labels)
+			   const char *object)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
-
-	if (labels != NULL) {
-		subject = smack_label_set_to_short_name(labels, subject);
-		object = smack_label_set_to_short_name(labels, object);
-
-		if (subject == NULL || object == NULL)
-			return;
-	}
 
 	HASH_FIND_STR(handle->subjects, subject, s);
 	if (s == NULL)
@@ -314,18 +275,10 @@ void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 	return;
 }
 
-void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject,
-				      SmackLabelSet labels)
+void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL, *tmp = NULL;
-
-	if (labels != NULL) {
-		subject = smack_label_set_to_short_name(labels, subject);
-
-		if (subject == NULL)
-			return;
-	}
 
 	HASH_FIND_STR(handle->subjects, subject, s);
 	if (s == NULL)
@@ -335,18 +288,10 @@ void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject,
 		o->ac = 0;
 }
 
-void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object,
-				     SmackLabelSet labels)
+void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
 {
 	struct smack_subject *s = NULL, *tmp = NULL;
 	struct smack_object *o = NULL;
-
-	if (labels != NULL) {
-		object = smack_label_set_to_short_name(labels, object);
-
-		if (object == NULL)
-			return;
-	}
 
 	HASH_ITER(hh, handle->subjects, s, tmp) {
 		HASH_FIND_STR(s->objects, object, o);
@@ -356,20 +301,11 @@ void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object,
 }
 
 int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
-			       const char *object, const char *access_str,
-			       SmackLabelSet labels)
+			       const char *object, const char *access_str)
 {
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 	unsigned ac;
-
-	if (labels != NULL) {
-		subject = smack_label_set_to_short_name(labels, subject);
-		object = smack_label_set_to_short_name(labels, object);
-
-		if (subject == NULL || object == NULL)
-			return -1;
-	}
 
 	ac = str_to_ac(access_str);
 
@@ -391,8 +327,8 @@ static int update_rule(struct smack_subject **subjects,
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 
-	if (strlen(subject_str) > SMACK64_LEN &&
-	    strlen(object_str) > SMACK64_LEN)
+	if (strlen(subject_str) > SMACK_LEN &&
+	    strlen(object_str) > SMACK_LEN)
 		return -ERANGE;
 
 	HASH_FIND_STR(*subjects, subject_str, s);

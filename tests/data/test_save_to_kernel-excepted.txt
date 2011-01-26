@@ -1,0 +1,3 @@
+Apple                   Orange                  rwx-
+Plum                    Peach                   ----
+Banana                  Peach                   --xa
