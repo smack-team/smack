@@ -67,7 +67,7 @@ extern void smack_rule_set_delete(SmackRuleSet handle);
  * @param path path to the rules file
  * @return 0 on success
  */
-extern int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_save_config(SmackRuleSet handle, const char *path);
 
 /*!
  * Write rules to /smack/load. Does not write rules with no access defined.
@@ -76,7 +76,7 @@ extern int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path);
  * @param path path to the SmackFS load file
  * @return 0 on success
  */
-extern int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_save_kernel(SmackRuleSet handle, const char *path);
 
 /*!
  * Clear rules from kernel.

@@ -147,7 +147,7 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	free(handle);
 }
 
-int smack_rule_set_save_to_file(SmackRuleSet handle, const char *path)
+int smack_rule_set_save_config(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -182,7 +182,7 @@ out:
 	return ret;
 }
 
-int smack_rule_set_save_to_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_save_kernel(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
