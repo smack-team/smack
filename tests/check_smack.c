@@ -44,7 +44,7 @@ START_TEST(test_save_to_kernel)
 
 	smack_rule_set_remove(rules, "Plum", "Peach");
 
-	rc = smack_rule_set_save_kernel(
+	rc = smack_rule_set_apply_kernel(
 		rules,
 		"test_save_to_kernel-result.txt");
 	fail_unless(rc == 0, "Failed to write the rule set");

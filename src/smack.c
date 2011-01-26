@@ -182,7 +182,7 @@ out:
 	return ret;
 }
 
-int smack_rule_set_save_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -212,7 +212,7 @@ int smack_rule_set_save_kernel(SmackRuleSet handle, const char *path)
 	return 0;
 }
 
-int smack_rule_set_clear_from_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
