@@ -33,11 +33,6 @@
 #define SMACK_H
 
 /*!
- * Smack config file default paths.
- */
-#define SMACK_ACCESSES_PATH "/etc/smack/accesses"
-
-/*!
  * Handle to a in-memory representation of set of Smack rules.
  */
 typedef struct _SmackRuleSet *SmackRuleSet;
