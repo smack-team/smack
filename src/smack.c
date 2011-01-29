@@ -37,10 +37,10 @@
 #define ACC_A 16
 #define ACC_LEN 4
 
-
 struct smack_object {
 	char *object;
 	unsigned ac;
+	char acstr[ACC_LEN + 1];
 	UT_hash_handle hh;
 };
 
@@ -316,6 +316,29 @@ int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
+int smack_rule_set_list(SmackRuleSet handle, int index,
+			const char **subject, const char **object,
+			const char **access)
+{
+	struct smack_subject *s, *stmp;
+	struct smack_object *o, *otmp;
+	int i = 0;
+
+	HASH_ITER(hh, handle->subjects, s, stmp) {
+		HASH_ITER(hh, s->objects, o, otmp) {
+			if (i == index) {
+				*subject = s->subject;
+				*object = o->object;
+				*access = o->acstr;
+				return 0;
+			}
+			i++;
+		}
+	}
+
+	return -1;
+}
+
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str,
 		       const char *object_str, unsigned ac)
@@ -342,6 +365,7 @@ static int update_rule(struct smack_subject **subjects,
 	}
 
 	o->ac = ac;
+	ac_to_config_str(ac, o->acstr);
 	return 0;
 }
 

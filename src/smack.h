@@ -144,6 +144,18 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 				      const char *object, const char *access);
 
+/*!
+ * Iterate over rules.
+ *
+ * @param index Index of the rule.
+ * @param subject Subject label of the rule.
+ * @param object Object label of the rule.
+ * @param access Access string for the rule.
+ */
+extern int smack_rule_set_list(SmackRuleSet handle, int index,
+			       const char **subject, const char **object,
+			       const char **access);
+
 #ifdef __cplusplus
 }
 #endif
