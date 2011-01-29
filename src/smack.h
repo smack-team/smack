@@ -65,7 +65,7 @@ extern void smack_rule_set_delete(SmackRuleSet handle);
  *
  * @param handle handle to a rules
  * @param path path to the rules file
- * @return 0 on success
+ * @return Returns negative value on failure.
  */
 extern int smack_rule_set_save_config(SmackRuleSet handle, const char *path);
 
@@ -74,7 +74,7 @@ extern int smack_rule_set_save_config(SmackRuleSet handle, const char *path);
  *
  * @param handle handle to a rule set
  * @param path path to the SmackFS load file
- * @return 0 on success
+ * @return Returns negative value on failure.
  */
 extern int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path);
 
@@ -83,7 +83,7 @@ extern int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path);
  *
  * @param handle handle to a rules
  * @param path path to the rules file
- * @return 0 on success
+ * @return Returns negative value on failure.
  */
 extern int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path);
 
@@ -95,7 +95,7 @@ extern int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path);
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access access string (rwxa)
- * @return 0 on success
+ * @return Returns negative value on failure.
  */
 extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 			      const char *object, const char *access);
@@ -107,7 +107,7 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
  * @param handle handle to a rule set
  * @param subject subject of the rule
  * @param object object of the rule
- * @return 0 on success
+ * @return Returns negative value on failure.
  */
 extern void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
 				  const char *object);
@@ -139,7 +139,7 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access string defining access type
- * @return 1 if access, 0 if no access and negative number of failure.
+ * @return 1 if access, 0 if no access.
  */
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 				      const char *object, const char *access);
