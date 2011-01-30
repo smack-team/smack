@@ -49,18 +49,16 @@ extern "C" {
  *
  * @param path path to the file containing rules. If NULL, empty set is
  * created.
- * @param subject read only rules for the given subject if not set to NULL.
  * @return SmackRuleSet instance on success
  */
-extern SmackRuleSet smack_rule_set_new(const char *path,
-				       const char *subject);
+extern SmackRuleSet smack_rule_set_new(const char *path);
 
 /*!
  * Free resources allocated by rules.
  *
  * @param handle handle to a rules
  */
-extern void smack_rule_set_delete(SmackRuleSet handle);
+extern void smack_rule_set_free(SmackRuleSet handle);
 
 /*!
  * Write access rules to a given file.
@@ -69,7 +67,7 @@ extern void smack_rule_set_delete(SmackRuleSet handle);
  * @param path path to the rules file
  * @return Returns negative value on failure.
  */
-extern int smack_rule_set_save_config(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_save(SmackRuleSet handle, const char *path);
 
 /*!
  * Apply rules to kernel.

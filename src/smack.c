@@ -66,8 +66,7 @@ inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
 
-SmackRuleSet smack_rule_set_new(const char *path,
-				const char *subject_filter)
+SmackRuleSet smack_rule_set_new(const char *path)
 {
 	SmackRuleSet rules;
 	FILE *file;
@@ -103,15 +102,12 @@ SmackRuleSet smack_rule_set_new(const char *path,
 			break;
 		}
 
-		if (subject_filter == NULL ||
-			strcmp(subject, subject_filter) == 0) {
-			ac = str_to_ac(access);
-			err = update_rule(&rules->subjects, subject, object,
-					  ac);
-			if (err != 0) {
-				ret = -1;
-				break;
-			}
+		ac = str_to_ac(access);
+		err = update_rule(&rules->subjects, subject, object,
+				  ac);
+		if (err != 0) {
+			ret = -1;
+			break;
 		}
 
 		free(buf);
@@ -119,7 +115,7 @@ SmackRuleSet smack_rule_set_new(const char *path,
 	}
 
 	if (ret != 0 || ferror(file)) {
-		smack_rule_set_delete(rules);
+		smack_rule_set_free(rules);
 		rules = NULL;
 	}
 
@@ -128,7 +124,7 @@ SmackRuleSet smack_rule_set_new(const char *path,
 	return rules;
 }
 
-void smack_rule_set_delete(SmackRuleSet handle)
+void smack_rule_set_free(SmackRuleSet handle)
 {
 	struct smack_subject *s;
 	struct smack_object *o;
@@ -152,7 +148,7 @@ void smack_rule_set_delete(SmackRuleSet handle)
 	free(handle);
 }
 
-int smack_rule_set_save_config(SmackRuleSet handle, const char *path)
+int smack_rule_set_save(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;

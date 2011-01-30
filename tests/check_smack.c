@@ -33,7 +33,7 @@ START_TEST(test_save_to_kernel)
 	const char *sn;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new(NULL, NULL);
+	rules = smack_rule_set_new(NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -54,7 +54,7 @@ START_TEST(test_save_to_kernel)
 		"data/test_save_to_kernel-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
 
-	smack_rule_set_delete(rules);
+	smack_rule_set_free(rules);
 }
 END_TEST
 
@@ -64,7 +64,7 @@ START_TEST(test_save_to_file)
 	const char *sn;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new(NULL, NULL);
+	rules = smack_rule_set_new(NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -75,7 +75,7 @@ START_TEST(test_save_to_file)
 
 	smack_rule_set_remove(rules, "Plum", "Peach");
 
-	rc = smack_rule_set_save_config(
+	rc = smack_rule_set_save(
 		rules,
 		"test_save_to_file-result.txt");
 	fail_unless(rc == 0, "Failed to write the rule set");
@@ -85,7 +85,7 @@ START_TEST(test_save_to_file)
 		"data/test_save_to_file-excepted.txt");
 	fail_unless(rc == 1, "Unexcepted result");
 
-	smack_rule_set_delete(rules);
+	smack_rule_set_free(rules);
 }
 END_TEST
 
@@ -94,7 +94,7 @@ START_TEST(test_rule_set_remove_by_subject)
 	int rc;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new(NULL, NULL);
+	rules = smack_rule_set_new(NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -108,7 +108,7 @@ START_TEST(test_rule_set_remove_by_subject)
 	rc = smack_rule_set_have_access(rules, "Plum", "Peach", "rx");
 	fail_unless(rc == 0, "Access granted to a removed rule");
 
-	smack_rule_set_delete(rules);
+	smack_rule_set_free(rules);
 }
 END_TEST
 
@@ -117,7 +117,7 @@ START_TEST(test_rule_set_remove_by_object)
 	int rc;
 	SmackRuleSet rules;
 
-	rules = smack_rule_set_new(NULL, NULL);
+	rules = smack_rule_set_new(NULL);
 	fail_unless(rules != NULL, "Creating rule set failed");
 	if (rules == NULL)
 		return;
@@ -131,7 +131,7 @@ START_TEST(test_rule_set_remove_by_object)
 	rc = smack_rule_set_have_access(rules, "Plum", "Peach", "rx");
 	fail_unless(rc == 0, "Access granted to a removed rule");
 
-	smack_rule_set_delete(rules);
+	smack_rule_set_free(rules);
 }
 END_TEST
 
