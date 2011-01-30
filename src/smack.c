@@ -54,6 +54,11 @@ struct _SmackRuleSet {
 	struct smack_subject *subjects;
 };
 
+struct _SmackRuleSetIter {
+	struct smack_subject *subject;
+	struct smack_object *object;
+};
+
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
@@ -316,27 +321,56 @@ int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
-int smack_rule_set_list(SmackRuleSet handle, int index,
-			const char **subject, const char **object,
-			const char **access)
+SmackRuleSetIter smack_rule_set_iter_new(void)
 {
-	struct smack_subject *s, *stmp;
-	struct smack_object *o, *otmp;
-	int i = 0;
+	SmackRuleSetIter iter = calloc(1, sizeof(struct _SmackRuleSetIter));
+	return iter;
+}
 
-	HASH_ITER(hh, handle->subjects, s, stmp) {
-		HASH_ITER(hh, s->objects, o, otmp) {
-			if (i == index) {
-				*subject = s->subject;
-				*object = o->object;
-				*access = o->acstr;
-				return 0;
-			}
-			i++;
-		}
+void smack_rule_set_iter_free(SmackRuleSetIter iter)
+{
+	if (iter != NULL)
+		free(iter);
+}
+
+void smack_rule_set_iter_get(SmackRuleSet handle,
+			     SmackRuleSetIter iter)
+{
+	iter->subject = handle->subjects;
+	iter->object = NULL;
+}
+
+int smack_rule_set_iter_next(SmackRuleSetIter iter,
+			     const char **subject,
+			     const char **object,
+			     const char **access)
+{
+	struct smack_subject *s;
+	struct smack_object *o;
+
+	if (iter->subject == NULL)
+		return -1;
+
+	if (iter->object == NULL)
+		iter->object = iter->subject->objects;
+	else
+		iter->object = iter->object->hh.next;
+
+	if (iter->object == NULL) {
+		iter->subject = iter->subject->hh.next;
+		if (iter->subject == NULL)
+			return -1;
+		iter->object = iter->subject->objects;
 	}
 
-	return -1;
+	if (iter->object == NULL)
+		return -1;
+
+	*subject = iter->subject->subject;
+	*object = iter->object->object;
+	*access = iter->object->acstr;
+
+	return 0;
 }
 
 static int update_rule(struct smack_subject **subjects,

@@ -37,6 +37,8 @@
  */
 typedef struct _SmackRuleSet *SmackRuleSet;
 
+typedef struct _SmackRuleSetIter *SmackRuleSetIter;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,16 +147,40 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 				      const char *object, const char *access);
 
 /*!
+ * Create new rule set iterator.
+ *
+ * @return new iterator instance
+ */
+extern SmackRuleSetIter smack_rule_set_iter_new(void);
+
+/*!
+ * Free rule set iterator.
+ *
+ * @param iter iterator
+ */
+extern void smack_rule_set_iter_free(SmackRuleSetIter iter);
+
+/*!
+ * Set iterator into beginning of the given rule set.
+ *
+ * @param handle handle to a rule set
+ * @param iter iterator
+ */
+extern void smack_rule_set_iter_get(SmackRuleSet handle,
+				    SmackRuleSetIter iter);
+
+/*!
  * Iterate over rules.
  *
- * @param index Index of the rule.
+ * @param iter Iterator
  * @param subject Subject label of the rule.
  * @param object Object label of the rule.
  * @param access Access string for the rule.
  */
-extern int smack_rule_set_list(SmackRuleSet handle, int index,
-			       const char **subject, const char **object,
-			       const char **access);
+extern int smack_rule_set_iter_next(SmackRuleSetIter iter,
+				    const char **subject,
+				    const char **object,
+				    const char **access);
 
 #ifdef __cplusplus
 }
