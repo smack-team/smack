@@ -8,4 +8,4 @@ Description: Smack kernel module userland library
 Requires:
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lsmack-1.0
-Cflags: -I${includedir}/smack-1.0 -I${libdir}/smack-1.0/include
+Cflags: -I${includedir}/libsmack-1.0
