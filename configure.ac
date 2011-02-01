@@ -11,6 +11,8 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AC_PROG_MAKE_SET
 
+LT_INIT
+
 # Doxygen
 AC_CHECK_PROG([DOXYGEN], [doxygen], [doxygen], [])
 AC_MSG_CHECKING([wheter to add documentation targets])
@@ -35,6 +37,6 @@ AC_CHECK_HEADERS([utarray.h  uthash.h  utlist.h  utstring.h],,
 	[AC_MSG_ERROR(Cannot find uthash headers)])
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
-AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack-1.0.pc])
 
 AC_OUTPUT

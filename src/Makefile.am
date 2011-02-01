@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-lib_LTLIBRARIES = libsmack.la
+lib_LTLIBRARIES = libsmack-1.0.la
 
-libsmack_la_LDFLAGS = -version-info 1:0
-libsmack_la_SOURCES = smack.c
+libsmack_1_0_la_LDFLAGS = -version-info 1:0:0
+libsmack_1_0_la_SOURCES = smack.c
