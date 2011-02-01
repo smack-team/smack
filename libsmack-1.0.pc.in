@@ -3,7 +3,7 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libsmack
+Name: @PACKAGE_NAME@
 Description: Smack kernel module userland library
 Requires:
 Version: @PACKAGE_VERSION@
