@@ -3,9 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: @PACKAGE_NAME@
+Name: libsmack-1.0
 Description: Smack kernel module userland library
 Requires:
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lsmack-1.0
+Libs: -L${libdir} -lsmack
 Cflags: -I${includedir}/libsmack-1.0

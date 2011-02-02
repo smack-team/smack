@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([libsmack-1.0],[1.0.0])
+AC_INIT([libsmack],[1.0.0])
 AM_INIT_AUTOMAKE(-Wall -Werror)
 
 AC_CONFIG_MACRO_DIR([m4])
