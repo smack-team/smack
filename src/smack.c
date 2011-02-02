@@ -23,7 +23,6 @@
 
 #include "smack.h"
 #include <sys/types.h>
-#include <attr/xattr.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
