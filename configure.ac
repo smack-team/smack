@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([libsmack-1.0],[1.0.0])
+AC_INIT([libsmack],[1.0.0])
 AM_INIT_AUTOMAKE(-Wall -Werror)
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -28,6 +28,6 @@ AC_CHECK_HEADERS([utarray.h  uthash.h  utlist.h  utstring.h],,
 	[AC_MSG_ERROR(Cannot find uthash headers)])
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
-AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack-1.0.pc])
+AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.pc])
 
 AC_OUTPUT
