@@ -38,6 +38,8 @@
 #define ACC_A 16
 #define ACC_LEN 4
 
+#define READ_BUF_SIZE 512
+
 struct smack_object {
 	char *object;
 	unsigned ac;
@@ -131,7 +133,7 @@ SmackRuleSet smack_rule_set_new(const char *path)
 {
 	SmackRuleSet rules;
 	FILE *file;
-	char *buf = NULL;
+	char buf[READ_BUF_SIZE];
 	const char *subject, *object, *access;
 	unsigned ac;
 	size_t size;
@@ -152,7 +154,7 @@ SmackRuleSet smack_rule_set_new(const char *path)
 
 	ret = 0;
 
-	while (getline(&buf, &size, file) != -1) {
+	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
 		subject = strtok(buf, " \t\n");
 		object = strtok(NULL, " \t\n");
 		access = strtok(NULL, " \t\n");
@@ -170,9 +172,6 @@ SmackRuleSet smack_rule_set_new(const char *path)
 			ret = -1;
 			break;
 		}
-
-		free(buf);
-		buf = NULL;
 	}
 
 	if (ret != 0 || ferror(file)) {
@@ -180,7 +179,6 @@ SmackRuleSet smack_rule_set_new(const char *path)
 		rules = NULL;
 	}
 
-	free(buf);
 	fclose(file);
 	return rules;
 }
