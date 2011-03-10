@@ -91,13 +91,13 @@ static int refresh_global_rules(const char *path)
 		goto out;
 	}
 
-	if (global_rules != NULL) {
-		ret = stat(path, &sb);
-		if (ret) {
-			result = -1;
-			goto out;
-		}
+	ret = stat(path, &sb);
+	if (ret) {
+		result = -1;
+		goto out;
+	}
 
+	if (global_rules != NULL) {
 		if (global_rules_path == NULL ||
 			strcmp(path, global_rules_path) != 0 ||
 			sb.st_mtime != global_rules_mtime)
@@ -105,6 +105,8 @@ static int refresh_global_rules(const char *path)
 	}
 
 	if (global_rules == NULL) {
+		global_rules_mtime = sb.st_mtime;
+
 		global_rules_path = strdup(path);
 		if (global_rules_path == NULL) {
 			result = -1;
