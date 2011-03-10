@@ -25,8 +25,6 @@
 #include <check.h>
 #include "../src/smack.h"
 
-static int files_equal(const char *filename1, const char *filename2);
-
 START_TEST(test_save_to_kernel)
 {
 	int rc;
@@ -46,13 +44,15 @@ START_TEST(test_save_to_kernel)
 
 	rc = smack_rule_set_apply_kernel(
 		rules,
-		"test_save_to_kernel-result.txt");
+		"save_to_kernel-kernel");
 	fail_unless(rc == 0, "Failed to write the rule set");
 
-	rc = files_equal(
-		"test_save_to_kernel-result.txt",
-		"data/test_save_to_kernel-excepted.txt");
-	fail_unless(rc == 1, "Unexcepted result");
+	fail_unless(smack_have_access("save_to_file-rules", "Banana", "Peach", "x"),
+				      "Access not granted");
+	fail_unless(!smack_have_access("save_to_file-rules", "Banana", "Peach", "r"),
+				       "Access not granted");
+	fail_unless(!smack_have_access("save_to_file-rules", "Apple", "Orange", "a"),
+				       "Access not granted");
 
 	smack_rule_set_free(rules);
 }
@@ -77,13 +77,15 @@ START_TEST(test_save_to_file)
 
 	rc = smack_rule_set_save(
 		rules,
-		"test_save_to_file-result.txt");
+		"save_to_file-rules");
 	fail_unless(rc == 0, "Failed to write the rule set");
 
-	rc = files_equal(
-		"test_save_to_file-result.txt",
-		"data/test_save_to_file-excepted.txt");
-	fail_unless(rc == 1, "Unexcepted result");
+	fail_unless(smack_have_access("save_to_file-rules", "Banana", "Peach", "x"),
+				      "Access not granted");
+	fail_unless(!smack_have_access("save_to_file-rules", "Banana", "Peach", "r"),
+				       "Access not granted");
+	fail_unless(!smack_have_access("save_to_file-rules", "Apple", "Orange", "a"),
+				       "Access not granted");
 
 	smack_rule_set_free(rules);
 }
@@ -162,57 +164,5 @@ int main(void)
 	nfailed = srunner_ntests_failed(sr);
 	srunner_free(sr);
 	return (nfailed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
-
-static int files_equal(const char *filename1, const char *filename2)
-{
-	FILE *fp1 = NULL;
-	FILE *fp2 = NULL;
-	char ch1, ch2;
-	int rc = 0;
-
-	fp1 = fopen(filename1, "rb");
-	if (fp1 == NULL) {
-		goto out;
-	}
-
-	fp2 = fopen(filename2, "rb");
-	if (fp2 == NULL) {
-		goto out;
-	}
-
-	rc = 1;
-	for (;;) {
-		if (feof(fp1) && feof(fp2))
-			break;
-
-		if (feof(fp1) || feof(fp2)) {
-			rc = 0;
-			break;
-		}
-
-		ch1 = fgetc(fp1);
-		if (ferror(fp1)) {
-			rc = 0;
-			break;
-		}
-
-		ch2 = fgetc(fp2);
-		if (ferror(fp2)) {
-			rc = 0;
-			break;
-		}
-
-		if (ch1 != ch2) {
-			rc = 0;
-			break;
-		}
-	}
-out:
-	if (fp1 != NULL)
-		fclose(fp1);
-	if (fp2 != NULL)
-		fclose(fp2);
-	return rc;
 }
 

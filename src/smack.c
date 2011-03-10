@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uthash.h>
+#include <pthread.h>
+#include <sys/stat.h>
 
 #define SMACK_LEN 23
 
@@ -64,6 +66,64 @@ static int update_rule(struct smack_subject **subjects,
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
+
+static SmackRuleSet global_rules = NULL;
+static time_t global_rules_mtime = 0;
+static pthread_mutex_t global_rules_mutex = PTHREAD_MUTEX_INITIALIZER;
+static char *global_rules_path = NULL;
+
+static void free_global_rules(void)
+{
+	smack_rule_set_free(global_rules);
+	global_rules = NULL;
+	free(global_rules_path);
+	global_rules_path = NULL;
+}
+
+static int refresh_global_rules(const char *path)
+{
+	struct stat sb;
+	int ret;
+	int result = 0;
+
+	if (pthread_mutex_lock(&global_rules_mutex) != 0) {
+		result = -1;
+		goto out;
+	}
+
+	if (global_rules != NULL) {
+		ret = stat(path, &sb);
+		if (ret) {
+			result = -1;
+			goto out;
+		}
+
+		if (global_rules_path == NULL ||
+			strcmp(path, global_rules_path) != 0 ||
+			sb.st_mtime != global_rules_mtime)
+			free_global_rules();
+	}
+
+	if (global_rules == NULL) {
+		global_rules_path = strdup(path);
+		if (global_rules_path == NULL) {
+			result = -1;
+			goto out;
+		}
+
+		global_rules = smack_rule_set_new(path);
+		if (global_rules == NULL) {
+			result = -1;
+			goto out;
+		}
+	}
+
+out:
+	if (result == -1)
+		free_global_rules();
+	(void) pthread_mutex_unlock(&global_rules_mutex);
+	return result;
+}
 
 SmackRuleSet smack_rule_set_new(const char *path)
 {
@@ -366,6 +426,25 @@ int smack_rule_set_iter_next(SmackRuleSetIter iter,
 	*access = iter->object->acstr;
 
 	return 0;
+}
+
+int smack_have_access(const char *path, const char *subject,
+		      const char *object, const char *access_type)
+{
+	int res;
+
+	if (refresh_global_rules(path) == -1)
+		return 0;
+
+	if (pthread_mutex_lock(&global_rules_mutex) != 0)
+		return 0;
+
+	res = smack_rule_set_have_access(global_rules, subject,
+					 object, access_type);
+
+	(void)pthread_mutex_unlock(&global_rules_mutex);
+
+	return res;
 }
 
 static int update_rule(struct smack_subject **subjects,
