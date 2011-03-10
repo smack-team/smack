@@ -44,14 +44,14 @@ START_TEST(test_save_to_kernel)
 
 	rc = smack_rule_set_apply_kernel(
 		rules,
-		"save_to_kernel-kernel");
+		"save_to_kernel-rules");
 	fail_unless(rc == 0, "Failed to write the rule set");
 
-	fail_unless(smack_have_access("save_to_file-rules", "Banana", "Peach", "x"),
+	fail_unless(smack_have_access("save_to_kernel-rules", "Banana", "Peach", "x"),
 				      "Access not granted");
-	fail_unless(!smack_have_access("save_to_file-rules", "Banana", "Peach", "r"),
+	fail_unless(!smack_have_access("save_to_kernel-rules", "Banana", "Peach", "r"),
 				       "Access not granted");
-	fail_unless(!smack_have_access("save_to_file-rules", "Apple", "Orange", "a"),
+	fail_unless(!smack_have_access("save_to_kernel-rules", "Apple", "Orange", "a"),
 				       "Access not granted");
 
 	smack_rule_set_free(rules);
