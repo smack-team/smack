@@ -29,6 +29,7 @@
 #include <uthash.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 #define SMACK_LEN 23
 
@@ -445,6 +446,40 @@ int smack_have_access(const char *path, const char *subject,
 	(void)pthread_mutex_unlock(&global_rules_mutex);
 
 	return res;
+}
+
+int smack_get_peer_label(int sock_fd, char **label)
+{
+        *label = NULL;
+        char *value;
+        int ret;
+        socklen_t length = SMACK_LEN + 1;
+
+        value = calloc(length, 1);
+        if (!value)
+                return -1;
+
+        ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
+        if (ret == -1)
+        {
+                if (errno == ERANGE)
+                {
+                        char *val2;
+                        val2 = realloc(value, length);
+                        if (!val2)
+                                goto err;
+
+                        value = val2;
+                        ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
+                }
+        }
+
+        if (ret == 0)
+               *label = strndup(value, length);
+
+err:
+        free(value);
+        return ret;
 }
 
 static int update_rule(struct smack_subject **subjects,

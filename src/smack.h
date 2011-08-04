@@ -193,6 +193,16 @@ extern int smack_rule_set_iter_next(SmackRuleSetIter iter,
 extern int smack_have_access(const char *path, const char *subject,
 			     const char *object, const char *access_type);
 
+/*!
+  * Get the label that is associated with a peer on the other
+  * end of a socket.
+  *
+  * @param sock_fd The file descriptor of the socket
+  * @param label (out) The NULL terminated label of the socket if it exists, the caller is responsible to call free on label.
+  * @return 0 on success, -1 otherwise.
+  */
+extern int smack_get_peer_label(int sock_fd, char **label);
+
 #ifdef __cplusplus
 }
 #endif
