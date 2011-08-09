@@ -2,6 +2,7 @@
  * This file is part of libsmack
  *
  * Copyright (C) 2010 Nokia Corporation
+ * Copyright (C) 2011 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -19,6 +20,7 @@
  *
  * Authors:
  * Jarkko Sakkinen <ext-jarkko.2.sakkinen@nokia.com>
+ * Brian McGillion <brian.mcgillion@intel.com>
  */
 
 #include "smack.h"
@@ -460,24 +462,23 @@ int smack_get_peer_label(int sock_fd, char **label)
                 return -1;
 
         ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
-        if (ret == -1)
-        {
-                if (errno == ERANGE)
-                {
-                        char *val2;
-                        val2 = realloc(value, length);
-                        if (!val2)
-                                goto err;
+        if (ret < 0 && errno == ERANGE) {
+                char *val2;
+                val2 = realloc(value, length);
 
-                        value = val2;
-                        ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
+                if (!val2) {
+                        free(value);
+                        return ret;
                 }
+
+                value = val2;
+                ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC,
+                                 value, &length);
         }
 
         if (ret == 0)
                *label = strndup(value, length);
 
-err:
         free(value);
         return ret;
 }
