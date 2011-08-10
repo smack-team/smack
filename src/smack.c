@@ -77,6 +77,8 @@ static time_t global_rules_mtime = 0;
 static pthread_mutex_t global_rules_mutex = PTHREAD_MUTEX_INITIALIZER;
 static char *global_rules_path = NULL;
 
+static const char * const SMACK_LOAD_PATH = "/smack/load";
+
 static void free_global_rules(void)
 {
 	smack_rule_set_free(global_rules);
@@ -431,12 +433,12 @@ int smack_rule_set_iter_next(SmackRuleSetIter iter,
 	return 0;
 }
 
-int smack_have_access(const char *path, const char *subject,
-		      const char *object, const char *access_type)
+int smack_have_access(const char *subject, const char *object,
+                      const char *access_type)
 {
 	int res;
 
-	if (refresh_global_rules(path) == -1)
+        if (refresh_global_rules(SMACK_LOAD_PATH) == -1)
 		return 0;
 
 	if (pthread_mutex_lock(&global_rules_mutex) != 0)
