@@ -1,6 +1,6 @@
 AC_PREREQ(2.59)
 AC_INIT([libsmack],[1.0.0])
-AM_INIT_AUTOMAKE(-Wall -Werror)
+AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2])
 
 AC_CONFIG_MACRO_DIR([m4])
 
