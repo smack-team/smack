@@ -19,7 +19,7 @@
  * 02110-1301 USA
  *
  * Authors:
- * Jarkko Sakkinen <ext-jarkko.2.sakkinen@nokia.com>
+ * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  * Brian McGillion <brian.mcgillion@intel.com>
  */
 
@@ -247,7 +247,7 @@ out:
 	return ret;
 }
 
-int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_apply_kernel(SmackRuleSet handle)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -255,7 +255,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
 	char str[6];
 	int err = 0;
 
-	file = fopen(path, "w+");
+	file = fopen(SMACK_LOAD_PATH, "w+");
 	if (!file)
 		return -1;
 
@@ -277,7 +277,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
 	return 0;
 }
 
-int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_clear_kernel(SmackRuleSet handle)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -285,7 +285,7 @@ int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path)
 	char str[6];
 	int err = 0;
 
-	file = fopen(path, "w+");
+	file = fopen(SMACK_LOAD_PATH, "w+");
 	if (!file)
 		return -1;
 

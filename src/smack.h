@@ -18,7 +18,7 @@
  * 02110-1301 USA
  *
  * Authors:
- * Jarkko Sakkinen <ext-jarkko.2.sakkinen@nokia.com>
+ * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
 /*!
@@ -73,19 +73,17 @@ extern int smack_rule_set_save(SmackRuleSet handle, const char *path);
  * Apply rules to kernel.
  *
  * @param handle handle to a rule set
- * @param path path to the SmackFS load file
  * @return Returns negative value on failure.
  */
-extern int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_apply_kernel(SmackRuleSet handle);
 
 /*!
  * Clear given set of rules from kernel.
  *
  * @param handle handle to a rules
- * @param path path to the rules file
  * @return Returns negative value on failure.
  */
-extern int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_clear_kernel(SmackRuleSet handle);
 
 /*!
  * Add new rule to a rule set. Updates existing rule if there is already rule
