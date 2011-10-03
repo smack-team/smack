@@ -28,31 +28,34 @@
 START_TEST(test_save_to_kernel)
 {
 	int rc;
-	const char *sn;
 	SmackRuleSet rules;
 
 	rules = smack_rule_set_new(NULL);
-	fail_unless(rules != NULL, "Creating rule set failed");
+	fail_unless(rules != NULL, "Rule set creation failed");
 	if (rules == NULL)
 		return;
 
 	smack_rule_set_add(rules, "Apple", "Orange", "rwx");
 	smack_rule_set_add(rules, "Plum", "Peach", "rx");
 	smack_rule_set_add(rules, "Banana", "Peach", "xa");
-
 	smack_rule_set_remove(rules, "Plum", "Peach");
 
 	rc = smack_rule_set_apply_kernel(
 		rules,
-		"save_to_kernel-rules");
+		"save_to_kernel.rules");
 	fail_unless(rc == 0, "Failed to write the rule set");
 
-	fail_unless(smack_have_access("save_to_kernel-rules", "Banana", "Peach", "x"),
-				      "Access not granted");
-	fail_unless(!smack_have_access("save_to_kernel-rules", "Banana", "Peach", "r"),
-				       "Access not granted");
-	fail_unless(!smack_have_access("save_to_kernel-rules", "Apple", "Orange", "a"),
-				       "Access not granted");
+	rules = smack_rule_set_new("save_to_kernel.rules");
+	fail_unless(rules != NULL, "Opening rule set failed");
+	if (rules == NULL)
+		return;
+
+	rc = smack_rule_set_have_access(rules, "Banana", "Peach", "x");
+	fail_unless(rc == 1, "Access not granted");
+	rc = smack_rule_set_have_access(rules, "Banana", "Peach", "r");
+	fail_unless(rc == 0, "Access granted");
+	rc = smack_rule_set_have_access(rules, "Apple", "Orange", "a");
+	fail_unless(rc == 0, "Access granted");
 
 	smack_rule_set_free(rules);
 }
@@ -72,7 +75,6 @@ START_TEST(test_save_to_file)
 	smack_rule_set_add(rules, "Apple", "Orange", "rwx");
 	smack_rule_set_add(rules, "Plum", "Peach", "rx");
 	smack_rule_set_add(rules, "Banana", "Peach", "xa");
-
 	smack_rule_set_remove(rules, "Plum", "Peach");
 
 	rc = smack_rule_set_save(
@@ -80,12 +82,12 @@ START_TEST(test_save_to_file)
 		"save_to_file-rules");
 	fail_unless(rc == 0, "Failed to write the rule set");
 
-	fail_unless(smack_have_access("save_to_file-rules", "Banana", "Peach", "x"),
-				      "Access not granted");
-	fail_unless(!smack_have_access("save_to_file-rules", "Banana", "Peach", "r"),
-				       "Access not granted");
-	fail_unless(!smack_have_access("save_to_file-rules", "Apple", "Orange", "a"),
-				       "Access not granted");
+	rc = smack_rule_set_have_access(rules, "Banana", "Peach", "x");
+	fail_unless(rc == 1, "Access not granted");
+	rc = smack_rule_set_have_access(rules, "Banana", "Peach", "r");
+	fail_unless(rc == 0, "Access granted");
+	rc = smack_rule_set_have_access(rules, "Apple", "Orange", "a");
+	fail_unless(rc == 0, "Access granted");
 
 	smack_rule_set_free(rules);
 }

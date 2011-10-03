@@ -2,6 +2,7 @@
  * This file is part of libsmack
  *
  * Copyright (C) 2010 Nokia Corporation
+ * Copyright (C) 2011 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -37,8 +38,6 @@
  */
 typedef struct _SmackRuleSet *SmackRuleSet;
 
-typedef struct _SmackRuleSetIter *SmackRuleSetIter;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -70,20 +69,22 @@ extern void smack_rule_set_free(SmackRuleSet handle);
 extern int smack_rule_set_save(SmackRuleSet handle, const char *path);
 
 /*!
- * Apply rules to kernel.
+ * Write rules in SmackFS format.
  *
  * @param handle handle to a rule set
+ * @param path path to the load file
  * @return Returns negative value on failure.
  */
-extern int smack_rule_set_apply_kernel(SmackRuleSet handle);
+extern int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path);
 
 /*!
- * Clear given set of rules from kernel.
+ * Write rules in SmackFS format with access type set to -.
  *
  * @param handle handle to a rules
+ * @param path path to the load file
  * @return Returns negative value on failure.
  */
-extern int smack_rule_set_clear_kernel(SmackRuleSet handle);
+extern int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path);
 
 /*!
  * Add new rule to a rule set. Updates existing rule if there is already rule
@@ -141,42 +142,6 @@ extern void smack_rule_set_remove_by_object(SmackRuleSet handle,
  */
 extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 				      const char *object, const char *access);
-
-/*!
- * Create new rule set iterator.
- *
- * @return new iterator instance
- */
-extern SmackRuleSetIter smack_rule_set_iter_new(void);
-
-/*!
- * Free rule set iterator.
- *
- * @param iter iterator
- */
-extern void smack_rule_set_iter_free(SmackRuleSetIter iter);
-
-/*!
- * Set iterator into beginning of the given rule set.
- *
- * @param handle handle to a rule set
- * @param iter iterator
- */
-extern void smack_rule_set_iter_get(SmackRuleSet handle,
-				    SmackRuleSetIter iter);
-
-/*!
- * Iterate over rules.
- *
- * @param iter Iterator
- * @param subject Subject label of the rule.
- * @param object Object label of the rule.
- * @param access Access string for the rule.
- */
-extern int smack_rule_set_iter_next(SmackRuleSetIter iter,
-				    const char **subject,
-				    const char **object,
-				    const char **access);
 
 /*!
  * Verify access from a given subject to given object with a

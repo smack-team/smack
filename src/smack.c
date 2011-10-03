@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 
+#define SMACK_LOAD_PATH "/smack/load"
 #define SMACK_LEN 23
 
 #define ACC_R 1
@@ -76,8 +77,6 @@ static SmackRuleSet global_rules = NULL;
 static time_t global_rules_mtime = 0;
 static pthread_mutex_t global_rules_mutex = PTHREAD_MUTEX_INITIALIZER;
 static char *global_rules_path = NULL;
-
-static const char * const SMACK_LOAD_PATH = "/smack/load";
 
 static void free_global_rules(void)
 {
@@ -247,7 +246,7 @@ out:
 	return ret;
 }
 
-int smack_rule_set_apply_kernel(SmackRuleSet handle)
+int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -255,7 +254,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle)
 	char str[6];
 	int err = 0;
 
-	file = fopen(SMACK_LOAD_PATH, "w+");
+	file = fopen(path, "w");
 	if (!file)
 		return -1;
 
@@ -277,7 +276,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle)
 	return 0;
 }
 
-int smack_rule_set_clear_kernel(SmackRuleSet handle)
+int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path)
 {
 	struct smack_subject *s, *stmp;
 	struct smack_object *o, *otmp;
@@ -285,7 +284,7 @@ int smack_rule_set_clear_kernel(SmackRuleSet handle)
 	char str[6];
 	int err = 0;
 
-	file = fopen(SMACK_LOAD_PATH, "w+");
+	file = fopen(path, "w");
 	if (!file)
 		return -1;
 
@@ -379,58 +378,6 @@ int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 		return 0;
 
 	return ((o->ac & ac) == ac);
-}
-
-SmackRuleSetIter smack_rule_set_iter_new(void)
-{
-	SmackRuleSetIter iter = calloc(1, sizeof(struct _SmackRuleSetIter));
-	return iter;
-}
-
-void smack_rule_set_iter_free(SmackRuleSetIter iter)
-{
-	if (iter != NULL)
-		free(iter);
-}
-
-void smack_rule_set_iter_get(SmackRuleSet handle,
-			     SmackRuleSetIter iter)
-{
-	iter->subject = handle->subjects;
-	iter->object = NULL;
-}
-
-int smack_rule_set_iter_next(SmackRuleSetIter iter,
-			     const char **subject,
-			     const char **object,
-			     const char **access)
-{
-	struct smack_subject *s;
-	struct smack_object *o;
-
-	if (iter->subject == NULL)
-		return -1;
-
-	if (iter->object == NULL)
-		iter->object = iter->subject->objects;
-	else
-		iter->object = iter->object->hh.next;
-
-	if (iter->object == NULL) {
-		iter->subject = iter->subject->hh.next;
-		if (iter->subject == NULL)
-			return -1;
-		iter->object = iter->subject->objects;
-	}
-
-	if (iter->object == NULL)
-		return -1;
-
-	*subject = iter->subject->subject;
-	*object = iter->object->object;
-	*access = iter->object->acstr;
-
-	return 0;
 }
 
 int smack_have_access(const char *subject, const char *object,
