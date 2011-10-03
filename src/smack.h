@@ -160,7 +160,7 @@ extern int smack_have_access(const char *subject, const char *object,
   * end of a socket.
   *
   * @param sock_fd The file descriptor of the socket
-  * @param label (out) The NULL terminated label of the socket if it exists,
+  * @param label The NULL terminated label of the socket if it exists,
   * the caller is responsible to call free on the label.
   * @return 0 on success, -1 otherwise.
   */

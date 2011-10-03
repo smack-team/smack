@@ -401,35 +401,27 @@ int smack_have_access(const char *subject, const char *object,
 
 int smack_get_peer_label(int sock_fd, char **label)
 {
-        *label = NULL;
-        char *value;
-        int ret;
-        socklen_t length = SMACK_LEN + 1;
+	char dummy;
+	int ret;
+	socklen_t length = 1;
+	char *value;
 
-        value = calloc(length, 1);
-        if (!value)
-                return -1;
+	ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
+	if (ret < 0 && errno != ERANGE)
+		return -1;
 
-        ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
-        if (ret < 0 && errno == ERANGE) {
-                char *val2;
-                val2 = realloc(value, length);
+	value = calloc(length, 1);
+	if (value == NULL)
+		return -1;
 
-                if (!val2) {
-                        free(value);
-                        return ret;
-                }
+	ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
+	if (ret < 0) {
+		free(value);
+		return -1;
+	}
 
-                value = val2;
-                ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC,
-                                 value, &length);
-        }
-
-        if (ret == 0)
-               *label = strndup(value, length);
-
-        free(value);
-        return ret;
+	*label = value;
+	return 0;
 }
 
 static int update_rule(struct smack_subject **subjects,
