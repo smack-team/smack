@@ -36,11 +36,14 @@
 #define SMACK_LOAD_PATH "/smack/load"
 #define SMACK_LEN 23
 
-#define ACC_R 1
-#define ACC_W 2
-#define ACC_X 4
-#define ACC_A 16
-#define ACC_LEN 4
+#define ACC_R   0x01
+#define ACC_W   0x02
+#define ACC_X   0x04
+#define ACC_A   0x08
+#define ACC_T   0x10
+#define ACC_LEN 5
+
+#define KERNEL_FORMAT "%-23s %-23s %5s"
 
 #define READ_BUF_SIZE 512
 
@@ -262,7 +265,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
 		HASH_ITER(hh, s->objects, o, otmp) {
 			ac_to_kernel_str(o->ac, str);
 
-			err = fprintf(file, "%-23s %-23s %4s\n",
+			err = fprintf(file, KERNEL_FORMAT "\n",
 				      s->subject, o->object, str);
 
 			if (err < 0) {
@@ -480,6 +483,10 @@ inline unsigned str_to_ac(const char *str)
 		case 'A':
 			access |= ACC_A;
 			break;
+		case 't':
+		case 'T':
+			access |= ACC_T;
+			break;
 		default:
 			break;
 		}
@@ -499,6 +506,8 @@ inline void ac_to_config_str(unsigned access, char *str)
 		str[i++] = 'x';
 	if ((access & ACC_A) != 0)
 		str[i++] = 'a';
+	if ((access & ACC_T) != 0)
+		str[i++] = 't';
 	str[i] = '\0';
 }
 
@@ -508,6 +517,7 @@ inline void ac_to_kernel_str(unsigned access, char *str)
 	str[1] = ((access & ACC_W) != 0) ? 'w' : '-';
 	str[2] = ((access & ACC_X) != 0) ? 'x' : '-';
 	str[3] = ((access & ACC_A) != 0) ? 'a' : '-';
+	str[3] = ((access & ACC_T) != 0) ? 't' : '-';
 	str[4] = '\0';
 }
 
