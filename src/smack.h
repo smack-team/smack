@@ -144,16 +144,16 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 				      const char *object, const char *access);
 
 /*!
- * Verify access from a given subject to given object with a
- * given access type.
+ * Check access from SmackFS access file.
  *
+ * @param path path to the access file.
  * @param subject subject of the rule
  * @param object object of the rule
- * @param access_type string defining access type
+ * @param access_type access type
  * @return 1 if access, 0 if no access.
  */
-extern int smack_have_access(const char *subject, const char *object,
-                             const char *access_type);
+extern int smack_have_access(const char *path, const char *subject,
+			     const char *object, const char *access_type);
 
 /*!
   * Get the label that is associated with a peer on the other

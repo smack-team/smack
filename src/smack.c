@@ -32,9 +32,9 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 
-#define SMACK_LOAD_PATH "/smack/load"
-#define SMACK_LEN 23
+#define LABEL_LEN 23
 
 #define ACC_R   0x01
 #define ACC_W   0x02
@@ -42,6 +42,8 @@
 #define ACC_A   0x08
 #define ACC_T   0x10
 #define ACC_LEN 5
+
+#define LOAD_SIZE (2 * (LABEL_LEN + 1) + ACC_LEN + 1)
 
 #define KERNEL_FORMAT "%-23s %-23s %5s"
 
@@ -75,66 +77,6 @@ static int update_rule(struct smack_subject **subjects,
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
-
-static SmackRuleSet global_rules = NULL;
-static time_t global_rules_mtime = 0;
-static pthread_mutex_t global_rules_mutex = PTHREAD_MUTEX_INITIALIZER;
-static char *global_rules_path = NULL;
-
-static void free_global_rules(void)
-{
-	smack_rule_set_free(global_rules);
-	global_rules = NULL;
-	free(global_rules_path);
-	global_rules_path = NULL;
-}
-
-static int refresh_global_rules(const char *path)
-{
-	struct stat sb;
-	int ret;
-	int result = 0;
-
-	if (pthread_mutex_lock(&global_rules_mutex) != 0) {
-		result = -1;
-		goto out;
-	}
-
-	ret = stat(path, &sb);
-	if (ret) {
-		result = -1;
-		goto out;
-	}
-
-	if (global_rules != NULL) {
-		if (global_rules_path == NULL ||
-			strcmp(path, global_rules_path) != 0 ||
-			sb.st_mtime != global_rules_mtime)
-			free_global_rules();
-	}
-
-	if (global_rules == NULL) {
-		global_rules_mtime = sb.st_mtime;
-
-		global_rules_path = strdup(path);
-		if (global_rules_path == NULL) {
-			result = -1;
-			goto out;
-		}
-
-		global_rules = smack_rule_set_new(path);
-		if (global_rules == NULL) {
-			result = -1;
-			goto out;
-		}
-	}
-
-out:
-	if (result == -1)
-		free_global_rules();
-	(void) pthread_mutex_unlock(&global_rules_mutex);
-	return result;
-}
 
 SmackRuleSet smack_rule_set_new(const char *path)
 {
@@ -270,7 +212,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
 
 			if (err < 0) {
 				fclose(file);
-				return errno;
+				return -1;
 			}
 		}
 	}
@@ -300,7 +242,7 @@ int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path)
 
 			if (err < 0) {
 				fclose(file);
-				return errno;
+				return -1;
 			}
 		}
 	}
@@ -383,23 +325,37 @@ int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 	return ((o->ac & ac) == ac);
 }
 
-int smack_have_access(const char *subject, const char *object,
-                      const char *access_type)
+int smack_have_access(const char *path, const char *subject,
+		      const char *object, const char *access_type)
 {
-	int res;
+	char buf[LOAD_SIZE];
+	int fd;
+	int ret;
 
-        if (refresh_global_rules(SMACK_LOAD_PATH) == -1)
-		return 0;
+	ret = snprintf(buf, LOAD_SIZE, KERNEL_FORMAT, subject, object, access_type);
+	if (ret < 0)
+		return -1;
 
-	if (pthread_mutex_lock(&global_rules_mutex) != 0)
-		return 0;
+	if (ret != (LOAD_SIZE - 1)) {
+		errno = ERANGE;
+		return -1;
+	}
 
-	res = smack_rule_set_have_access(global_rules, subject,
-					 object, access_type);
+	fd = open(path, O_RDWR);
+	ret = write(fd, buf, LOAD_SIZE - 1);
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
 
-	(void)pthread_mutex_unlock(&global_rules_mutex);
+	ret = read(fd, buf, 1);
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
 
-	return res;
+	close(fd);
+	return buf[0] == '1';
 }
 
 int smack_get_peer_label(int sock_fd, char **label)
@@ -434,8 +390,8 @@ static int update_rule(struct smack_subject **subjects,
 	struct smack_subject *s = NULL;
 	struct smack_object *o = NULL;
 
-	if (strlen(subject_str) > SMACK_LEN &&
-	    strlen(object_str) > SMACK_LEN)
+	if (strlen(subject_str) > LABEL_LEN &&
+	    strlen(object_str) > LABEL_LEN)
 		return -ERANGE;
 
 	HASH_FIND_STR(*subjects, subject_str, s);
