@@ -66,11 +66,6 @@ struct _SmackRuleSet {
 	struct smack_subject *subjects;
 };
 
-struct _SmackRuleSetIter {
-	struct smack_subject *subject;
-	struct smack_object *object;
-};
-
 static int update_rule(struct smack_subject **subjects,
 		       const char *subject_str, const char *object_str,
 		       unsigned ac);
