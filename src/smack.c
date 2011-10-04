@@ -293,7 +293,7 @@ int smack_have_access(int fd, const char *subject,
 	return buf[0] == '1';
 }
 
-char *smack_get_peer_label(int fd)
+char *smack_get_socket_label(int fd)
 {
 	char dummy;
 	int ret;
