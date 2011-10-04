@@ -26,7 +26,6 @@
 #include "smack.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,10 +52,12 @@ struct smack_rule {
 	char subject[LABEL_LEN + 1];
 	char object[LABEL_LEN + 1];
 	unsigned access_code;
+	struct smack_rule *next;
 };
 
 struct _SmackRuleSet {
-	GList *rules;
+	struct smack_rule *first;
+	struct smack_rule *last;
 };
 
 inline unsigned str_to_ac(const char *str);
@@ -71,10 +72,9 @@ SmackRuleSet smack_rule_set_new(int fd)
 	const char *subject, *object, *access;
 	int newfd;
 
-	rules = g_new(struct _SmackRuleSet, 1);
+	rules = calloc(sizeof(struct _SmackRuleSet), 1);
 	if (rules == NULL)
 		return NULL;
-	rules->rules = NULL;
 
 	if (fd < 0)
 		return rules;
@@ -120,13 +120,21 @@ err_out:
 
 void smack_rule_set_free(SmackRuleSet handle)
 {
-	g_list_free_full(handle->rules, g_free);
+	struct smack_rule *rule = handle->first;
+	struct smack_rule *next_rule = NULL;
+
+	while (rule != NULL) {
+		next_rule = rule->next;
+		free(rule);
+		rule = next_rule;
+	}
+
+	free(handle);
 }
 
 int smack_rule_set_save(SmackRuleSet handle, int fd)
 {
-	GList *entry;
-	struct smack_rule *rule;
+	struct smack_rule *rule = handle->first;
 	char access_type[ACC_LEN + 1];
 	FILE *file;
 	int ret;
@@ -143,10 +151,7 @@ int smack_rule_set_save(SmackRuleSet handle, int fd)
 		return -1;
 	}
 
-	entry = g_list_first(handle->rules);
-	while (entry) {
-		rule = entry->data;
-
+	while (rule) {
 		ac_to_config_str(rule->access_code, access_type);
 
 		ret = fprintf(file, "%s %s %s\n",
@@ -156,7 +161,7 @@ int smack_rule_set_save(SmackRuleSet handle, int fd)
 			goto out;
 		}
 
-		entry = g_list_next(entry);
+		rule = rule->next;
 	}
 
 out:
@@ -166,8 +171,7 @@ out:
 
 int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd)
 {
-	GList *entry;
-	struct smack_rule *rule;
+	struct smack_rule *rule = handle->first;
 	char access_type[ACC_LEN + 1];
 	FILE *file;
 	int ret;
@@ -184,10 +188,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd)
 		return -1;
 	}
 
-	entry = g_list_first(handle->rules);
-	while (entry) {
-		rule = entry->data;
-
+	while (rule) {
 		ac_to_kernel_str(rule->access_code, access_type);
 
 		ret = fprintf(file, KERNEL_FORMAT "\n",
@@ -197,7 +198,7 @@ int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd)
 			goto out;
 		}
 
-		entry = g_list_next(entry);
+		rule = rule->next;
 	}
 
 out:
@@ -207,8 +208,7 @@ out:
 
 int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd)
 {
-	GList *entry;
-	struct smack_rule *rule;
+	struct smack_rule *rule = handle->first;
 	char access_type[ACC_LEN + 1];
 	FILE *file;
 	int ret;
@@ -225,10 +225,7 @@ int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd)
 		return -1;
 	}
 
-	entry = g_list_first(handle->rules);
-	while (entry) {
-		rule = entry->data;
-
+	while (rule) {
 		ret = fprintf(file, KERNEL_FORMAT "\n",
 			      rule->subject, rule->object, "-----");
 		if (ret < 0) {
@@ -236,7 +233,7 @@ int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd)
 			goto out;
 		}
 
-		entry = g_list_next(entry);
+		rule = rule->next;
 	}
 
 out:
@@ -254,7 +251,7 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 		return -1;
 	}
 
-	rule = g_new(struct smack_rule, 1);
+	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
@@ -262,7 +259,12 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 	strncpy(rule->object, object, LABEL_LEN + 1);
 	rule->access_code = str_to_ac(access_type);
 
-	handle->rules = g_list_append(handle->rules, rule);
+	if (handle->first == NULL) {
+		handle->first = handle->last = rule;
+	} else {
+		handle->last->next = rule;
+		handle->last = rule;
+	}
 
 	return 0;
 }

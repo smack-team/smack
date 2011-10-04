@@ -24,8 +24,6 @@ fi
 AM_CONDITIONAL([HAVE_DOXYGEN],[test ! -z "$DOXYGEN"])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
-PKG_CHECK_MODULES([GLIB], [glib-2.0])
-
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.pc])
 
 AC_OUTPUT
