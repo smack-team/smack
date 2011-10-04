@@ -267,11 +267,10 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 	return 0;
 }
 
-int smack_have_access(const char *path, const char *subject,
+int smack_have_access(int fd, const char *subject,
 		      const char *object, const char *access_type)
 {
 	char buf[LOAD_SIZE];
-	int fd;
 	int ret;
 
 	ret = snprintf(buf, LOAD_SIZE, KERNEL_FORMAT, subject, object, access_type);
@@ -283,20 +282,14 @@ int smack_have_access(const char *path, const char *subject,
 		return -1;
 	}
 
-	fd = open(path, O_RDWR);
 	ret = write(fd, buf, LOAD_SIZE - 1);
-	if (ret < 0) {
-		close(fd);
+	if (ret < 0)
 		return -1;
-	}
 
 	ret = read(fd, buf, 1);
-	if (ret < 0) {
-		close(fd);
+	if (ret < 0)
 		return -1;
-	}
 
-	close(fd);
 	return buf[0] == '1';
 }
 

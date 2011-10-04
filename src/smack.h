@@ -100,13 +100,13 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 /*!
  * Check access from SmackFS access file.
  *
- * @param path path to the access file.
+ * @param fd file descriptor
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access_type access type
  * @return 1 if access, 0 if no access and -1 on error.
  */
-extern int smack_have_access(const char *path, const char *subject,
+extern int smack_have_access(int fd, const char *subject,
 			     const char *object, const char *access_type);
 
 /*!

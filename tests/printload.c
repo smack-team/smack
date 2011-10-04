@@ -48,6 +48,7 @@ int main(int argc, char **argv)
 			break;
 		default:
 			exit(EXIT_FAILURE);
+		}
 	}
 
 	rules = smack_rule_set_new(STDIN_FILENO);
