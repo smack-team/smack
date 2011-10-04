@@ -24,9 +24,7 @@ fi
 AM_CONDITIONAL([HAVE_DOXYGEN],[test ! -z "$DOXYGEN"])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
-AC_CHECK_HEADERS([uthash.h],,
-	[AC_MSG_ERROR(Cannot find uthash headers)])
-PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.pc])
 

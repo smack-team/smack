@@ -43,19 +43,18 @@ extern "C" {
 #endif
 
 /*!
- * Read rules from a given file. Rules can be optionally filtered by a
- * subject.
+ * Creates a new SmackRuleSet instance. If fd >= 0, rule set is read from the
+ * given file. Otherwise, empty rule set is created.
  *
- * @param path path to the file containing rules. If NULL, empty set is
- * created.
+ * @param fd file descriptor
  * @return SmackRuleSet instance on success
  */
-extern SmackRuleSet smack_rule_set_new(const char *path);
+extern SmackRuleSet smack_rule_set_new(int fd);
 
 /*!
- * Free resources allocated by rules.
+ * Destroy a SmackRuleSet instance.
  *
- * @param handle handle to a rules
+ * @param handle handle to a SmackRuleSet instance
  */
 extern void smack_rule_set_free(SmackRuleSet handle);
 
@@ -63,53 +62,40 @@ extern void smack_rule_set_free(SmackRuleSet handle);
  * Write access rules to a given file.
  *
  * @param handle handle to a rules
- * @param path path to the rules file
- * @return Returns negative value on failure.
+ * @param fd file descriptor
+ * @return Returns 0 on success.
  */
-extern int smack_rule_set_save(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_save(SmackRuleSet handle, int fd);
 
 /*!
- * Write rules in SmackFS format.
- *
- * @param handle handle to a rule set
- * @param path path to the load file
- * @return Returns negative value on failure.
- */
-extern int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path);
-
-/*!
- * Write rules in SmackFS format with access type set to -.
+ * Write rules in SmackFS format to a given file.
  *
  * @param handle handle to a rules
- * @param path path to the load file
- * @return Returns negative value on failure.
+ * @param fd file descriptor
+ * @return Returns 0 on success.
  */
-extern int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path);
+extern int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd);
 
 /*!
- * Add new rule to a rule set. Updates existing rule if there is already rule
- * for the given subject and object.
+ * Write rules in SmackFS format with access type set to '-' to a given file.
+ *
+ * @param handle handle to a rules
+ * @param fd file descriptor
+ * @return Returns 0 on success.
+ */
+extern int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd);
+
+/*!
+ * Add new rule to a rule set.
  *
  * @param handle handle to a rule set
  * @param subject subject of the rule
  * @param object object of the rule
- * @param access access string (rwxa)
- * @return Returns negative value on failure.
+ * @param access_type access type
+ * @return Returns 0 on success.
  */
 extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
-			      const char *object, const char *access);
-
-/*!
- * Check access to a give object from the give rule set.
- *
- * @param handle handle to a rule set
- * @param subject subject of the rule
- * @param object object of the rule
- * @param access string defining access type
- * @return 1 if access, 0 if no access.
- */
-extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
-				      const char *object, const char *access);
+			      const char *object, const char *access_type);
 
 /*!
  * Check access from SmackFS access file.
@@ -118,21 +104,19 @@ extern int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access_type access type
- * @return 1 if access, 0 if no access.
+ * @return 1 if access, 0 if no access and -1 on error.
  */
 extern int smack_have_access(const char *path, const char *subject,
 			     const char *object, const char *access_type);
 
 /*!
-  * Get the label that is associated with a peer on the other
-  * end of a socket.
+  * Get the label that is associated with a peer on the other end of a socket.
+  * Caller is responsible of freeing the returned label.
   *
-  * @param sock_fd The file descriptor of the socket
-  * @param label The NULL terminated label of the socket if it exists,
-  * the caller is responsible to call free on the label.
-  * @return 0 on success, -1 otherwise.
+  * @param fd socket file descriptor
+  * @return label on success and NULL of failure.
   */
-extern int smack_get_peer_label(int sock_fd, char **label);
+extern char *smack_get_peer_label(int fd);
 
 #ifdef __cplusplus
 }

@@ -24,15 +24,15 @@
  */
 
 #include "smack.h"
-#include <sys/types.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <uthash.h>
-#include <pthread.h>
-#include <sys/stat.h>
+#include <string.h>
 #include <sys/socket.h>
-#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define LABEL_LEN 23
 
@@ -49,54 +49,48 @@
 
 #define READ_BUF_SIZE 512
 
-struct smack_object {
-	char *object;
-	unsigned ac;
-	char acstr[ACC_LEN + 1];
-	UT_hash_handle hh;
-};
-
-struct smack_subject {
-	char *subject;
-	struct smack_object *objects;
-	UT_hash_handle hh;
+struct smack_rule {
+	char subject[LABEL_LEN + 1];
+	char object[LABEL_LEN + 1];
+	unsigned access_code;
 };
 
 struct _SmackRuleSet {
-	struct smack_subject *subjects;
+	GList *rules;
 };
 
-static int update_rule(struct smack_subject **subjects,
-		       const char *subject_str, const char *object_str,
-		       unsigned ac);
 inline unsigned str_to_ac(const char *str);
 inline void ac_to_config_str(unsigned ac, char *str);
 inline void ac_to_kernel_str(unsigned ac, char *str);
 
-SmackRuleSet smack_rule_set_new(const char *path)
+SmackRuleSet smack_rule_set_new(int fd)
 {
 	SmackRuleSet rules;
 	FILE *file;
 	char buf[READ_BUF_SIZE];
 	const char *subject, *object, *access;
-	unsigned ac;
-	size_t size;
-	int err, ret;
+	int newfd;
 
-	rules = calloc(1, sizeof(struct _SmackRuleSet));
+	rules = g_new(struct _SmackRuleSet, 1);
 	if (rules == NULL)
 		return NULL;
+	rules->rules = NULL;
 
-	if (path == NULL)
+	if (fd < 0)
 		return rules;
 
-	file = fopen(path, "r");
-	if (file == NULL) {
+	newfd = dup(fd);
+	if (newfd == -1) {
 		free(rules);
 		return NULL;
 	}
 
-	ret = 0;
+	file = fdopen(newfd, "r");
+	if (file == NULL) {
+		close(newfd);
+		free(rules);
+		return NULL;
+	}
 
 	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
 		subject = strtok(buf, " \t\n");
@@ -105,80 +99,64 @@ SmackRuleSet smack_rule_set_new(const char *path)
 
 		if (subject == NULL || object == NULL || access == NULL ||
 		    strtok(NULL, " \t\n") != NULL) {
-			ret = -1;
-			break;
+			errno = EINVAL;
+			goto err_out;
 		}
 
-		ac = str_to_ac(access);
-		err = update_rule(&rules->subjects, subject, object,
-				  ac);
-		if (err != 0) {
-			ret = -1;
-			break;
-		}
+		if (smack_rule_set_add(rules, subject, object, access))
+			goto err_out;
 	}
 
-	if (ret != 0 || ferror(file)) {
-		smack_rule_set_free(rules);
-		rules = NULL;
-	}
+	if (ferror(file))
+		goto err_out;
 
 	fclose(file);
 	return rules;
+err_out:
+	fclose(file);
+	smack_rule_set_free(rules);
+	return NULL;
 }
 
 void smack_rule_set_free(SmackRuleSet handle)
 {
-	struct smack_subject *s;
-	struct smack_object *o;
-
-	if (handle == NULL)
-		return;
-
-	while (handle->subjects != NULL) {
-		s = handle->subjects;
-		while (s->objects != NULL) {
-			o = s->objects;
-			HASH_DEL(s->objects, o);
-			free(o->object);
-			free(o);
-		}
-		HASH_DEL(handle->subjects, s);
-		free(s->subject);
-		free(s);
-	}
-
-	free(handle);
+	g_list_free_full(handle->rules, g_free);
 }
 
-int smack_rule_set_save(SmackRuleSet handle, const char *path)
+int smack_rule_set_save(SmackRuleSet handle, int fd)
 {
-	struct smack_subject *s, *stmp;
-	struct smack_object *o, *otmp;
-	char astr[ACC_LEN + 1];
+	GList *entry;
+	struct smack_rule *rule;
+	char access_type[ACC_LEN + 1];
 	FILE *file;
-	int err, ret;
+	int ret;
+	int newfd;
 
-	ret = 0;
-
-	file = fopen(path, "w+");
-	if (!file)
+	newfd = dup(fd);
+	if (newfd == -1) {
 		return -1;
+	}
 
-	HASH_ITER(hh, handle->subjects, s, stmp) {
-		HASH_ITER(hh, s->objects, o, otmp) {
-			if (o->ac == 0)
-				continue;
+	file = fdopen(newfd, "w");
+	if (file == NULL) {
+		close(newfd);
+		return -1;
+	}
 
-			ac_to_config_str(o->ac, astr);
+	entry = g_list_first(handle->rules);
+	while (entry) {
+		rule = entry->data;
 
-			err = fprintf(file, "%s %s %s\n",
-				      s->subject, o->object, astr);
-			if (err < 0) {
-				ret = -1;
-				goto out;
-			}
+		ac_to_config_str(rule->access_code, access_type);
+
+		ret = fprintf(file, "%s %s %s\n",
+			      rule->subject, rule->object, access_type);
+		if (ret < 0) {
+			ret = -1;
+			goto out;
 		}
+
+		entry = g_list_next(entry);
 	}
 
 out:
@@ -186,95 +164,107 @@ out:
 	return ret;
 }
 
-int smack_rule_set_apply_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd)
 {
-	struct smack_subject *s, *stmp;
-	struct smack_object *o, *otmp;
+	GList *entry;
+	struct smack_rule *rule;
+	char access_type[ACC_LEN + 1];
 	FILE *file;
-	char str[6];
-	int err = 0;
+	int ret;
+	int newfd;
 
-	file = fopen(path, "w");
-	if (!file)
+	newfd = dup(fd);
+	if (newfd == -1) {
 		return -1;
-
-	HASH_ITER(hh, handle->subjects, s, stmp) {
-		HASH_ITER(hh, s->objects, o, otmp) {
-			ac_to_kernel_str(o->ac, str);
-
-			err = fprintf(file, KERNEL_FORMAT "\n",
-				      s->subject, o->object, str);
-
-			if (err < 0) {
-				fclose(file);
-				return -1;
-			}
-		}
 	}
 
+	file = fdopen(newfd, "w");
+	if (file == NULL) {
+		close(newfd);
+		return -1;
+	}
+
+	entry = g_list_first(handle->rules);
+	while (entry) {
+		rule = entry->data;
+
+		ac_to_kernel_str(rule->access_code, access_type);
+
+		ret = fprintf(file, KERNEL_FORMAT "\n",
+			      rule->subject, rule->object, access_type);
+		if (ret < 0) {
+			ret = -1;
+			goto out;
+		}
+
+		entry = g_list_next(entry);
+	}
+
+out:
 	fclose(file);
-	return 0;
+	return ret;
 }
 
-int smack_rule_set_clear_kernel(SmackRuleSet handle, const char *path)
+int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd)
 {
-	struct smack_subject *s, *stmp;
-	struct smack_object *o, *otmp;
+	GList *entry;
+	struct smack_rule *rule;
+	char access_type[ACC_LEN + 1];
 	FILE *file;
-	char str[6];
-	int err = 0;
+	int ret;
+	int newfd;
 
-	file = fopen(path, "w");
-	if (!file)
+	newfd = dup(fd);
+	if (newfd == -1) {
 		return -1;
-
-	HASH_ITER(hh, handle->subjects, s, stmp) {
-		HASH_ITER(hh, s->objects, o, otmp) {
-			ac_to_kernel_str(0, str);
-
-			err = fprintf(file, "%-23s %-23s %4s\n",
-				      s->subject, o->object, str);
-
-			if (err < 0) {
-				fclose(file);
-				return -1;
-			}
-		}
 	}
 
+	file = fdopen(newfd, "w");
+	if (file == NULL) {
+		close(newfd);
+		return -1;
+	}
+
+	entry = g_list_first(handle->rules);
+	while (entry) {
+		rule = entry->data;
+
+		ret = fprintf(file, KERNEL_FORMAT "\n",
+			      rule->subject, rule->object, "-----");
+		if (ret < 0) {
+			ret = -1;
+			goto out;
+		}
+
+		entry = g_list_next(entry);
+	}
+
+out:
 	fclose(file);
-	return 0;
+	return ret;
 }
 
 int smack_rule_set_add(SmackRuleSet handle, const char *subject,
-		       const char *object, const char *access_str)
+		       const char *object, const char *access_type)
 {
-	unsigned access;
-	int ret;
+	struct smack_rule *rule = NULL;
 
-	access = str_to_ac(access_str);
-	ret = update_rule(&handle->subjects, subject, object, access);
-	return ret == 0 ? 0  : -1;
-}
+	if (strlen(subject) > LABEL_LEN || strlen(object) > LABEL_LEN) {
+		errno = ERANGE;
+		return -1;
+	}
 
-int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
-			       const char *object, const char *access_str)
-{
-	struct smack_subject *s = NULL;
-	struct smack_object *o = NULL;
-	unsigned ac;
+	rule = g_new(struct smack_rule, 1);
+	if (rule == NULL)
+		return -1;
 
-	ac = str_to_ac(access_str);
+	strncpy(rule->subject, subject, LABEL_LEN + 1);
+	strncpy(rule->object, object, LABEL_LEN + 1);
+	rule->access_code = str_to_ac(access_type);
 
-	HASH_FIND_STR(handle->subjects, subject, s);
-	if (s == NULL)
-		return 0;
+	handle->rules = g_list_append(handle->rules, rule);
 
-	HASH_FIND_STR(s->objects, object, o);
-	if (o == NULL)
-		return 0;
-
-	return ((o->ac & ac) == ac);
+	return 0;
 }
 
 int smack_have_access(const char *path, const char *subject,
@@ -310,59 +300,28 @@ int smack_have_access(const char *path, const char *subject,
 	return buf[0] == '1';
 }
 
-int smack_get_peer_label(int sock_fd, char **label)
+char *smack_get_peer_label(int fd)
 {
 	char dummy;
 	int ret;
 	socklen_t length = 1;
-	char *value;
+	char *label;
 
-	ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
+	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
 	if (ret < 0 && errno != ERANGE)
-		return -1;
+		return NULL;
 
-	value = calloc(length, 1);
-	if (value == NULL)
-		return -1;
+	label = calloc(length, 1);
+	if (label == NULL)
+		return NULL;
 
-	ret = getsockopt(sock_fd, SOL_SOCKET, SO_PEERSEC, value, &length);
+	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, label, &length);
 	if (ret < 0) {
-		free(value);
-		return -1;
+		free(label);
+		return NULL;
 	}
 
-	*label = value;
-	return 0;
-}
-
-static int update_rule(struct smack_subject **subjects,
-		       const char *subject_str,
-		       const char *object_str, unsigned ac)
-{
-	struct smack_subject *s = NULL;
-	struct smack_object *o = NULL;
-
-	if (strlen(subject_str) > LABEL_LEN &&
-	    strlen(object_str) > LABEL_LEN)
-		return -ERANGE;
-
-	HASH_FIND_STR(*subjects, subject_str, s);
-	if (s == NULL) {
-		s = calloc(1, sizeof(struct smack_subject));
-		s->subject = strdup(subject_str);
-		HASH_ADD_KEYPTR(hh, *subjects, s->subject, strlen(s->subject), s);
-	}
-
-	HASH_FIND_STR(s->objects, object_str, o);
-	if (o == NULL) {
-		o = calloc(1, sizeof(struct smack_object));
-		o->object = strdup(object_str);
-		HASH_ADD_KEYPTR(hh, s->objects, o->object, strlen(o->object), o);
-	}
-
-	o->ac = ac;
-	ac_to_config_str(ac, o->acstr);
-	return 0;
+	return label;
 }
 
 inline unsigned str_to_ac(const char *str)
@@ -425,7 +384,7 @@ inline void ac_to_kernel_str(unsigned access, char *str)
 	str[1] = ((access & ACC_W) != 0) ? 'w' : '-';
 	str[2] = ((access & ACC_X) != 0) ? 'x' : '-';
 	str[3] = ((access & ACC_A) != 0) ? 'a' : '-';
-	str[3] = ((access & ACC_T) != 0) ? 't' : '-';
-	str[4] = '\0';
+	str[4] = ((access & ACC_T) != 0) ? 't' : '-';
+	str[5] = '\0';
 }
 

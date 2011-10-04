@@ -1,6 +1,6 @@
-TESTS = check_smack
-check_PROGRAMS = check_smack
+AM_CPPFLAGS = -I../src
 
-check_smack_SOURCES = check_smack.c $(top_builddir)/src/smack.h
-check_smack_CFLAGS = @CHECK_CFLAGS@
-check_smack_LDADD = -L$(top_builddir)/src/.libs -lsmack @CHECK_LIBS@
+bin_PROGRAMS = printload
+
+printload_SOURCES = printload.c
+printload_LDADD = -L$(top_builddir)/src/.libs -lsmack
