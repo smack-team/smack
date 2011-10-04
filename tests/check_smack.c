@@ -38,7 +38,6 @@ START_TEST(test_save_to_kernel)
 	smack_rule_set_add(rules, "Apple", "Orange", "rwx");
 	smack_rule_set_add(rules, "Plum", "Peach", "rx");
 	smack_rule_set_add(rules, "Banana", "Peach", "xa");
-	smack_rule_set_remove(rules, "Plum", "Peach");
 
 	rc = smack_rule_set_apply_kernel(
 		rules,
@@ -75,7 +74,6 @@ START_TEST(test_save_to_file)
 	smack_rule_set_add(rules, "Apple", "Orange", "rwx");
 	smack_rule_set_add(rules, "Plum", "Peach", "rx");
 	smack_rule_set_add(rules, "Banana", "Peach", "xa");
-	smack_rule_set_remove(rules, "Plum", "Peach");
 
 	rc = smack_rule_set_save(
 		rules,
@@ -93,52 +91,6 @@ START_TEST(test_save_to_file)
 }
 END_TEST
 
-START_TEST(test_rule_set_remove_by_subject)
-{
-	int rc;
-	SmackRuleSet rules;
-
-	rules = smack_rule_set_new(NULL);
-	fail_unless(rules != NULL, "Creating rule set failed");
-	if (rules == NULL)
-		return;
-
-	smack_rule_set_add(rules, "Apple", "Orange", "rwx");
-	smack_rule_set_add(rules, "Plum", "Peach", "rx");
-	smack_rule_set_add(rules, "Banana", "Peach", "xa");
-
-	smack_rule_set_remove_by_subject(rules, "Plum");
-
-	rc = smack_rule_set_have_access(rules, "Plum", "Peach", "rx");
-	fail_unless(rc == 0, "Access granted to a removed rule");
-
-	smack_rule_set_free(rules);
-}
-END_TEST
-
-START_TEST(test_rule_set_remove_by_object)
-{
-	int rc;
-	SmackRuleSet rules;
-
-	rules = smack_rule_set_new(NULL);
-	fail_unless(rules != NULL, "Creating rule set failed");
-	if (rules == NULL)
-		return;
-
-	smack_rule_set_add(rules, "Apple", "Orange", "rwx");
-	smack_rule_set_add(rules, "Plum", "Peach", "rx");
-	smack_rule_set_add(rules, "Banana", "Peach", "xa");
-
-	smack_rule_set_remove_by_object(rules, "Peach");
-
-	rc = smack_rule_set_have_access(rules, "Plum", "Peach", "rx");
-	fail_unless(rc == 0, "Access granted to a removed rule");
-
-	smack_rule_set_free(rules);
-}
-END_TEST
-
 Suite *ruleset_suite (void)
 {
 	Suite *s;
@@ -149,8 +101,6 @@ Suite *ruleset_suite (void)
 	tc_core = tcase_create("Rules");
 	tcase_add_test(tc_core, test_save_to_kernel);
 	tcase_add_test(tc_core, test_save_to_file);
-	tcase_add_test(tc_core, test_rule_set_remove_by_subject);
-	tcase_add_test(tc_core, test_rule_set_remove_by_object);
 	suite_add_tcase(s, tc_core);
 
 	return s;

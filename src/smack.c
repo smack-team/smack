@@ -262,49 +262,6 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 	return ret == 0 ? 0  : -1;
 }
 
-void smack_rule_set_remove(SmackRuleSet handle, const char *subject,
-			   const char *object)
-{
-	struct smack_subject *s = NULL;
-	struct smack_object *o = NULL;
-
-	HASH_FIND_STR(handle->subjects, subject, s);
-	if (s == NULL)
-		return;
-
-	HASH_FIND_STR(s->objects, object, o);
-	if (o == NULL)
-		return;
-
-	o->ac = 0;
-	return;
-}
-
-void smack_rule_set_remove_by_subject(SmackRuleSet handle, const char *subject)
-{
-	struct smack_subject *s = NULL;
-	struct smack_object *o = NULL, *tmp = NULL;
-
-	HASH_FIND_STR(handle->subjects, subject, s);
-	if (s == NULL)
-		return;
-
-	HASH_ITER(hh, s->objects, o, tmp)
-		o->ac = 0;
-}
-
-void smack_rule_set_remove_by_object(SmackRuleSet handle, const char *object)
-{
-	struct smack_subject *s = NULL, *tmp = NULL;
-	struct smack_object *o = NULL;
-
-	HASH_ITER(hh, handle->subjects, s, tmp) {
-		HASH_FIND_STR(s->objects, object, o);
-		if (o)
-			o->ac = 0;
-	}
-}
-
 int smack_rule_set_have_access(SmackRuleSet handle, const char *subject,
 			       const char *object, const char *access_str)
 {
