@@ -273,9 +273,14 @@ int smack_have_access(int fd, const char *subject,
 		      const char *object, const char *access_type)
 {
 	char buf[LOAD_SIZE];
+	char access_type_k[ACC_LEN + 1];
+	unsigned access_code;
 	int ret;
 
-	ret = snprintf(buf, LOAD_SIZE, KERNEL_FORMAT, subject, object, access_type);
+	access_code = str_to_ac(access_type);
+	ac_to_kernel_str(access_code, access_type_k);
+
+	ret = snprintf(buf, LOAD_SIZE, KERNEL_FORMAT, subject, object, access_type_k);
 	if (ret < 0)
 		return -1;
 
@@ -292,7 +297,7 @@ int smack_have_access(int fd, const char *subject,
 	if (ret < 0)
 		return -1;
 
-	return buf[0] == '1';
+	return buf[0] == 1;
 }
 
 char *smack_get_socket_label(int fd)
