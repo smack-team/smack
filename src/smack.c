@@ -295,7 +295,7 @@ inline int access_type_to_int(const char *access_type)
 	unsigned access;
 
 	access = 0;
-	for (i = 0; i < ACC_LEN || access_type[i] != '\0'; i++)
+	for (i = 0; i < ACC_LEN && access_type[i] != '\0'; i++)
 		switch (access_type[i]) {
 		case 'r':
 		case 'R':
