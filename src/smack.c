@@ -69,6 +69,7 @@ SmackRuleSet smack_rule_set_new(int fd)
 	SmackRuleSet rules;
 	FILE *file;
 	char buf[READ_BUF_SIZE];
+	char *ptr;
 	const char *subject, *object, *access;
 	int newfd;
 
@@ -93,12 +94,12 @@ SmackRuleSet smack_rule_set_new(int fd)
 	}
 
 	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
-		subject = strtok(buf, " \t\n");
-		object = strtok(NULL, " \t\n");
-		access = strtok(NULL, " \t\n");
+		subject = strtok_r(buf, " \t\n", &ptr);
+		object = strtok_r(NULL, " \t\n", &ptr);
+		access = strtok_r(NULL, " \t\n", &ptr);
 
 		if (subject == NULL || object == NULL || access == NULL ||
-		    strtok(NULL, " \t\n") != NULL) {
+		    strtok_r(NULL, " \t\n", &ptr) != NULL) {
 			errno = EINVAL;
 			goto err_out;
 		}
