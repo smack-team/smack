@@ -34,24 +34,22 @@
 #include <sys/types.h>
 
 #define LABEL_LEN 23
-
-#define ACC_R   0x01
-#define ACC_W   0x02
-#define ACC_X   0x04
-#define ACC_A   0x08
-#define ACC_T   0x10
+#define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
 #define ACC_LEN 5
 
-#define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
+#define ACC_R 0x01
+#define ACC_W 0x02
+#define ACC_X 0x04
+#define ACC_A 0x08
+#define ACC_T 0x10
 
 #define KERNEL_FORMAT "%-23s %-23s %5s"
-
 #define READ_BUF_SIZE 512
 
 struct smack_rule {
 	char subject[LABEL_LEN + 1];
 	char object[LABEL_LEN + 1];
-	unsigned access_code;
+	int access_code;
 	struct smack_rule *next;
 };
 
@@ -60,10 +58,10 @@ struct _SmackRuleSet {
 	struct smack_rule *last;
 };
 
-inline unsigned str_to_ac(const char *str);
-inline void ac_to_config_str(unsigned ac, char *str);
-inline void ac_to_kernel_str(unsigned ac, char *str);
 static int apply_kernel(SmackRuleSet handle, int fd, int clear);
+inline int access_type_to_int(const char *access_type);
+inline void int_to_access_type_c(unsigned ac, char *str);
+inline void int_to_access_type_k(unsigned ac, char *str);
 
 SmackRuleSet smack_rule_set_new(int fd)
 {
@@ -154,7 +152,7 @@ int smack_rule_set_save(SmackRuleSet handle, int fd)
 	}
 
 	while (rule) {
-		ac_to_config_str(rule->access_code, access_type);
+		int_to_access_type_c(rule->access_code, access_type);
 
 		ret = fprintf(file, "%s %s %s\n",
 			      rule->subject, rule->object, access_type);
@@ -186,18 +184,13 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
-	if (strlen(subject) > LABEL_LEN || strlen(object) > LABEL_LEN) {
-		errno = ERANGE;
-		return -1;
-	}
-
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
 	strncpy(rule->subject, subject, LABEL_LEN + 1);
 	strncpy(rule->object, object, LABEL_LEN + 1);
-	rule->access_code = str_to_ac(access_type);
+	rule->access_code = access_type_to_int(access_type);
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -217,8 +210,8 @@ int smack_have_access(int fd, const char *subject,
 	unsigned access_code;
 	int ret;
 
-	access_code = str_to_ac(access_type);
-	ac_to_kernel_str(access_code, access_type_k);
+	access_code = access_type_to_int(access_type);
+	int_to_access_type_k(access_code, access_type_k);
 
 	ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, subject, object, access_type_k);
 	if (ret < 0)
@@ -276,7 +269,7 @@ static int apply_kernel(SmackRuleSet handle, int fd, int clear)
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
 		if (!clear)
-			ac_to_kernel_str(rule->access_code, access_type);
+			int_to_access_type_k(rule->access_code, access_type);
 
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
 		if (ret < 0) {
@@ -296,16 +289,14 @@ out:
 	return ret;
 }
 
-inline unsigned str_to_ac(const char *str)
+inline int access_type_to_int(const char *access_type)
 {
 	int i, count;
 	unsigned access;
 
 	access = 0;
-
-	count = strlen(str);
-	for (i = 0; i < count; i++)
-		switch (str[i]) {
+	for (i = 0; i < ACC_LEN || access_type[i] != '\0'; i++)
+		switch (access_type[i]) {
 		case 'r':
 		case 'R':
 			access |= ACC_R;
@@ -333,7 +324,7 @@ inline unsigned str_to_ac(const char *str)
 	return access;
 }
 
-inline void ac_to_config_str(unsigned access, char *str)
+inline void int_to_access_type_c(unsigned access, char *str)
 {
 	int i;
 	i = 0;
@@ -350,7 +341,7 @@ inline void ac_to_config_str(unsigned access, char *str)
 	str[i] = '\0';
 }
 
-inline void ac_to_kernel_str(unsigned access, char *str)
+inline void int_to_access_type_k(unsigned access, char *str)
 {
 	str[0] = ((access & ACC_R) != 0) ? 'r' : '-';
 	str[1] = ((access & ACC_W) != 0) ? 'w' : '-';
