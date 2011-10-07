@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 			perror("open");
 			exit(EXIT_FAILURE);
 		}
-		ret = smack_have_access(fd, subject, object, access_type);
+		ret = smack_have_access(subject, object, access_type);
 		printf("%d\n", ret);
 		close(fd);
 	}

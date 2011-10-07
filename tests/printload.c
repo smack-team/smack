@@ -38,13 +38,14 @@ static struct option opts[] = {
 int main(int argc, char **argv)
 {
 	SmackRuleSet rules;
-	int clear_flag = 0;
+	int flags = 0;
 	int o = 1;
+	int ret;
 
 	while ((o = getopt_long(argc, argv, "c", opts, NULL)) != -1) {
 		switch (o) {
 		case 'c':
-			clear_flag = 1;
+			flags = SMACK_RULE_SET_APPLY_CLEAR;
 			break;
 		default:
 			exit(EXIT_FAILURE);
@@ -58,10 +59,11 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (clear_flag)
-		smack_rule_set_clear_kernel(rules, STDOUT_FILENO);
-	else
-		smack_rule_set_apply_kernel(rules, STDOUT_FILENO);
+	ret = smack_rule_set_apply(rules, SMACK_RULE_SET_APPLY_CLEAR);
+	if (ret < 0) {
+		perror("smack_rule_set_apply");
+		exit("EXIT_FAILURE");
+	}
 
 	return EXIT_SUCCESS;
 }

@@ -45,6 +45,7 @@
 
 #define KERNEL_FORMAT "%-23s %-23s %5s"
 #define READ_BUF_SIZE 512
+#define SMACKFS_MNT "/smack"
 
 struct smack_rule {
 	char subject[LABEL_LEN + 1];
@@ -58,7 +59,6 @@ struct _SmackRuleSet {
 	struct smack_rule *last;
 };
 
-static int apply_kernel(SmackRuleSet handle, int fd, int clear);
 inline int access_type_to_int(const char *access_type);
 inline void int_to_access_type_c(unsigned ac, char *str);
 inline void int_to_access_type_k(unsigned ac, char *str);
@@ -169,14 +169,41 @@ out:
 	return ret;
 }
 
-int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd)
+int smack_rule_set_apply(SmackRuleSet handle, int flags)
 {
-	apply_kernel(handle, fd, 0);
-}
+	char buf[LOAD_LEN + 1];
+	char access_type[ACC_LEN + 1];
+	struct smack_rule *rule;
+	int ret;
+	int fd;
 
-int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd)
-{
-	apply_kernel(handle, fd, 1);
+	fd = open(SMACKFS_MNT, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	if (flags & SMACK_RULE_SET_APPLY_CLEAR)
+		strcpy(access_type, "-----");
+
+	for (rule = handle->first; rule != NULL; rule = rule->next) {
+		if (!(flags & SMACK_RULE_SET_APPLY_CLEAR))
+			int_to_access_type_k(rule->access_code, access_type);
+
+		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
+		if (ret < 0) {
+			ret = -1;
+			goto out;
+		}
+
+		ret = write(fd, buf, LOAD_LEN);
+		if (ret < 0) {
+			ret = -1;
+			goto out;
+		}
+	}
+
+out:
+	close(fd);
+	return ret;
 }
 
 int smack_rule_set_add(SmackRuleSet handle, const char *subject,
@@ -202,38 +229,48 @@ int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 	return 0;
 }
 
-int smack_have_access(int fd, const char *subject,
-		      const char *object, const char *access_type)
+int smack_have_access(const char *subject, const char *object,
+		      const char *access_type)
 {
 	char buf[LOAD_LEN + 1];
 	char access_type_k[ACC_LEN + 1];
 	unsigned access_code;
 	int ret;
+	int fd;
+
+	fd = open(SMACKFS_MNT, O_RDWR);
+	if (fd < 0)
+		goto err_out;
 
 	access_code = access_type_to_int(access_type);
 	int_to_access_type_k(access_code, access_type_k);
 
-	ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, subject, object, access_type_k);
+	ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, subject, object,
+		       access_type_k);
 	if (ret < 0)
-		return -1;
+		goto err_out;
 
 	if (ret != LOAD_LEN) {
 		errno = ERANGE;
-		return -1;
+		goto err_out;
 	}
 
 	ret = write(fd, buf, LOAD_LEN);
 	if (ret < 0)
-		return -1;
+		goto err_out;
 
 	ret = read(fd, buf, 1);
 	if (ret < 0)
-		return -1;
+		goto err_out;
 
+	close(fd);
 	return buf[0] == 1;
+err_out:
+	close(fd);
+	return -1;
 }
 
-char *smack_get_socket_label(int fd)
+char *smack_get_peer_label(int fd)
 {
 	char dummy;
 	int ret;
@@ -255,38 +292,6 @@ char *smack_get_socket_label(int fd)
 	}
 
 	return label;
-}
-
-static int apply_kernel(SmackRuleSet handle, int fd, int clear)
-{
-	char buf[LOAD_LEN + 1];
-	char access_type[ACC_LEN + 1];
-	int ret;
-	struct smack_rule *rule;
-
-	if (clear)
-		strcpy(access_type, "-----");
-
-	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		if (!clear)
-			int_to_access_type_k(rule->access_code, access_type);
-
-		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
-		if (ret < 0) {
-			ret = -1;
-			goto out;
-		}
-
-		ret = write(fd, buf, LOAD_LEN);
-		if (ret < 0) {
-			ret = -1;
-			goto out;
-		}
-	}
-
-out:
-	close(fd);
-	return ret;
 }
 
 inline int access_type_to_int(const char *access_type)

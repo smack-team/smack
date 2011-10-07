@@ -38,6 +38,11 @@
  */
 typedef struct _SmackRuleSet *SmackRuleSet;
 
+/*!
+ * smack_rule_set_apply flags.
+ */
+#define SMACK_RULE_SET_APPLY_CLEAR 0x01
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -68,22 +73,13 @@ extern void smack_rule_set_free(SmackRuleSet handle);
 extern int smack_rule_set_save(SmackRuleSet handle, int fd);
 
 /*!
- * Write rules in SmackFS format to a given file.
+ * Write rules to kernel.
  *
  * @param handle handle to a rules
- * @param fd file descriptor
+ * @param flags apply flags
  * @return Returns 0 on success.
  */
-extern int smack_rule_set_apply_kernel(SmackRuleSet handle, int fd);
-
-/*!
- * Write rules in SmackFS format with access type set to '-' to a given file.
- *
- * @param handle handle to a rules
- * @param fd file descriptor
- * @return Returns 0 on success.
- */
-extern int smack_rule_set_clear_kernel(SmackRuleSet handle, int fd);
+extern int smack_rule_set_apply(SmackRuleSet handle, int flags);
 
 /*!
  * Add new rule to a rule set.
@@ -98,7 +94,7 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 			      const char *object, const char *access_type);
 
 /*!
- * Check access from SmackFS access file.
+ * Check Smack access.
  *
  * @param fd file descriptor
  * @param subject subject of the rule
@@ -106,17 +102,17 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
  * @param access_type access type
  * @return 1 if access, 0 if no access and -1 on error.
  */
-extern int smack_have_access(int fd, const char *subject,
-			     const char *object, const char *access_type);
+extern int smack_have_access(const char *subject, const char *object,
+			     const char *access_type);
 
 /*!
-  * Get the label that is associated with a peer on the other end of an 
+  * Get the label that is associated with a peer on the other end of an
   * Unix socket. Caller is responsible of freeing the returned label.
   *
   * @param fd socket file descriptor
   * @return label on success and NULL of failure.
   */
-extern char *smack_get_socket_label(int fd);
+extern char *smack_get_peer_label(int fd);
 
 #ifdef __cplusplus
 }
