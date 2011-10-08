@@ -36,28 +36,34 @@
 
 static int start(void);
 static int stop(void);
-static int is_active(void);
+static int status(void);
+static int get_activity(void);
+static void print_activity(int activity);
 static int apply_rules(const char *path, int flags);
 
 int main(int argc, char **argv)
 {
+	int a;
+
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
 		return 1;
 	}
 
-	if (!strcmp(argv[1], "start"))
+	if (!strcmp(argv[1], "start")) {
 		if (start())
 			return 1;
-	if (!strncmp(argv[1], "restart")) {
+	} else if (!strncmp(argv[1], "restart")) {
 		if (stop() || start())
 			return 1;
 	} else if (!strcmp(argv[1], "stop")) {
 		if (stop())
 			return 1;
 	} else if (!strcmp(argv[1], "status")) {
-		if (is_active() < 0)
-			return 1;
+		a = get_activity();
+		print_activity(a);
+		if (a == -1)
+			return -1;
 	} else {
 		fprintf(stderr, "Uknown action: %s\n", argv[1]);
 		return 1;
@@ -68,8 +74,11 @@ int main(int argc, char **argv)
 
 static int start(void)
 {
-	if (is_active() != 0)
+	int a = get_activity();
+	if (a != 1) {
+		print_activity(a);
 		return -1;
+	}
 
 	if (apply_rules("/etc/smack/accesses", 0))
 		return -1;
@@ -79,16 +88,13 @@ static int start(void)
 
 static int stop(void)
 {
-	if (is_active() != 1)
-		return -1;
-
 	if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
 		return -1;
 
 	return 0;
 }
 
-static int is_active(void)
+static int get_activity(void)
 {
 	struct statfs sfs;
 	int ret;
@@ -102,13 +108,24 @@ static int is_active(void)
 		return -1;
 	}
 
-	if (sfs.f_type == SMACKFS_MAGIC) {
-		printf("Smack is active.\n");
+	if (sfs.f_type == SMACKFS_MAGIC)
 		return 1;
-	} 
 
-	printf("Smack is not active.\n");
 	return 0;
+}
+
+static void print_activity(int activity)
+{
+	switch (activity) {
+		case 1:
+			printf("Smack is active.\n");
+			break;
+		case 0:
+			printf("Smack is not active.\n");
+			break;
+		default:
+			break;
+	}
 }
 
 static int apply_rules(const char *path, int flags)
