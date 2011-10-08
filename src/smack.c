@@ -120,6 +120,9 @@ err_out:
 
 void smack_rule_set_free(SmackRuleSet handle)
 {
+	if (handle == NULL)
+		return;
+
 	struct smack_rule *rule = handle->first;
 	struct smack_rule *next_rule = NULL;
 
@@ -177,7 +180,7 @@ int smack_rule_set_apply(SmackRuleSet handle, int flags)
 	int ret;
 	int fd;
 
-	fd = open(SMACKFS_MNT, O_WRONLY);
+	fd = open(SMACKFS_MNT "/load", O_WRONLY);
 	if (fd < 0)
 		return -1;
 
@@ -190,20 +193,18 @@ int smack_rule_set_apply(SmackRuleSet handle, int flags)
 
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
 		if (ret < 0) {
-			ret = -1;
-			goto out;
+			close(fd);
+			return -1;
 		}
 
 		ret = write(fd, buf, LOAD_LEN);
 		if (ret < 0) {
-			ret = -1;
-			goto out;
+			close(fd);
+			return -1;
 		}
 	}
 
-out:
-	close(fd);
-	return ret;
+	return 0;
 }
 
 int smack_rule_set_add(SmackRuleSet handle, const char *subject,
