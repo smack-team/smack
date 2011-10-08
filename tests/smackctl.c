@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 	} else if (!strcmp(argv[1], "stop")) {
 		if (stop())
 			return 1;
-	} else if (!strcmp(argv[1], "is_active")) {
+	} else if (!strcmp(argv[1], "status")) {
 		if (is_active() < 0)
 			return 1;
 	} else {
