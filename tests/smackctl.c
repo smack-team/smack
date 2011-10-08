@@ -21,6 +21,7 @@
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <smack.h>
@@ -28,7 +29,10 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/vfs.h>
 #include <unistd.h>
+
+#define SMACKFS_MAGIC 0x43415d53
 
 static int restart(void);
 static int stop(void);
@@ -39,24 +43,24 @@ int main(int argc, char **argv)
 {
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
-		return EXIT_FAILURE;
+		return 1;
 	}
 
 	if (!strcmp(argv[1], "start") || !strncmp(argv[1], "restart")) {
 		if (restart())
-			return EXIT_FAILURE;
+			return 1;
 	} else if (!strcmp(argv[1], "stop")) {
 		if (stop())
-			return EXIT_FAILURE;
+			return 1;
 	} else if (!strcmp(argv[1], "status")) {
-		if (status())
-			return EXIT_FAILURE;
+		if (status() )
+			return 1;
 	} else {
 		fprintf(stderr, "Uknown action: %s\n", argv[1]);
-		return EXIT_FAILURE;
+		return 1;
 	}
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 static int restart(void)
@@ -80,6 +84,23 @@ static int stop(void)
 
 static int status(void)
 {
+	struct statfs sfs;
+	int ret;
+
+	do {
+		ret = statfs("/smack", &sfs);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret) {
+		perror("statfs");
+		return -1;
+	}
+
+	if (sfs.f_type == SMACKFS_MAGIC)
+		printf("Smack is active.\n");
+	else
+		printf("Smack is not active.\n");
+
 	return 0;
 }
 
