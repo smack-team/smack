@@ -30,6 +30,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+static int restart(void);
+static int stop(void);
 static int apply_rules(const char *path, int flags);
 
 int main(int argc, char **argv)
@@ -39,14 +41,12 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (!strcmp(argv[1], "start")) {
-		if (apply_rules("/etc/smack/accesses", 0))
+	if (!strcmp(argv[1], "start") || !strncmp(argv[1], "restart")) {
+		if (restart())
 			return EXIT_FAILURE;
 	} else if (!strcmp(argv[1], "stop")) {
-		if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
+		if (stop())
 			return EXIT_FAILURE;
-	} else if (!strcmp(argv[1], "restart")) {
-		printf("restart\n");
 	} else if (!strcmp(argv[1], "status")) {
 		printf("status\n");
 	} else {
@@ -55,6 +55,25 @@ int main(int argc, char **argv)
 	}
 
 	return EXIT_SUCCESS;
+}
+
+static int restart(void)
+{
+	if (stop())
+		return -1;
+
+	if (apply_rules("/etc/smack/accesses", 0))
+		return -1;
+
+	return 0;
+}
+
+static int stop(void)
+{
+	if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
+		return -1;
+
+	return 0;
 }
 
 static int apply_rules(const char *path, int flags)
