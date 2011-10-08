@@ -30,40 +30,40 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static int apply_rules(void);
+static int apply_rules(const char *path, int flags);
 
 int main(int argc, char **argv)
 {
-	int ret = 0;
-
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	if (!strcmp(argv[1], "start"))
-		ret = apply_rules();
-	else if (!strcmp(argv[1], "stop"))
-		ret = 0;
-	else if (!strcmp(argv[1], "restart"))
-		ret = 0;
-	else if (!strcmp(argv[1], "status"))
-		ret = 0;
-	else {
+	if (!strcmp(argv[1], "start")) {
+		if (apply_rules("/etc/smack/accesses", 0))
+			return EXIT_FAILURE;
+	} else if (!strcmp(argv[1], "stop")) {
+		if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
+			return EXIT_FAILURE;
+	} else if (!strcmp(argv[1], "restart")) {
+		printf("restart\n");
+	} else if (!strcmp(argv[1], "status")) {
+		printf("status\n");
+	} else {
 		fprintf(stderr, "Uknown action: %s\n", argv[1]);
-		ret = -1;
+		return EXIT_FAILURE;
 	}
 
-	return (ret == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+	return EXIT_SUCCESS;
 }
 
-static int apply_rules(void)
+static int apply_rules(const char *path, int flags)
 {
 	SmackRuleSet rules = NULL;
 	int fd = 0;
 	int ret = 0;
 
-	fd = open("/etc/smack/accesses", O_RDONLY);
+	fd = open(path, O_RDONLY);
 	if (fd < 0) {
 		perror("open");
 		return -1;
@@ -76,7 +76,7 @@ static int apply_rules(void)
 		return -1;
 	}
 
-	ret = smack_rule_set_apply(rules, 0);
+	ret = smack_rule_set_apply(rules, flags);
 	smack_rule_set_free(rules);
 	if (ret) {
 		perror("smack_rule_set_apply");
