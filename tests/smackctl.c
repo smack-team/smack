@@ -32,6 +32,7 @@
 
 static int restart(void);
 static int stop(void);
+static int status(void);
 static int apply_rules(const char *path, int flags);
 
 int main(int argc, char **argv)
@@ -48,7 +49,8 @@ int main(int argc, char **argv)
 		if (stop())
 			return EXIT_FAILURE;
 	} else if (!strcmp(argv[1], "status")) {
-		printf("status\n");
+		if (status())
+			return EXIT_FAILURE;
 	} else {
 		fprintf(stderr, "Uknown action: %s\n", argv[1]);
 		return EXIT_FAILURE;
@@ -73,6 +75,11 @@ static int stop(void)
 	if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
 		return -1;
 
+	return 0;
+}
+
+static int status(void)
+{
 	return 0;
 }
 
