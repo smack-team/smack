@@ -37,8 +37,7 @@
 static int start(void);
 static int stop(void);
 static int status(void);
-static int get_activity(void);
-static void print_activity(int activity);
+static int is_smackfs_mounted(void);
 static int apply_rules(const char *path, int flags);
 
 int main(int argc, char **argv)
@@ -60,10 +59,8 @@ int main(int argc, char **argv)
 		if (stop())
 			return 1;
 	} else if (!strcmp(argv[1], "status")) {
-		a = get_activity();
-		print_activity(a);
-		if (a == -1)
-			return -1;
+		if (status())
+			return 1;
 	} else {
 		fprintf(stderr, "Uknown action: %s\n", argv[1]);
 		return 1;
@@ -74,9 +71,8 @@ int main(int argc, char **argv)
 
 static int start(void)
 {
-	int a = get_activity();
-	if (a != 1) {
-		print_activity(a);
+	if (is_smackfs_mounted() != 1) {
+		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
 		return -1;
 	}
 
@@ -88,13 +84,34 @@ static int start(void)
 
 static int stop(void)
 {
+	if (is_smackfs_mounted() != 1) {
+		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
+		return -1;
+	}
+
 	if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
 		return -1;
 
 	return 0;
 }
 
-static int get_activity(void)
+static int status(void)
+{
+	int ret = is_smackfs_mounted();
+
+	switch (ret) {
+		case 1:
+			printf("SmackFS is mounted.\n");
+			return 0;
+		case 0:
+			printf("SmackFS is not mounted.\n");
+			return 0;
+		default:
+			return -1;
+	}
+}
+
+static int is_smackfs_mounted(void)
 {
 	struct statfs sfs;
 	int ret;
@@ -112,20 +129,6 @@ static int get_activity(void)
 		return 1;
 
 	return 0;
-}
-
-static void print_activity(int activity)
-{
-	switch (activity) {
-		case 1:
-			printf("Smack is active.\n");
-			break;
-		case 0:
-			printf("Smack is not active.\n");
-			break;
-		default:
-			break;
-	}
 }
 
 static int apply_rules(const char *path, int flags)
