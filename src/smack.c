@@ -239,36 +239,30 @@ int smack_have_access(const char *subject, const char *object,
 	int ret;
 	int fd;
 
-	fd = open(SMACKFS_MNT, O_RDWR);
-	if (fd < 0)
-		goto err_out;
-
 	access_code = access_type_to_int(access_type);
 	int_to_access_type_k(access_code, access_type_k);
 
 	ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, subject, object,
 		       access_type_k);
 	if (ret < 0)
-		goto err_out;
+		return -1;
 
-	if (ret != LOAD_LEN) {
-		errno = ERANGE;
-		goto err_out;
-	}
+	fd = open(SMACKFS_MNT "/access", O_RDWR);
+	if (fd < 0)
+		return -1;
 
 	ret = write(fd, buf, LOAD_LEN);
-	if (ret < 0)
-		goto err_out;
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
 
 	ret = read(fd, buf, 1);
+	close(fd);
 	if (ret < 0)
-		goto err_out;
+		return -1;
 
-	close(fd);
-	return buf[0] == 1;
-err_out:
-	close(fd);
-	return -1;
+	return buf[0] == '1';
 }
 
 char *smack_get_peer_label(int fd)
