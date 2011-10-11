@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -I../src
 
-bin_PROGRAMS = smackctl smackaccess
+noinst_PROGRAMS = smackctl smackaccess
 
 smackctl_SOURCES = smackctl.c
 smackctl_LDADD = -L$(top_builddir)/src/.libs -lsmack
