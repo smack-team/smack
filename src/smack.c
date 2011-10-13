@@ -144,9 +144,8 @@ int smack_rule_set_save(SmackRuleSet handle, int fd)
 	int newfd;
 
 	newfd = dup(fd);
-	if (newfd == -1) {
+	if (newfd == -1)
 		return -1;
-	}
 
 	file = fdopen(newfd, "w");
 	if (file == NULL) {
@@ -160,16 +159,15 @@ int smack_rule_set_save(SmackRuleSet handle, int fd)
 		ret = fprintf(file, "%s %s %s\n",
 			      rule->subject, rule->object, access_type);
 		if (ret < 0) {
-			ret = -1;
-			goto out;
+			fclose(file);
+			return -1;
 		}
 
 		rule = rule->next;
 	}
 
-out:
 	fclose(file);
-	return ret;
+	return 0;
 }
 
 int smack_rule_set_apply(SmackRuleSet handle, int flags)
