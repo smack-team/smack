@@ -8,4 +8,4 @@ Description: Smack LSM module userspace library
 Requires:
 Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lsmack
-Cflags: -I${includedir}/libsmack
+Cflags: -I${includedir}
