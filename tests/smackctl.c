@@ -71,12 +71,21 @@ int main(int argc, char **argv)
 
 static int start(void)
 {
+	struct stat sbuf;
+	int err;
+
 	if (is_smackfs_mounted() != 1) {
 		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
 		return -1;
 	}
 
-	if (apply_rules("/etc/smack/accesses", 0))
+	err = stat("/etc/smack/accesses", &sbuf);
+	if (err && err != ENOENT) {
+		perror("stat");
+		return -1;
+	}
+
+	if (!err && apply_rules("/etc/smack/accesses", 0))
 		return -1;
 
 	return 0;
