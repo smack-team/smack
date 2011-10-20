@@ -35,8 +35,8 @@
 
 #define SMACKFS_MAGIC 0x43415d53
 
-static int start(void);
-static int stop(void);
+static int apply(void);
+static int clear(void);
 static int status(void);
 static int is_smackfs_mounted(void);
 static int apply_rules(const char *path, int flags);
@@ -50,14 +50,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (!strcmp(argv[1], "start")) {
-		if (start())
+	if (!strcmp(argv[1], "apply")) {
+		if (apply())
 			return 1;
-	} else if (!strcmp(argv[1], "restart")) {
-		if (stop() || start())
-			return 1;
-	} else if (!strcmp(argv[1], "stop")) {
-		if (stop())
+	} else if (!strcmp(argv[1], "clear")) {
+		if (clear())
 			return 1;
 	} else if (!strcmp(argv[1], "status")) {
 		if (status())
@@ -70,7 +67,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-static int start(void)
+static int apply(void)
 {
 	struct stat sbuf;
 
@@ -78,6 +75,9 @@ static int start(void)
 		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
 		return -1;
 	}
+
+	if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
+		return -1;
 
 	if (stat("/etc/smack/accesses", &sbuf) && errno != ENOENT) {
 		perror("stat");
@@ -88,7 +88,7 @@ static int start(void)
 	return 0;
 }
 
-static int stop(void)
+static int clear(void)
 {
 	if (is_smackfs_mounted() != 1) {
 		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
