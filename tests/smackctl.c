@@ -27,6 +27,7 @@
 #include <smack.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/vfs.h>
@@ -52,7 +53,7 @@ int main(int argc, char **argv)
 	if (!strcmp(argv[1], "start")) {
 		if (start())
 			return 1;
-	} else if (!strncmp(argv[1], "restart")) {
+	} else if (!strcmp(argv[1], "restart")) {
 		if (stop() || start())
 			return 1;
 	} else if (!strcmp(argv[1], "stop")) {
