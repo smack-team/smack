@@ -264,30 +264,6 @@ int smack_have_access(const char *subject, const char *object,
 	return buf[0] == '1';
 }
 
-char *smack_get_peer_label(int fd)
-{
-	char dummy;
-	int ret;
-	socklen_t length = 1;
-	char *label;
-
-	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
-	if (ret < 0 && errno != ERANGE)
-		return NULL;
-
-	label = calloc(length, 1);
-	if (label == NULL)
-		return NULL;
-
-	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, label, &length);
-	if (ret < 0) {
-		free(label);
-		return NULL;
-	}
-
-	return label;
-}
-
 char *smack_get_self_label()
 {
 	char *label;
@@ -306,6 +282,30 @@ char *smack_get_self_label()
 
 	ret = read(fd, label, LABEL_LEN);
 	close(fd);
+	if (ret < 0) {
+		free(label);
+		return NULL;
+	}
+
+	return label;
+}
+
+char *smack_get_peer_label(int fd)
+{
+	char dummy;
+	int ret;
+	socklen_t length = 1;
+	char *label;
+
+	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
+	if (ret < 0 && errno != ERANGE)
+		return NULL;
+
+	label = calloc(length, 1);
+	if (label == NULL)
+		return NULL;
+
+	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, label, &length);
 	if (ret < 0) {
 		free(label);
 		return NULL;

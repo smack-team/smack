@@ -106,20 +106,21 @@ extern int smack_have_access(const char *subject, const char *object,
 			     const char *access_type);
 
 /*!
+  * Get the label that is associated with the callers process.
+  * Caller is responsible of freeing the returned label.
+  *
+  * @return Callers label on success and NULL of failure.
+  */
+extern char *smack_get_self_label();
+
+/*!
   * Get the label that is associated with a peer on the other end of an
   * Unix socket. Caller is responsible of freeing the returned label.
   *
   * @param fd socket file descriptor
-  * @return label on success and NULL of failure.
+  * @return Peers label on success and NULL of failure.
   */
 extern char *smack_get_peer_label(int fd);
-
-/*!
-  * Allow a process to determine its own smack label
-  *
-  * @return The label of the process, NULL on error.
-  */
-extern char *smack_get_self_label();
 
 #ifdef __cplusplus
 }
