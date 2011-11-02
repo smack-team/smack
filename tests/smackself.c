@@ -19,6 +19,7 @@
  *
  * Authors:
  * Brian McGillion <brian.mcgillion@intel.com>
+ * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
 #include <smack.h>
@@ -27,15 +28,15 @@
 
 int main(int argc, char **argv)
 {
-	char *own_label;
+	char *label = NULL;
 
-	own_label = smack_get_self_label();
-	if (own_label)
-		printf("Own_label: '%s'\n", own_label);
-	else
-		printf("Error reading label\n");
+	label = smack_get_self_label();
+	if (label == NULL) {
+		perror("smack_get_self_label");
+		return EXIT_FAILURE;
+	}
 
-	free(own_label);
-
+	printf("%s", label);
+	free(label);
 	return EXIT_SUCCESS;
 }
