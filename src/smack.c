@@ -46,6 +46,7 @@
 #define KERNEL_FORMAT "%-23s %-23s %5s"
 #define READ_BUF_SIZE 512
 #define SMACKFS_MNT "/smack"
+#define SELF_LABEL_FILE "/proc/self/attr/current"
 
 struct smack_rule {
 	char subject[LABEL_LEN + 1];
@@ -279,6 +280,32 @@ char *smack_get_peer_label(int fd)
 		return NULL;
 
 	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, label, &length);
+	if (ret < 0) {
+		free(label);
+		return NULL;
+	}
+
+	return label;
+}
+
+char *smack_get_self_label()
+{
+	char *label;
+	int fd;
+	int ret;
+
+	label = calloc(LABEL_LEN + 1, 1);
+	if (label == NULL)
+		return NULL;
+
+	fd = open(SELF_LABEL_FILE, O_RDONLY);
+	if (fd < 0) {
+		free(label);
+		return NULL;
+	}
+
+	ret = read(fd, label, LABEL_LEN);
+	close(fd);
 	if (ret < 0) {
 		free(label);
 		return NULL;

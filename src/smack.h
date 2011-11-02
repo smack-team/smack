@@ -114,6 +114,13 @@ extern int smack_have_access(const char *subject, const char *object,
   */
 extern char *smack_get_peer_label(int fd);
 
+/*!
+  * Allow a process to determine its own smack label
+  *
+  * @return The label of the process, NULL on error.
+  */
+extern char *smack_get_self_label();
+
 #ifdef __cplusplus
 }
 #endif
