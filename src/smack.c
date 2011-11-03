@@ -203,6 +203,7 @@ int smack_rule_set_apply(SmackRuleSet handle, int flags)
 		}
 	}
 
+	close(fd);
 	return 0;
 }
 
