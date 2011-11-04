@@ -21,6 +21,13 @@
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
+#define __USE_XOPEN_EXTENDED 1
+#define _GNU_SOURCE 1
+#define __USE_GNU 1
+#include <ftw.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <libgen.h>
 #include <alloca.h>
 #include <dirent.h>
 #include <errno.h>
@@ -71,6 +78,15 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+static int apply_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+	if (typeflag == FTW_D)
+		return ftwbuf->level ? FTW_SKIP_SUBTREE : FTW_CONTINUE;
+	else if (typeflag != FTW_F)
+		return FTW_STOP;
+	return apply_rules(fpath, 0) ? FTW_STOP : FTW_CONTINUE;
+}
+
 static int apply(void)
 {
 	struct stat sbuf;
@@ -86,59 +102,32 @@ static int apply(void)
 	if (clear())
 		return -1;
 
+	errno = 0;
 	if (stat("/etc/smack/accesses", &sbuf) && errno != ENOENT) {
 		perror("stat");
 		clear();
 		return -1;
-	} else if (errno == 0 && apply_rules("/etc/smack/accesses", 0)) {
-		clear();
-		return -1;
 	}
 
+	if (!errno) {
+		if (apply_rules("/etc/smack/accesses", 0)) {
+			clear();
+			return -1;
+		}
+	}
+
+	errno = 0;
 	if (stat(ACCESSES_D_PATH, &sbuf) && errno != ENOENT) {
 		perror("stat");
 		clear();
 		return -1;
-	} else if (errno == 0) {
-		errno = 0;
-		dir = opendir(ACCESSES_D_PATH);
-		if (dir == NULL) {
-			perror("opendir");
+	}
+
+	if (!errno) {
+		if (nftw(ACCESSES_D_PATH, apply_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL)) {
+			perror("nftw");
 			clear();
 			return -1;
-		}
-
-		for (;;) {
-			errno = 0;
-			ent = readdir(dir);
-			if (ent == NULL) {
-				closedir(dir);
-				if (errno) {
-					perror("readdir");
-					clear();
-					return -1;
-				}
-				break;
-			}
-
-			snprintf(pathbuf, PATH_SIZE, "%s/%s", ACCESSES_D_PATH,
-				 ent->d_name);
-
-			if (stat(pathbuf, &sbuf)) {
-				perror("stat");
-				closedir(dir);
-				clear();
-				return -1;
-			}
-
-			if (S_ISDIR(sbuf.st_mode))
-				continue;
-
-			if (apply_rules(pathbuf, 0)) {
-				closedir(dir);
-				clear();
-				return -1;
-			}
 		}
 	}
 
