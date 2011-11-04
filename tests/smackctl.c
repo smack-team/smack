@@ -90,9 +90,6 @@ static int apply_cb(const char *fpath, const struct stat *sb, int typeflag, stru
 static int apply(void)
 {
 	struct stat sbuf;
-	DIR *dir;
-	struct dirent *ent;
-	char pathbuf[PATH_SIZE];
 
 	if (is_smackfs_mounted() != 1) {
 		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
