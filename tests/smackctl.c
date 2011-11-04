@@ -43,8 +43,9 @@
 #include <unistd.h>
 
 #define SMACKFS_MAGIC 0x43415d53
+#define SMACKFS_MNT "/smack"
+#define ACCESSES_PATH "/etc/smack/accesses"
 #define ACCESSES_D_PATH "/etc/smack/accesses.d"
-#define PATH_SIZE 1000
 
 static int apply(void);
 static int clear(void);
@@ -100,14 +101,14 @@ static int apply(void)
 		return -1;
 
 	errno = 0;
-	if (stat("/etc/smack/accesses", &sbuf) && errno != ENOENT) {
+	if (stat(ACCESSES_PATH, &sbuf) && errno != ENOENT) {
 		perror("stat");
 		clear();
 		return -1;
 	}
 
 	if (!errno) {
-		if (apply_rules("/etc/smack/accesses", 0)) {
+		if (apply_rules(ACCESSES_PATH, 0)) {
 			clear();
 			return -1;
 		}
@@ -138,7 +139,7 @@ static int clear(void)
 		return -1;
 	}
 
-	if (apply_rules("/smack/load", SMACK_RULE_SET_APPLY_CLEAR))
+	if (apply_rules(SMACKFS_MNT "/load", SMACK_RULE_SET_APPLY_CLEAR))
 		return -1;
 
 	return 0;
@@ -166,7 +167,7 @@ static int is_smackfs_mounted(void)
 	int ret;
 
 	do {
-		ret = statfs("/smack", &sfs);
+		ret = statfs(SMACKFS_MNT, &sfs);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret) {
