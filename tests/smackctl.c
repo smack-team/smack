@@ -54,7 +54,9 @@
 #define CAT_MAX_VALUE 63
 #define LEVEL_MAX 255
 #define NUM_LEN 4
-#define CIPSO_MAX (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + CAT_MAX_COUNT * NUM_LEN)
+
+#define CIPSO_POS(i)   (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
+#define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
 
 #define BUF_SIZE 512
 
@@ -403,8 +405,8 @@ static void cipso_free(struct cipso *cipso)
 
 static int cipso_apply(struct cipso *cipso)
 {
-	struct cipso_mapping *mapping = NULL;
-	char buf[CIPSO_MAX + 1];
+	struct cipso_mapping *m = NULL;
+	char buf[CIPSO_MAX_SIZE];
 	int fd;
 	int i;
 
@@ -412,17 +414,13 @@ static int cipso_apply(struct cipso *cipso)
 	if (fd < 0)
 		return -1;
 
-	for (mapping = cipso->first; mapping != NULL;
-	     mapping = mapping->next) {
-		sprintf(buf, "%-23s ", mapping->label);
-		sprintf(&buf[LABEL_LEN + 1], "%-4d", mapping->level);
-		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN],
-			"%-4d", mapping->ncats);
+	for (m = cipso->first; m != NULL; m = m->next) {
+		sprintf(buf, "%-23s ", m->label);
+		sprintf(&buf[LABEL_LEN + 1], "%-4d", m->level);
+		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], "%-4d", m->ncats);
 
-		for (i = 0; i < mapping->ncats; i++) {
-			sprintf(&buf[LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN],
-				"%-4d", mapping->cats[i]);
-		}
+		for (i = 0; i < m->ncats; i++)
+			sprintf(&buf[CIPSO_POS(i)], "%-4d", m->cats[i]);
 
 		if (write(fd, buf, strlen(buf)) < 0) {
 			close(fd);
