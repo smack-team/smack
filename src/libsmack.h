@@ -42,7 +42,7 @@ struct smack_accesses;
 #define SMACK_RULE_SET_APPLY_CLEAR 0x01
 
 #ifdef __cplusplus
-extern "C" {
+"C" {
 #endif
 
 /*!
@@ -52,14 +52,14 @@ extern "C" {
  * @param fd file descriptor
  * @return struct smack_accesses *instance on success
  */
-extern struct smack_accesses *smack_accesses_new(int fd);
+struct smack_accesses *smack_accesses_new(int fd);
 
 /*!
  * Destroy a struct smack_accesses *instance.
  *
  * @param handle handle to a struct smack_accesses *instance
  */
-extern void smack_accesses_free(struct smack_accesses *handle);
+void smack_accesses_free(struct smack_accesses *handle);
 
 /*!
  * Write access rules to a given file.
@@ -68,7 +68,7 @@ extern void smack_accesses_free(struct smack_accesses *handle);
  * @param fd file descriptor
  * @return Returns 0 on success.
  */
-extern int smack_accesses_save(struct smack_accesses *handle, int fd);
+int smack_accesses_save(struct smack_accesses *handle, int fd);
 
 /*!
  * Write rules to kernel.
@@ -77,7 +77,7 @@ extern int smack_accesses_save(struct smack_accesses *handle, int fd);
  * @param flags apply flags
  * @return Returns 0 on success.
  */
-extern int smack_accesses_apply(struct smack_accesses *handle, int flags);
+int smack_accesses_apply(struct smack_accesses *handle, int flags);
 
 /*!
  * Add new rule to a rule set.
@@ -88,8 +88,8 @@ extern int smack_accesses_apply(struct smack_accesses *handle, int flags);
  * @param access_type access type
  * @return Returns 0 on success.
  */
-extern int smack_accesses_add(struct smack_accesses *handle, const char *subject,
-			      const char *object, const char *access_type);
+int smack_accesses_add(struct smack_accesses *handle, const char *subject,
+		       const char *object, const char *access_type);
 
 /*!
  * Check for Smack access.
@@ -99,8 +99,8 @@ extern int smack_accesses_add(struct smack_accesses *handle, const char *subject
  * @param access_type access type
  * @return 1 if access, 0 if no access and -1 on error.
  */
-extern int smack_have_access(const char *subject, const char *object,
-			     const char *access_type);
+int smack_have_access(const char *subject, const char *object,
+		      const char *access_type);
 
 /*!
   * Get the label that is associated with the callers process.
@@ -108,7 +108,7 @@ extern int smack_have_access(const char *subject, const char *object,
   *
   * @return Callers label on success and NULL of failure.
   */
-extern char *smack_get_self_label();
+char *smack_get_self_label();
 
 /*!
   * Get the label that is associated with a peer on the other end of an
@@ -117,7 +117,7 @@ extern char *smack_get_self_label();
   * @param fd socket file descriptor
   * @return Peers label on success and NULL of failure.
   */
-extern char *smack_get_peer_label(int fd);
+char *smack_get_peer_label(int fd);
 
 #ifdef __cplusplus
 }
