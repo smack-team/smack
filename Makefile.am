@@ -1,5 +1,5 @@
 library_includedir=$(includedir)
-library_include_HEADERS=src/smack.h
+library_include_HEADERS=src/libsmack.h
 
 SUBDIRS = src tests doc
 

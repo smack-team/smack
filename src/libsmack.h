@@ -23,11 +23,9 @@
  */
 
 /*!
- * @file smack.h
+ * @file libsmack.h
  *
  * Smack user space library
- *
- * Processes Smack rules both from smackfs and configuration files.
  */
 
 #ifndef SMACK_H

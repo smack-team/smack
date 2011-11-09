@@ -23,7 +23,7 @@
  * Brian McGillion <brian.mcgillion@intel.com>
  */
 
-#include "smack.h"
+#include "libsmack.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
