@@ -55,7 +55,7 @@ struct smack_rule {
 	struct smack_rule *next;
 };
 
-struct _SmackRuleSet {
+struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
 };
@@ -64,16 +64,16 @@ inline int access_type_to_int(const char *access_type);
 inline void int_to_access_type_c(unsigned ac, char *str);
 inline void int_to_access_type_k(unsigned ac, char *str);
 
-SmackRuleSet smack_rule_set_new(int fd)
+struct smack_accesses *smack_accesses_new(int fd)
 {
-	SmackRuleSet rules;
+	struct smack_accesses *rules;
 	FILE *file;
 	char buf[READ_BUF_SIZE];
 	char *ptr;
 	const char *subject, *object, *access;
 	int newfd;
 
-	rules = calloc(sizeof(struct _SmackRuleSet), 1);
+	rules = calloc(sizeof(struct smack_accesses), 1);
 	if (rules == NULL)
 		return NULL;
 
@@ -104,7 +104,7 @@ SmackRuleSet smack_rule_set_new(int fd)
 			goto err_out;
 		}
 
-		if (smack_rule_set_add(rules, subject, object, access))
+		if (smack_accesses_add(rules, subject, object, access))
 			goto err_out;
 	}
 
@@ -115,11 +115,11 @@ SmackRuleSet smack_rule_set_new(int fd)
 	return rules;
 err_out:
 	fclose(file);
-	smack_rule_set_free(rules);
+	smack_accesses_free(rules);
 	return NULL;
 }
 
-void smack_rule_set_free(SmackRuleSet handle)
+void smack_accesses_free(struct smack_accesses *handle)
 {
 	if (handle == NULL)
 		return;
@@ -136,7 +136,7 @@ void smack_rule_set_free(SmackRuleSet handle)
 	free(handle);
 }
 
-int smack_rule_set_save(SmackRuleSet handle, int fd)
+int smack_accesses_save(struct smack_accesses *handle, int fd)
 {
 	struct smack_rule *rule = handle->first;
 	char access_type[ACC_LEN + 1];
@@ -171,7 +171,7 @@ int smack_rule_set_save(SmackRuleSet handle, int fd)
 	return 0;
 }
 
-int smack_rule_set_apply(SmackRuleSet handle, int flags)
+int smack_accesses_apply(struct smack_accesses *handle, int flags)
 {
 	char buf[LOAD_LEN + 1];
 	char access_type[ACC_LEN + 1];
@@ -207,7 +207,7 @@ int smack_rule_set_apply(SmackRuleSet handle, int flags)
 	return 0;
 }
 
-int smack_rule_set_add(SmackRuleSet handle, const char *subject,
+int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type)
 {
 	struct smack_rule *rule = NULL;

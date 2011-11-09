@@ -233,7 +233,7 @@ static int is_smackfs_mounted(void)
 
 static int apply_rules(const char *path, int flags)
 {
-	SmackRuleSet rules = NULL;
+	struct smack_accesses *rules = NULL;
 	int fd = 0;
 	int ret = 0;
 
@@ -243,17 +243,17 @@ static int apply_rules(const char *path, int flags)
 		return -1;
 	}
 
-	rules = smack_rule_set_new(fd);
+	rules = smack_accesses_new(fd);
 	close(fd);
 	if (rules == NULL) {
-		perror("smack_rule_set_new");
+		perror("smack_accesses_new");
 		return -1;
 	}
 
-	ret = smack_rule_set_apply(rules, flags);
-	smack_rule_set_free(rules);
+	ret = smack_accesses_apply(rules, flags);
+	smack_accesses_free(rules);
 	if (ret) {
-		perror("smack_rule_set_apply");
+		perror("smack_accesses_apply");
 		return -1;
 	}
 

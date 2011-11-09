@@ -34,10 +34,10 @@
 /*!
  * Handle to a in-memory representation of set of Smack rules.
  */
-typedef struct _SmackRuleSet *SmackRuleSet;
+struct smack_accesses;
 
 /*!
- * smack_rule_set_apply flags.
+ * smack_accesses_apply flags.
  */
 #define SMACK_RULE_SET_APPLY_CLEAR 0x01
 
@@ -46,20 +46,20 @@ extern "C" {
 #endif
 
 /*!
- * Creates a new SmackRuleSet instance. If fd >= 0, rule set is read from the
+ * Creates a new struct smack_accesses *instance. If fd >= 0, rule set is read from the
  * given file. Otherwise, empty rule set is created.
  *
  * @param fd file descriptor
- * @return SmackRuleSet instance on success
+ * @return struct smack_accesses *instance on success
  */
-extern SmackRuleSet smack_rule_set_new(int fd);
+extern struct smack_accesses *smack_accesses_new(int fd);
 
 /*!
- * Destroy a SmackRuleSet instance.
+ * Destroy a struct smack_accesses *instance.
  *
- * @param handle handle to a SmackRuleSet instance
+ * @param handle handle to a struct smack_accesses *instance
  */
-extern void smack_rule_set_free(SmackRuleSet handle);
+extern void smack_accesses_free(struct smack_accesses *handle);
 
 /*!
  * Write access rules to a given file.
@@ -68,7 +68,7 @@ extern void smack_rule_set_free(SmackRuleSet handle);
  * @param fd file descriptor
  * @return Returns 0 on success.
  */
-extern int smack_rule_set_save(SmackRuleSet handle, int fd);
+extern int smack_accesses_save(struct smack_accesses *handle, int fd);
 
 /*!
  * Write rules to kernel.
@@ -77,7 +77,7 @@ extern int smack_rule_set_save(SmackRuleSet handle, int fd);
  * @param flags apply flags
  * @return Returns 0 on success.
  */
-extern int smack_rule_set_apply(SmackRuleSet handle, int flags);
+extern int smack_accesses_apply(struct smack_accesses *handle, int flags);
 
 /*!
  * Add new rule to a rule set.
@@ -88,7 +88,7 @@ extern int smack_rule_set_apply(SmackRuleSet handle, int flags);
  * @param access_type access type
  * @return Returns 0 on success.
  */
-extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
+extern int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 			      const char *object, const char *access_type);
 
 /*!
