@@ -21,9 +21,6 @@
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
-#define __USE_XOPEN_EXTENDED 1
-#define _GNU_SOURCE 1
-#define __USE_GNU 1
 #include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,6 +1,6 @@
 EXTRA_DIST=Doxyfile
 
-if HAVE_DOXYGEN
+if ENABLE_DOXYGEN
 
 docpkg = $(PACKAGE_TARNAME)-doxygen-$(PACKAGE_VERSION).tar.gz
 
@@ -12,7 +12,7 @@ $(docpkg): doxygen.stamp
 	tar chof - html | gzip -9 -c >$@
 
 doxygen.stamp: Doxyfile
-	$(DOXYGEN) $(DOXYFLAGS) $<
+	$(DOXYGEN)  $<
 	echo Timestamp > $@
 
 clean-local:

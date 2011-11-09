@@ -1,27 +1,26 @@
-AC_PREREQ(2.59)
-AC_INIT([libsmack],[1.0.0pre20110819])
+AC_PREREQ(2.60)
+AC_INIT([libsmack],
+	[1],
+	[jarkko.sakkinen@intel.com],
+	[libsmack],
+	[https://meego.gitorious.org/meego-platform-security/libsmack])
+AC_CONFIG_SRCDIR([src/libsmack.c])
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2 foreign])
-
+AC_USE_SYSTEM_EXTENSIONS
 AC_CONFIG_MACRO_DIR([m4])
+AM_SILENT_RULES([yes])
+LT_INIT([disable-static])
+AC_PREFIX_DEFAULT([/usr])
 
-AC_PROG_CC
-AM_PROG_CC_C_O
-AC_PROG_CXX
-AC_PROG_INSTALL
-AC_PROG_LIBTOOL
-AC_PROG_MAKE_SET
-
-LT_INIT
-
-# Doxygen
 AC_CHECK_PROG([DOXYGEN], [doxygen], [doxygen], [])
-AC_MSG_CHECKING([wheter to add documentation targets])
+AC_MSG_CHECKING([for doxygen])
 if test ! -z "$DOXYGEN"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
 fi
-AM_CONDITIONAL([HAVE_DOXYGEN],[test ! -z "$DOXYGEN"])
+AM_CONDITIONAL([ENABLE_DOXYGEN],[test ! -z "$DOXYGEN"], [Build API documentation.])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.pc])

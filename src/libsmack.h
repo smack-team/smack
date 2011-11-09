@@ -92,9 +92,8 @@ extern int smack_rule_set_add(SmackRuleSet handle, const char *subject,
 			      const char *object, const char *access_type);
 
 /*!
- * Check Smack access.
+ * Check for Smack access.
  *
- * @param fd file descriptor
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access_type access type
