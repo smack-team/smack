@@ -1,0 +1,13 @@
+LIBSMACK_1.0 {
+global:
+	smack_rule_set_new;
+	smack_rule_set_free;
+	smack_rule_set_save;
+	smack_rule_set_apply;
+	smack_rule_set_add;
+	smack_have_access;
+	smack_get_self_label;
+	smack_get_peer_label;
+local:
+	*;
+};

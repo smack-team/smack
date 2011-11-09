@@ -1,6 +1,6 @@
 AC_PREREQ(2.60)
 AC_INIT([libsmack],
-	[1],
+	[1.0],
 	[jarkko.sakkinen@intel.com],
 	[libsmack],
 	[https://meego.gitorious.org/meego-platform-security/libsmack])
