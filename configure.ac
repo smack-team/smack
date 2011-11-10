@@ -23,6 +23,6 @@ fi
 AM_CONDITIONAL([ENABLE_DOXYGEN],[test ! -z "$DOXYGEN"], [Build API documentation.])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
-AC_CONFIG_FILES([Makefile libsmack/Makefile utils/Makefile doc/Makefile libsmack.pc])
+AC_CONFIG_FILES([Makefile libsmack/Makefile libsmack/libsmack.pc utils/Makefile doc/Makefile])
 
 AC_OUTPUT

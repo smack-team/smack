@@ -8,3 +8,5 @@ libsmack_la_LDFLAGS = \
 	-Wl,--version-script=$(top_srcdir)/libsmack/libsmack.sym
 libsmack_la_SOURCES = libsmack.c
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libsmack.pc
