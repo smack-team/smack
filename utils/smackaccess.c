@@ -30,44 +30,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define LABEL_LEN 23
-#define ACC_LEN 5
-#define BUF_SIZE 512
-#define DELIM " \t\n"
-
 int main(int argc, char **argv)
 {
-	char buf[BUF_SIZE];
-	char *ptr;
-	int fd;
-	char *subject;
-	char *object;
-	char *access_type;
 	int ret;
 
-	while (fgets(buf, BUF_SIZE, stdin) != NULL) {
-
-		subject = strtok_r(buf, DELIM, &ptr);
-		object = strtok_r(NULL, DELIM, &ptr);
-		access_type = strtok_r(NULL, DELIM, &ptr);
-
-		if (subject == NULL || object == NULL || access_type == NULL ||
-		    strtok_r(NULL, DELIM, &ptr) != NULL) {
-			fprintf(stderr, "Invalid rule\n");
-			close(fd);
-			exit(EXIT_FAILURE);
-		}
-
-		fd = open("/smack/access", O_RDWR);
-		if (fd < 0) {
-			perror("open");
-			exit(EXIT_FAILURE);
-		}
-		ret = smack_have_access(subject, object, access_type);
-		printf("%d\n", ret);
-		close(fd);
+	if (argc < 4) {
+		fprintf(stderr, "Usage: %s <subject> <object> <access>\n", argv[0]);
+		return EXIT_FAILURE;
 	}
 
+	ret = smack_have_access(argv[1], argv[2], argv[3]);
+	if (ret < 0) {
+		perror("smack_have_access");
+		return EXIT_FAILURE;
+	}
+
+	printf("%d\n", ret);
 	return EXIT_SUCCESS;
 }
 
