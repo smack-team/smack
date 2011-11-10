@@ -4,7 +4,7 @@ AC_INIT([libsmack],
 	[jarkko.sakkinen@intel.com],
 	[libsmack],
 	[https://meego.gitorious.org/meego-platform-security/libsmack])
-AC_CONFIG_SRCDIR([src/libsmack.c])
+AC_CONFIG_SRCDIR([libsmack/libsmack.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2 foreign])
 AC_USE_SYSTEM_EXTENSIONS
@@ -23,6 +23,6 @@ fi
 AM_CONDITIONAL([ENABLE_DOXYGEN],[test ! -z "$DOXYGEN"], [Build API documentation.])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
-AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile libsmack.pc])
+AC_CONFIG_FILES([Makefile libsmack/Makefile tests/Makefile doc/Makefile libsmack.pc])
 
 AC_OUTPUT
