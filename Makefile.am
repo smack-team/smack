@@ -4,7 +4,7 @@ AM_MAKEFLAGS = --no-print-directory
 library_includedir=$(includedir)
 library_include_HEADERS=libsmack/libsmack.h
 
-SUBDIRS = libsmack tests doc
+SUBDIRS = libsmack utils doc
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsmack.pc
