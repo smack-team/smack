@@ -30,9 +30,8 @@ int main(int argc, char **argv)
 {
 	char *label = NULL;
 
-	label = smack_get_self_label();
-	if (label == NULL) {
-		perror("smack_get_self_label");
+	if (smack_new_label_from_self(&label)) {
+		perror("smack_new_label_from_self");
 		return EXIT_FAILURE;
 	}
 

@@ -48,7 +48,7 @@ struct smack_accesses;
 /*!
  * Creates a new empty smack_accesses instance.
  *
- * @param created instance
+ * @param accesses created instance
  * @return 0 on success and negative value on failure.
  */
 int smack_accesses_new(struct smack_accesses **accesses);
@@ -58,7 +58,7 @@ int smack_accesses_new(struct smack_accesses **accesses);
  * file descriptor.
  *
  * @param fd file descriptor
- * @param created instance
+ * @param accesses created instance
  * @return 0 on success and negative value on failure.
  */
 int smack_accesses_new_from_file(int fd, struct smack_accesses **accesses);
@@ -115,18 +115,21 @@ int smack_have_access(const char *subject, const char *object,
   * Get the label that is associated with the callers process.
   * Caller is responsible of freeing the returned label.
   *
-  * @return Callers label on success and NULL of failure.
+  * @param label returned label
+  * @return 0 on success and negative value on failure.
   */
-char *smack_get_self_label();
+int smack_new_label_from_self(char **label);
 
 /*!
   * Get the label that is associated with a peer on the other end of an
-  * Unix socket. Caller is responsible of freeing the returned label.
+  * Unix socket (SO_PEERSEC). Caller is responsible of freeing the 
+  * returned label.
   *
   * @param fd socket file descriptor
-  * @return Peers label on success and NULL of failure.
+  * @param label returned label
+  * @return 0 on success and negative value on failure.
   */
-char *smack_get_peer_label(int fd);
+int smack_new_label_from_socket(int fd, char **label);
 
 #ifdef __cplusplus
 }

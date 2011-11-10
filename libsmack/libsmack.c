@@ -271,54 +271,56 @@ int smack_have_access(const char *subject, const char *object,
 	return buf[0] == '1';
 }
 
-char *smack_get_self_label()
+int smack_new_label_from_self(char **label)
 {
-	char *label;
+	char *result;
 	int fd;
 	int ret;
 
-	label = calloc(LABEL_LEN + 1, 1);
-	if (label == NULL)
-		return NULL;
+	result = calloc(LABEL_LEN + 1, 1);
+	if (result == NULL)
+		return -1;
 
 	fd = open(SELF_LABEL_FILE, O_RDONLY);
 	if (fd < 0) {
-		free(label);
-		return NULL;
+		free(result);
+		return -1;
 	}
 
-	ret = read(fd, label, LABEL_LEN);
+	ret = read(fd, result, LABEL_LEN);
 	close(fd);
 	if (ret < 0) {
-		free(label);
-		return NULL;
+		free(result);
+		return -1;
 	}
 
-	return label;
+	*label = result;
+	return 0;
 }
 
-char *smack_get_peer_label(int fd)
+int smack_new_label_from_socket(int fd, char **label)
 {
 	char dummy;
 	int ret;
 	socklen_t length = 1;
-	char *label;
+	char *result;
 
 	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
 	if (ret < 0 && errno != ERANGE)
-		return NULL;
+		return -1;
 
-	label = calloc(length, 1);
-	if (label == NULL)
-		return NULL;
+	result = calloc(length, 1);
+	if (result == NULL)
+		return -1;
 
-	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, label, &length);
+	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, result, &length);
 	if (ret < 0) {
-		free(label);
-		return NULL;
+		free(result);
+		return -1;
 	}
 
-	return label;
+	*label = result;
+	return 0;
 }
 
 inline int access_type_to_int(const char *access_type)

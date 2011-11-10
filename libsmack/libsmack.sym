@@ -7,8 +7,8 @@ global:
 	smack_accesses_apply;
 	smack_accesses_add;
 	smack_have_access;
-	smack_get_self_label;
-	smack_get_peer_label;
+	smack_new_label_from_self;
+	smack_new_label_from_socket;
 local:
 	*;
 };
