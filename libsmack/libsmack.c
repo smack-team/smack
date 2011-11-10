@@ -60,9 +60,10 @@ struct smack_accesses {
 	struct smack_rule *last;
 };
 
-inline int access_type_to_int(const char *access_type);
-inline void int_to_access_type_c(unsigned ac, char *str);
-inline void int_to_access_type_k(unsigned ac, char *str);
+static int accesses_apply(struct smack_accesses *handle, int clear);
+static inline int access_type_to_int(const char *access_type);
+static inline void int_to_access_type_c(unsigned ac, char *str);
+static inline void int_to_access_type_k(unsigned ac, char *str);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -177,40 +178,14 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 	return 0;
 }
 
-int smack_accesses_apply(struct smack_accesses *handle, int flags)
+int smack_accesses_apply(struct smack_accesses *handle)
 {
-	char buf[LOAD_LEN + 1];
-	char access_type[ACC_LEN + 1];
-	struct smack_rule *rule;
-	int ret;
-	int fd;
+	accesses_apply(handle, 0);
+}
 
-	fd = open(SMACKFS_MNT "/load", O_WRONLY);
-	if (fd < 0)
-		return -1;
-
-	if (flags & SMACK_RULE_SET_APPLY_CLEAR)
-		strcpy(access_type, "-----");
-
-	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		if (!(flags & SMACK_RULE_SET_APPLY_CLEAR))
-			int_to_access_type_k(rule->access_code, access_type);
-
-		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
-		if (ret < 0) {
-			close(fd);
-			return -1;
-		}
-
-		ret = write(fd, buf, LOAD_LEN);
-		if (ret < 0) {
-			close(fd);
-			return -1;
-		}
-	}
-
-	close(fd);
-	return 0;
+int smack_accesses_clear(struct smack_accesses *handle)
+{
+	accesses_apply(handle, 1);
 }
 
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
@@ -323,7 +298,43 @@ int smack_new_label_from_socket(int fd, char **label)
 	return 0;
 }
 
-inline int access_type_to_int(const char *access_type)
+static int accesses_apply(struct smack_accesses *handle, int clear)
+{
+	char buf[LOAD_LEN + 1];
+	char access_type[ACC_LEN + 1];
+	struct smack_rule *rule;
+	int ret;
+	int fd;
+
+	fd = open(SMACKFS_MNT "/load", O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	if (clear)
+		strcpy(access_type, "-----");
+
+	for (rule = handle->first; rule != NULL; rule = rule->next) {
+		if (!clear)
+			int_to_access_type_k(rule->access_code, access_type);
+
+		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
+		if (ret < 0) {
+			close(fd);
+			return -1;
+		}
+
+		ret = write(fd, buf, LOAD_LEN);
+		if (ret < 0) {
+			close(fd);
+			return -1;
+		}
+	}
+
+	close(fd);
+	return 0;
+}
+
+static inline int access_type_to_int(const char *access_type)
 {
 	int i, count;
 	unsigned access;
@@ -358,7 +369,7 @@ inline int access_type_to_int(const char *access_type)
 	return access;
 }
 
-inline void int_to_access_type_c(unsigned access, char *str)
+static inline void int_to_access_type_c(unsigned access, char *str)
 {
 	int i;
 	i = 0;
@@ -375,7 +386,7 @@ inline void int_to_access_type_c(unsigned access, char *str)
 	str[i] = '\0';
 }
 
-inline void int_to_access_type_k(unsigned access, char *str)
+static inline void int_to_access_type_k(unsigned access, char *str)
 {
 	str[0] = ((access & ACC_R) != 0) ? 'r' : '-';
 	str[1] = ((access & ACC_W) != 0) ? 'w' : '-';

@@ -36,11 +36,6 @@
  */
 struct smack_accesses;
 
-/*!
- * smack_accesses_apply flags.
- */
-#define SMACK_RULE_SET_APPLY_CLEAR 0x01
-
 #ifdef __cplusplus
 "C" {
 #endif
@@ -75,7 +70,7 @@ void smack_accesses_free(struct smack_accesses *handle);
  *
  * @param handle handle to a rules
  * @param fd file descriptor
- * @return Returns 0 on success.
+ * @return 0 on success and negative value on failure.
  */
 int smack_accesses_save(struct smack_accesses *handle, int fd);
 
@@ -83,10 +78,17 @@ int smack_accesses_save(struct smack_accesses *handle, int fd);
  * Write rules to kernel.
  *
  * @param handle handle to a rules
- * @param flags apply flags
- * @return Returns 0 on success.
+ * @return 0 on success and negative value on failure.
  */
-int smack_accesses_apply(struct smack_accesses *handle, int flags);
+int smack_accesses_apply(struct smack_accesses *handle);
+
+/*!
+ * Clear rules from kernel.
+ *
+ * @param handle handle to a rules
+ * @return 0 on success and negative value on failure.
+ */
+int smack_accesses_clear(struct smack_accesses *handle);
 
 /*!
  * Add new rule to a rule set.

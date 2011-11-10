@@ -74,7 +74,7 @@ static int apply(void);
 static int clear(void);
 static int status(void);
 static int is_smackfs_mounted(void);
-static int apply_rules(const char *path, int flags);
+static int apply_rules(const char *path, int clear);
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 static int apply_cipso(const char *path);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
@@ -189,7 +189,7 @@ static int clear(void)
 		return -1;
 	}
 
-	if (apply_rules(SMACKFS_MNT "/load", SMACK_RULE_SET_APPLY_CLEAR))
+	if (apply_rules(SMACKFS_MNT "/load", 1))
 		return -1;
 
 	return 0;
@@ -231,7 +231,7 @@ static int is_smackfs_mounted(void)
 	return 0;
 }
 
-static int apply_rules(const char *path, int flags)
+static int apply_rules(const char *path, int clear)
 {
 	struct smack_accesses *rules = NULL;
 	int fd = 0;
@@ -250,7 +250,10 @@ static int apply_rules(const char *path, int flags)
 		return -1;
 	}
 
-	ret = smack_accesses_apply(rules, flags);
+	if (!clear)
+		ret = smack_accesses_apply(rules);
+	else 
+		ret = smack_accesses_clear(rules);
 	smack_accesses_free(rules);
 	if (ret) {
 		perror("smack_accesses_apply");
