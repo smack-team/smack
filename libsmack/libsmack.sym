@@ -1,6 +1,7 @@
 LIBSMACK_1.0 {
 global:
 	smack_accesses_new;
+	smack_accesses_new_from_file;
 	smack_accesses_free;
 	smack_accesses_save;
 	smack_accesses_apply;

@@ -64,33 +64,38 @@ inline int access_type_to_int(const char *access_type);
 inline void int_to_access_type_c(unsigned ac, char *str);
 inline void int_to_access_type_k(unsigned ac, char *str);
 
-struct smack_accesses *smack_accesses_new(int fd)
+int smack_accesses_new(struct smack_accesses **accesses)
 {
-	struct smack_accesses *rules;
-	FILE *file;
+	struct smack_accesses *result;
+
+	result = calloc(sizeof(struct smack_accesses), 1);
+	if (result == NULL)
+		return -1;
+
+	*accesses = result;
+	return 0;
+}
+
+int smack_accesses_new_from_file(int fd, struct smack_accesses **accesses)
+{
+	struct smack_accesses *result = NULL;
+	FILE *file = NULL;
 	char buf[READ_BUF_SIZE];
 	char *ptr;
 	const char *subject, *object, *access;
 	int newfd;
 
-	rules = calloc(sizeof(struct smack_accesses), 1);
-	if (rules == NULL)
-		return NULL;
-
-	if (fd < 0)
-		return rules;
+	if (smack_accesses_new(&result))
+		goto err_out;
 
 	newfd = dup(fd);
-	if (newfd == -1) {
-		free(rules);
-		return NULL;
-	}
+	if (newfd == -1)
+		goto err_out;
 
 	file = fdopen(newfd, "r");
 	if (file == NULL) {
 		close(newfd);
-		free(rules);
-		return NULL;
+		goto err_out;
 	}
 
 	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
@@ -104,7 +109,7 @@ struct smack_accesses *smack_accesses_new(int fd)
 			goto err_out;
 		}
 
-		if (smack_accesses_add(rules, subject, object, access))
+		if (smack_accesses_add(result, subject, object, access))
 			goto err_out;
 	}
 
@@ -112,11 +117,12 @@ struct smack_accesses *smack_accesses_new(int fd)
 		goto err_out;
 
 	fclose(file);
-	return rules;
+	*accesses = result;
+	return 0;
 err_out:
 	fclose(file);
-	smack_accesses_free(rules);
-	return NULL;
+	smack_accesses_free(result);
+	return -1;
 }
 
 void smack_accesses_free(struct smack_accesses *handle)

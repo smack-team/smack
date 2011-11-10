@@ -46,13 +46,22 @@ struct smack_accesses;
 #endif
 
 /*!
- * Creates a new struct smack_accesses *instance. If fd >= 0, rule set is read from the
- * given file. Otherwise, empty rule set is created.
+ * Creates a new empty smack_accesses instance.
+ *
+ * @param created instance
+ * @return 0 on success and negative value on failure.
+ */
+int smack_accesses_new(struct smack_accesses **accesses);
+
+/*!
+ * Creates a new smack_accesses instance from a given
+ * file descriptor.
  *
  * @param fd file descriptor
- * @return struct smack_accesses *instance on success
+ * @param created instance
+ * @return 0 on success and negative value on failure.
  */
-struct smack_accesses *smack_accesses_new(int fd);
+int smack_accesses_new_from_file(int fd, struct smack_accesses **accesses);
 
 /*!
  * Destroy a struct smack_accesses *instance.

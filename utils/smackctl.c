@@ -243,7 +243,7 @@ static int apply_rules(const char *path, int flags)
 		return -1;
 	}
 
-	rules = smack_accesses_new(fd);
+	ret = smack_accesses_new_from_file(fd, &rules);
 	close(fd);
 	if (rules == NULL) {
 		perror("smack_accesses_new");
