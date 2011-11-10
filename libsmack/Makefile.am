@@ -1,6 +1,8 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_MAKEFLAGS = --no-print-directory
 
+EXTRA_DIST = libsmack.sym
+
 lib_LTLIBRARIES = libsmack.la
 
 libsmack_la_LDFLAGS = \
@@ -10,3 +12,7 @@ libsmack_la_SOURCES = libsmack.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsmack.pc
+
+library_includedir=$(includedir)
+library_include_HEADERS=sys/smack.h
+
