@@ -22,7 +22,7 @@
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
-#include <libsmack.h>
+#include <sys/smack.h>
 #include <stdio.h>
 #include <stdlib.h>
 

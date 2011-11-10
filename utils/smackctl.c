@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <libsmack.h>
+#include <sys/smack.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

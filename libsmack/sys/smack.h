@@ -23,8 +23,6 @@
  */
 
 /*!
- * @file libsmack.h
- *
  * Smack user space library
  */
 

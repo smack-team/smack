@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_MAKEFLAGS = --no-print-directory
 
 library_includedir=$(includedir)
-library_include_HEADERS=libsmack/libsmack.h
+library_include_HEADERS=libsmack/sys/smack.h
 
 SUBDIRS = libsmack utils doc
 

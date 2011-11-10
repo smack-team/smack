@@ -1,7 +1,7 @@
-AM_CPPFLAGS = -I../libsmack
-
 instdir = ${bindir}
 inst_PROGRAMS = smackctl smackaccess smackself
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/libsmack
 
 smackctl_SOURCES = smackctl.c
 smackctl_LDADD = ../libsmack/libsmack.la
