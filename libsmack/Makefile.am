@@ -5,6 +5,6 @@ lib_LTLIBRARIES = libsmack.la
 
 libsmack_la_LDFLAGS = \
 	-version-info 1:0:0 \
-	-Wl,--version-script=libsmack.sym
+	-Wl,--version-script=$(top_srcdir)/libsmack/libsmack.sym
 libsmack_la_SOURCES = libsmack.c
 

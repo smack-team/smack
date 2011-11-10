@@ -2,9 +2,9 @@ EXTRA_DIST=Doxyfile
 
 if ENABLE_DOXYGEN
 
-docpkg = $(PACKAGE_TARNAME)-doxygen-$(PACKAGE_VERSION).tar.gz
+docpkg = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)-doc.tar.gz
 
-CLEANFILES = $(docpkg)
+CLEANFILES = $(docpkg) doxygen.stamp
 
 doc_DATA = $(docpkg)
 
