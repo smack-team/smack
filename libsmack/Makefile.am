@@ -1,6 +1,8 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_MAKEFLAGS = --no-print-directory
 
+AM_CFLAGS = -Wall -Wextra
+
 EXTRA_DIST = libsmack.sym
 
 lib_LTLIBRARIES = libsmack.la

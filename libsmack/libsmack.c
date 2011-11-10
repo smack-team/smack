@@ -32,6 +32,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #define LABEL_LEN 23
 #define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
@@ -180,12 +181,12 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 
 int smack_accesses_apply(struct smack_accesses *handle)
 {
-	accesses_apply(handle, 0);
+	return accesses_apply(handle, 0);
 }
 
 int smack_accesses_clear(struct smack_accesses *handle)
 {
-	accesses_apply(handle, 1);
+	return accesses_apply(handle, 1);
 }
 
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
@@ -336,7 +337,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 
 static inline int access_type_to_int(const char *access_type)
 {
-	int i, count;
+	int i;
 	unsigned access;
 
 	access = 0;
