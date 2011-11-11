@@ -26,6 +26,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+static int usage(const char *bin)
+{
+	fprintf(stderr, "Usage: %s [-c] <path>\n", bin);
+	exit(1);
+}
+
 int main(int argc, char **argv)
 {
 	int clear = 0;
@@ -37,10 +43,12 @@ int main(int argc, char **argv)
 				clear = 1;
 				break;
 			default:
-				fprintf(stderr, "Usage: %s [-c] <path>\n", argv[0]);
-				exit(1);
+				usage(argv[0]);
 		}
 	}
+
+	if (optind == argc)
+		usage(argv[0]);
 
 	if (is_smackfs_mounted() != 1) {
 		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
