@@ -1,9 +1,9 @@
 AC_PREREQ(2.60)
 AC_INIT([libsmack],
 	[1.0],
-	[jarkko.sakkinen@intel.com],
+	[jarkko.sakkinen@iki.fi],
 	[libsmack],
-	[https://meego.gitorious.org/meego-platform-security/libsmack])
+	[https://github.com/jarkkos/smack])
 AC_CONFIG_SRCDIR([libsmack/libsmack.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2 foreign])
