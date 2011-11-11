@@ -1,5 +1,5 @@
 instdir = ${bindir}
-inst_PROGRAMS = smackctl smackaccess smackself smackload smackcipso
+inst_PROGRAMS = smackctl smackaccess smackself smackload smackcipso smackd
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libsmack
 
@@ -17,3 +17,6 @@ smackload_LDADD = ../libsmack/libsmack.la
 
 smackcipso_SOURCES = smackcipso.c common.c
 smackcipso_LDADD = ../libsmack/libsmack.la
+
+smackd_SOURCES = smackd.c common.c
+smackd_LDADD = ../libsmack/libsmack.la

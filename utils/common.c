@@ -111,7 +111,7 @@ int apply_rules(const char *path, int clear)
 	if (S_ISDIR(sbuf.st_mode))
 		ret = nftw(path, apply_rules_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
 	else
-		ret = apply_rules_file(path, 0);
+		ret = apply_rules_file(path, clear);
 
 	if (ret)
 		return -1;
