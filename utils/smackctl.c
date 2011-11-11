@@ -401,6 +401,8 @@ static void cipso_free(struct cipso *cipso)
 		free(mapping);
 		mapping = next_mapping;
 	}
+
+	free(cipso);
 }
 
 static int cipso_apply(struct cipso *cipso)
