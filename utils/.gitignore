@@ -1,8 +1,6 @@
 .deps/
 .libs/
 smackaccess
-smackaccess.o
 smackctl
-smackctl.o
 smackself
-smackself.o
+*.o
