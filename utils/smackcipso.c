@@ -22,41 +22,18 @@
  */
 
 #include "common.h"
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-static void usage(const char *bin)
-{
-	fprintf(stderr, "Usage: %s [-c] <path>\n", bin);
-	exit(1);
-}
-
 int main(int argc, char **argv)
 {
-	int clear = 0;
-	int c;
-
-	while ((c = getopt(argc, argv, "c")) != -1) {
-		switch (c) {
-			case 'c':
-				clear = 1;
-				break;
-			default:
-				usage(argv[0]);
-		}
-	}
-
-	if (optind == argc)
-		usage(argv[0]);
-
-	if (is_smackfs_mounted() != 1) {
-		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
+	if (argc != 2) {
+		fprintf(stderr, "Usage: %s <path>\n", argv[0]);
 		exit(1);
 	}
 
-	if (apply_rules(argv[optind], clear)) {
-		perror("Failure applying rules : ");
+	if (apply_cipso(argv[1])) {
+		perror("Failure to apply cipso : ");
 		exit(1);
 	}
 
