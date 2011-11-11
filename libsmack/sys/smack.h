@@ -47,16 +47,6 @@ struct smack_accesses;
 int smack_accesses_new(struct smack_accesses **accesses);
 
 /*!
- * Creates a new smack_accesses instance from a given
- * file descriptor.
- *
- * @param fd file descriptor
- * @param accesses created instance
- * @return 0 on success and negative value on failure.
- */
-int smack_accesses_new_from_file(int fd, struct smack_accesses **accesses);
-
-/*!
  * Destroy a struct smack_accesses *instance.
  *
  * @param handle handle to a struct smack_accesses *instance
@@ -99,6 +89,15 @@ int smack_accesses_clear(struct smack_accesses *handle);
  */
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type);
+
+/*!
+ * Add rules from file.
+ *
+ * @param accesses instance
+ * @param fd file descriptor
+ * @return 0 on success and negative value on failure.
+ */
+int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd);
 
 /*!
  * Check for Smack access.

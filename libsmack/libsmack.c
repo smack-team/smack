@@ -78,55 +78,6 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	return 0;
 }
 
-int smack_accesses_new_from_file(int fd, struct smack_accesses **accesses)
-{
-	struct smack_accesses *result = NULL;
-	FILE *file = NULL;
-	char buf[READ_BUF_SIZE];
-	char *ptr;
-	const char *subject, *object, *access;
-	int newfd;
-
-	if (smack_accesses_new(&result))
-		goto err_out;
-
-	newfd = dup(fd);
-	if (newfd == -1)
-		goto err_out;
-
-	file = fdopen(newfd, "r");
-	if (file == NULL) {
-		close(newfd);
-		goto err_out;
-	}
-
-	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
-		subject = strtok_r(buf, " \t\n", &ptr);
-		object = strtok_r(NULL, " \t\n", &ptr);
-		access = strtok_r(NULL, " \t\n", &ptr);
-
-		if (subject == NULL || object == NULL || access == NULL ||
-		    strtok_r(NULL, " \t\n", &ptr) != NULL) {
-			errno = EINVAL;
-			goto err_out;
-		}
-
-		if (smack_accesses_add(result, subject, object, access))
-			goto err_out;
-	}
-
-	if (ferror(file))
-		goto err_out;
-
-	fclose(file);
-	*accesses = result;
-	return 0;
-err_out:
-	fclose(file);
-	smack_accesses_free(result);
-	return -1;
-}
-
 void smack_accesses_free(struct smack_accesses *handle)
 {
 	if (handle == NULL)
@@ -209,6 +160,51 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		handle->last = rule;
 	}
 
+	return 0;
+}
+
+int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
+{
+	FILE *file = NULL;
+	char buf[READ_BUF_SIZE];
+	char *ptr;
+	const char *subject, *object, *access;
+	int newfd;
+
+	newfd = dup(fd);
+	if (newfd == -1)
+		return -1;
+
+	file = fdopen(newfd, "r");
+	if (file == NULL) {
+		close(newfd);
+		return -1;
+	}
+
+	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
+		subject = strtok_r(buf, " \t\n", &ptr);
+		object = strtok_r(NULL, " \t\n", &ptr);
+		access = strtok_r(NULL, " \t\n", &ptr);
+
+		if (subject == NULL || object == NULL || access == NULL ||
+		    strtok_r(NULL, " \t\n", &ptr) != NULL) {
+			errno = EINVAL;
+			fclose(file);
+			return -1;
+		}
+
+		if (smack_accesses_add(accesses, subject, object, access)) {
+			fclose(file);
+			return -1;
+		}
+	}
+
+	if (ferror(file)) {
+		fclose(file);
+		return -1;
+	}
+
+	fclose(file);
 	return 0;
 }
 

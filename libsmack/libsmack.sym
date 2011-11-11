@@ -1,12 +1,12 @@
 LIBSMACK_1.0 {
 global:
 	smack_accesses_new;
-	smack_accesses_new_from_file;
 	smack_accesses_free;
 	smack_accesses_save;
 	smack_accesses_apply;
 	smack_accesses_clear;
 	smack_accesses_add;
+	smack_accesses_add_from_file;
 	smack_have_access;
 	smack_new_label_from_self;
 	smack_new_label_from_socket;

@@ -237,16 +237,23 @@ static int apply_rules(const char *path, int clear)
 	int fd = 0;
 	int ret = 0;
 
-	fd = open(path, O_RDONLY);
-	if (fd < 0) {
-		perror("open");
+	if (smack_accesses_new(&rules)) {
+		perror("smack_accesses_new");
 		return -1;
 	}
 
-	ret = smack_accesses_new_from_file(fd, &rules);
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		smack_accesses_free(rules);
+		return -1;
+	}
+
+	ret = smack_accesses_add_from_file(rules, fd);
 	close(fd);
 	if (rules == NULL) {
-		perror("smack_accesses_new");
+		perror("smack_accesses_add_from_file");
+		smack_accesses_free(rules);
 		return -1;
 	}
 
@@ -254,7 +261,9 @@ static int apply_rules(const char *path, int clear)
 		ret = smack_accesses_apply(rules);
 	else 
 		ret = smack_accesses_clear(rules);
+
 	smack_accesses_free(rules);
+
 	if (ret) {
 		perror("smack_accesses_apply");
 		return -1;
