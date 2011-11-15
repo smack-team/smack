@@ -18,8 +18,8 @@
  * 02110-1301 USA
  *
  * Authors:
- * Brian McGillion <brian.mcgillion@intel.com>
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
+ * Brian McGillion <brian.mcgillion@intel.com>
  */
 
 #include "common.h"
