@@ -38,16 +38,16 @@ static int apply_all(void)
 		return -1;
 
 	if (apply_rules(ACCESSES_PATH, 0))
-		perror("Access File");
+		perror("apply_rules File");
 
 	if (apply_rules(ACCESSES_D_PATH, 0))
-		perror("Access Path");
+		perror("apply_rules Path");
 
 	if (apply_cipso(CIPSO_PATH))
-		perror("Cipso File");
+		perror("apply_cipso File");
 
 	if (apply_cipso(CIPSO_D_PATH))
-		perror("Cipso Path");
+		perror("apply_cipso Path");
 
 	return 0;
 }
@@ -57,14 +57,14 @@ static int status(void)
 	int ret = is_smackfs_mounted();
 
 	switch (ret) {
-		case 1:
-			printf("SmackFS is mounted.\n");
-			return 0;
-		case 0:
-			printf("SmackFS is not mounted.\n");
-			return 0;
-		default:
-			return -1;
+	case 1:
+		printf("SmackFS is mounted.\n");
+		return 0;
+	case 0:
+		printf("SmackFS is not mounted.\n");
+		return 0;
+	default:
+		return -1;
 	}
 }
 

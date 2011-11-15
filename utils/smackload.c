@@ -39,11 +39,11 @@ int main(int argc, char **argv)
 
 	while ((c = getopt(argc, argv, "c")) != -1) {
 		switch (c) {
-			case 'c':
-				clear = 1;
-				break;
-			default:
-				usage(argv[0]);
+		case 'c':
+			clear = 1;
+			break;
+		default:
+			usage(argv[0]);
 		}
 	}
 

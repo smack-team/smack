@@ -44,11 +44,11 @@ int notify_handles[2];
 static volatile sig_atomic_t terminate = 0;
 static volatile sig_atomic_t restart = 0;
 
-typedef enum {
+enum mask_action {
 	CREATE,
 	MODIFY,
 	DELETE
-}mask_action;
+};
 
 static void clear_all_rules()
 {
@@ -65,15 +65,15 @@ static void load_all_rules()
 static void signal_handler(int sig)
 {
 	switch (sig) {
-		case SIGTERM:
-			terminate = 1;
-			break;
-		case SIGHUP:
-			restart = 1;
-			break;
-		default:
-			syslog(LOG_DEBUG, "Unrequested signal : %d", sig);
-			break;
+	case SIGTERM:
+		terminate = 1;
+		break;
+	case SIGHUP:
+		restart = 1;
+		break;
+	default:
+		syslog(LOG_DEBUG, "Unrequested signal : %d", sig);
+		break;
 	}
 }
 
@@ -127,13 +127,13 @@ static int daemonize()
 	int maxfd, fd;
 
 	switch (fork()) {
-		case -1:
-			syslog(LOG_ERR, "Failed to fork : %m");
-			return -1;
-		case 0:
-			break;
-		default:
-			exit(EXIT_SUCCESS);
+	case -1:
+		syslog(LOG_ERR, "Failed to fork : %m");
+		return -1;
+	case 0:
+		break;
+	default:
+		exit(EXIT_SUCCESS);
 	}
 
 	if (setsid() < 0)
@@ -141,13 +141,13 @@ static int daemonize()
 
 	//do not regain a terminal
 	switch (fork()) {
-		case -1:
-			syslog(LOG_ERR, "Failed to fork (2) : %m");
-			return -1;
-		case 0:
-			break;
-		default:
-			exit(EXIT_SUCCESS);
+	case -1:
+		syslog(LOG_ERR, "Failed to fork (2) : %m");
+		return -1;
+	case 0:
+		break;
+	default:
+		exit(EXIT_SUCCESS);
 	}
 
 	umask(0);
@@ -204,7 +204,7 @@ static int configure_inotify()
 	return inotifyFd;
 }
 
-static void modify_access_rules(char *file, mask_action action)
+static void modify_access_rules(char *file, enum mask_action action)
 {
 	char path[PATH_MAX];
 	int ret;
@@ -236,19 +236,19 @@ static int handle_inotify_event(int inotifyFd)
 {
 	struct inotify_event *event;
 	char buf[BUF_SIZE];
-	ssize_t numRead;
+	ssize_t num_read;
 	char *head;
-	mask_action action;
+	enum mask_action action;
 	int del = 0;
 	int size = sizeof(struct inotify_event);
 
-	numRead = read(inotifyFd, buf, BUF_SIZE);
-	if (numRead <= 0) {
+	num_read = read(inotifyFd, buf, BUF_SIZE);
+	if (num_read <= 0) {
 		syslog(LOG_ERR, "Error reading inotify event : %m");
 		return -1;
 	}
 
-	for (head = buf; head < buf + numRead; head += size + event->len) {
+	for (head = buf; head < buf + num_read; head += size + event->len) {
 		event = (struct inotify_event *) head;
 
 		if (event->mask & IN_MOVED_TO)
@@ -287,9 +287,9 @@ static int monitor(int inotifyFd)
 void main(int argc, char **argv)
 {
 	struct sigaction sa;
-	int inotifyFd;
+	int inotify_fd;
 	int ret;
-	int pidFd;
+	int pid_fd;
 
 	sigemptyset(&sa.sa_mask);
 	sa.sa_handler = signal_handler;
@@ -305,17 +305,17 @@ void main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	pidFd = daemonize();
-	if (pidFd < 0)
+	pid_fd = daemonize();
+	if (pid_fd < 0)
 		exit(EXIT_FAILURE);
 
 	clear_all_rules();
 	load_all_rules();
 
-	inotifyFd = configure_inotify();
+	inotify_fd = configure_inotify();
 
-	while (inotifyFd >= 0 && !terminate && !restart) {
-		ret = monitor(inotifyFd);
+	while (inotify_fd >= 0 && !terminate && !restart) {
+		ret = monitor(inotify_fd);
 		if (ret < 0 && errno == EINTR) {
 			continue;
 		}
@@ -324,12 +324,12 @@ void main(int argc, char **argv)
 			break;
 		}
 
-		ret = handle_inotify_event(inotifyFd);
+		ret = handle_inotify_event(inotify_fd);
 		if (ret < 0)
 			break;
 	}
 
-	close(pidFd);
+	close(pid_fd);
 	remove(PID_FILE);
 
 	if (restart && execv(argv[0], argv))

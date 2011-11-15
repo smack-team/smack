@@ -3,4 +3,7 @@
 smackaccess
 smackctl
 smackself
+smackcipso
+smackd
+smackload
 *.o
