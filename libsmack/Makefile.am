@@ -15,6 +15,6 @@ libsmack_la_SOURCES = libsmack.c
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsmack.pc
 
-library_includedir=$(includedir)
+library_includedir=$(includedir)/sys
 library_include_HEADERS=sys/smack.h
 
