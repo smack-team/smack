@@ -35,7 +35,7 @@
 struct smack_accesses;
 
 #ifdef __cplusplus
-"C" {
+extern "C" {
 #endif
 
 /*!
