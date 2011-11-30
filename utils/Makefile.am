@@ -22,3 +22,5 @@ smackd_SOURCES = smackd.c common.c
 smackd_LDADD = ../libsmack/libsmack.la
 
 chsmack_SOURCES = chsmack.c
+
+EXTRA_DIST = common.h
