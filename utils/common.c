@@ -36,7 +36,6 @@
 #include <string.h>
 
 #define SMACKFS_MAGIC 0x43415d53
-#define LABEL_LEN 23
 #define CAT_MAX_COUNT 240
 #define CAT_MAX_VALUE 63
 #define LEVEL_MAX 255

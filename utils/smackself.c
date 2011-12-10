@@ -25,17 +25,21 @@
 #include <sys/smack.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.h"
 
 int main(int argc, char **argv)
 {
-	char *label = NULL;
+	char label[LABEL_LEN + 1];
+	int len;
 
-	if (smack_new_label_from_self(&label)) {
-		perror("smack_new_label_from_self");
+	len = smack_get_self_label(label, LABEL_LEN);
+	if (len < 0) {
+		perror("smack_get_self_label");
 		return EXIT_FAILURE;
 	}
 
+	label[len] = '\0';
+
 	printf("%s", label);
-	free(label);
 	return EXIT_SUCCESS;
 }

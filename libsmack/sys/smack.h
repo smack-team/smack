@@ -29,6 +29,8 @@
 #ifndef SMACK_H
 #define SMACK_H
 
+#include <sys/types.h>
+
 /*!
  * Handle to a in-memory representation of set of Smack rules.
  */
@@ -112,12 +114,19 @@ int smack_have_access(const char *subject, const char *object,
 
 /*!
   * Get the label that is associated with the callers process.
-  * Caller is responsible of freeing the returned label.
   *
-  * @param label returned label
-  * @return 0 on success and negative value on failure.
+  * @param buf character buffer where label is read
+  * @param count length of the buffer
+  * @return label length on success and negative value on failure.
   */
-int smack_new_label_from_self(char **label);
+ssize_t smack_get_self_label(char *buf, size_t count);
+
+/*!
+ * Set the label that is associated with the callers process.
+ *
+ * @param label new label for callers process
+ */
+int smack_set_self_label(char *label);
 
 /*!
   * Get the label that is associated with a peer on the other end of an
@@ -129,13 +138,6 @@ int smack_new_label_from_self(char **label);
   * @return 0 on success and negative value on failure.
   */
 int smack_new_label_from_socket(int fd, char **label);
-
-/*!
- * Set Smack label for callers process. Requires CAP_MAC_ADMIN.
- *
- * @param label new label for callers process
- */
-int smack_set_self_label(char *label);
 
 #ifdef __cplusplus
 }
