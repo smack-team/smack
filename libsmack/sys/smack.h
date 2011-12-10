@@ -130,6 +130,13 @@ int smack_new_label_from_self(char **label);
   */
 int smack_new_label_from_socket(int fd, char **label);
 
+/*!
+ * Set Smack label for callers process. Requires CAP_MAC_ADMIN.
+ *
+ * @param label new label for callers process
+ */
+int smack_set_self_label(char *label);
+
 #ifdef __cplusplus
 }
 #endif
