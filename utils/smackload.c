@@ -51,12 +51,12 @@ int main(int argc, char **argv)
 		usage(argv[0]);
 
 	if (is_smackfs_mounted() != 1) {
-		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
+		fprintf(stderr, "SmackFS is not mounted.\n");
 		exit(1);
 	}
 
 	if (apply_rules(argv[optind], clear)) {
-		perror("Failure applying rules : ");
+		perror("apply_rules");
 		exit(1);
 	}
 

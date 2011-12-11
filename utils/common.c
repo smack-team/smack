@@ -59,7 +59,7 @@ struct cipso {
 	struct cipso_mapping *last;
 };
 
-static int apply_rules_file(const char *path, int clear);
+static int apply_rules_file(int fd, int clear);
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 
 static int apply_cipso_file(const char *path);
@@ -89,18 +89,25 @@ int is_smackfs_mounted(void)
 
 int clear(void)
 {
+	int fd;
+	int ret;
+
 	if (is_smackfs_mounted() != 1)
 		return -1;
 
-	if (apply_rules_file(SMACKFS_MNT "/load", 1))
+	fd = open(SMACKFS_MNT "/load", O_RDONLY);
+	if (fd < 0)
 		return -1;
 
-	return 0;
+	ret = apply_rules_file(fd, 1);
+	close(fd);
+	return ret;
 }
 
 int apply_rules(const char *path, int clear)
 {
 	struct stat sbuf;
+	int fd;
 	int ret;
 
 	errno = 0;
@@ -108,14 +115,15 @@ int apply_rules(const char *path, int clear)
 		return -1;
 
 	if (S_ISDIR(sbuf.st_mode))
-		ret = nftw(path, apply_rules_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
-	else
-		ret = apply_rules_file(path, clear);
+		return nftw(path, apply_rules_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
 
-	if (ret)
+	fd = open(path, O_RDONLY);
+	if (fd < 0)
 		return -1;
 
-	return 0;
+	ret = apply_rules_file(fd, clear);
+	close(fd);
+	return ret;
 }
 
 int apply_cipso(const char *path)
@@ -138,24 +146,15 @@ int apply_cipso(const char *path)
 	return 0;
 }
 
-static int apply_rules_file(const char *path, int clear)
+static int apply_rules_file(int fd, int clear)
 {
 	struct smack_accesses *rules = NULL;
-	int fd = 0;
 	int ret = 0;
 
 	if (smack_accesses_new(&rules))
 		return -1;
 
-	fd = open(path, O_RDONLY);
-	if (fd < 0) {
-		smack_accesses_free(rules);
-		return -1;
-	}
-
-	ret = smack_accesses_add_from_file(rules, fd);
-	close(fd);
-	if (rules == NULL) {
+	if (smack_accesses_add_from_file(rules, fd)) {
 		smack_accesses_free(rules);
 		return -1;
 	}
@@ -167,10 +166,7 @@ static int apply_rules_file(const char *path, int clear)
 
 	smack_accesses_free(rules);
 
-	if (ret)
-		return -1;
-
-	return 0;
+	return ret;
 }
 
 static int apply_cipso_file(const char *path)
@@ -192,11 +188,25 @@ static int apply_cipso_file(const char *path)
 
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
+	int fd;
+	int ret;
+
 	if (typeflag == FTW_D)
 		return ftwbuf->level ? FTW_SKIP_SUBTREE : FTW_CONTINUE;
 	else if (typeflag != FTW_F)
 		return FTW_STOP;
-	return apply_rules_file(fpath, 0) ? FTW_STOP : FTW_CONTINUE;
+
+	fd = open(fpath, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	fd = open(fpath, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
+	close(fd);
+	return ret;
 }
 
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
