@@ -36,5 +36,6 @@ int clear(void);
 int is_smackfs_mounted(void);
 int apply_rules(const char *path, int clear);
 int apply_cipso(const char *path);
+int apply_rules_file(int fd, int clear);
 
 #endif // COMMON_H

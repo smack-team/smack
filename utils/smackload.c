@@ -19,6 +19,7 @@
  *
  * Authors:
  * Brian McGillion <brian.mcgillion@intel.com>
+ * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
 #include "common.h"
@@ -37,6 +38,11 @@ int main(int argc, char **argv)
 	int clear = 0;
 	int c;
 
+	if (is_smackfs_mounted() != 1) {
+		fprintf(stderr, "SmackFS is not mounted.\n");
+		exit(1);
+	}
+
 	while ((c = getopt(argc, argv, "c")) != -1) {
 		switch (c) {
 		case 'c':
@@ -47,17 +53,16 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (optind == argc)
-		usage(argv[0]);
-
-	if (is_smackfs_mounted() != 1) {
-		fprintf(stderr, "SmackFS is not mounted.\n");
-		exit(1);
-	}
-
-	if (apply_rules(argv[optind], clear)) {
-		perror("apply_rules");
-		exit(1);
+	if (optind == argc) {
+		if (apply_rules_file(STDIN_FILENO, clear)) {
+			perror("apply_rules_file");
+			exit(1);
+		}
+	} else {
+		if (apply_rules(argv[optind], clear)) {
+			perror("apply_rules");
+			exit(1);
+		}
 	}
 
 	exit(0);

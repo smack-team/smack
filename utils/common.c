@@ -59,15 +59,12 @@ struct cipso {
 	struct cipso_mapping *last;
 };
 
-static int apply_rules_file(int fd, int clear);
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-
 static int apply_cipso_file(const char *path);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 static struct cipso *cipso_new(const char *path);
 static void cipso_free(struct cipso *cipso);
 static int cipso_apply(struct cipso *cipso);
-
 
 int is_smackfs_mounted(void)
 {
@@ -146,7 +143,7 @@ int apply_cipso(const char *path)
 	return 0;
 }
 
-static int apply_rules_file(int fd, int clear)
+int apply_rules_file(int fd, int clear)
 {
 	struct smack_accesses *rules = NULL;
 	int ret = 0;
