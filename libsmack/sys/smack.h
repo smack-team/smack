@@ -114,19 +114,12 @@ int smack_have_access(const char *subject, const char *object,
 
 /*!
   * Get the label that is associated with the callers process.
+  * Caller is responsible of freeing the returned label.
   *
-  * @param buf character buffer where label is read
-  * @param count length of the buffer
-  * @return label length on success and negative value on failure.
+  * @param label returned label
+  * @return 0 on success and negative value on failure.
   */
-ssize_t smack_get_self_label(char *buf, size_t count);
-
-/*!
- * Set the label that is associated with the callers process.
- *
- * @param label new label for callers process
- */
-int smack_set_self_label(char *label);
+int smack_new_label_from_self(char **label);
 
 /*!
   * Get the label that is associated with a peer on the other end of an

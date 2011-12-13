@@ -243,37 +243,30 @@ int smack_have_access(const char *subject, const char *object,
 	return buf[0] == '1';
 }
 
-ssize_t smack_get_self_label(char *buf, size_t count)
+int smack_new_label_from_self(char **label)
 {
+	char *result;
 	int fd;
 	int ret;
 
+	result = calloc(LABEL_LEN + 1, 1);
+	if (result == NULL)
+		return -1;
+
 	fd = open(SELF_LABEL_FILE, O_RDONLY);
-	if (fd < 0)
-		return -1;
-
-	ret = read(fd, buf, count);
-	close(fd);
-	if (ret < 0)
-		return -1;
-
-	return count;
-}
-
-int smack_set_self_label(char *label)
-{
-	int fd;
-
-	fd = open(SELF_LABEL_FILE, O_WRONLY);
-	if (fd < 0)
-		return -1;
-
-	if (write(fd, label, strlen(label)) < 0) {
-		close(fd);
+	if (fd < 0) {
+		free(result);
 		return -1;
 	}
 
+	ret = read(fd, result, LABEL_LEN);
 	close(fd);
+	if (ret < 0) {
+		free(result);
+		return -1;
+	}
+
+	*label = result;
 	return 0;
 }
 
