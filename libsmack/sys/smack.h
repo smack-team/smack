@@ -26,8 +26,8 @@
  * Smack user space library
  */
 
-#ifndef SMACK_H
-#define SMACK_H
+#ifndef _SYS_SMACK_H
+#define _SYS_SMACK_H
 
 #include <sys/types.h>
 
@@ -136,4 +136,4 @@ int smack_new_label_from_socket(int fd, char **label);
 }
 #endif
 
-#endif // SMACK_H
+#endif // _SYS_SMACK_H
