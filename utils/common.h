@@ -27,9 +27,7 @@
 
 #define LABEL_LEN 23
 #define SMACKFS_MNT "/smack"
-#define ACCESSES_PATH "/etc/smack/accesses"
 #define ACCESSES_D_PATH "/etc/smack/accesses.d"
-#define CIPSO_PATH "/etc/smack/cipso"
 #define CIPSO_D_PATH "/etc/smack/cipso.d"
 
 int clear(void);

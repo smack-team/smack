@@ -197,10 +197,6 @@ static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag
 	if (fd < 0)
 		return -1;
 
-	fd = open(fpath, O_RDONLY);
-	if (fd < 0)
-		return -1;
-
 	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
 	close(fd);
 	return ret;

@@ -1,0 +1,8 @@
+[Unit]
+Description=Smack
+After=basic.target
+
+[Service]
+ExecStart=/usr/bin/smackctl apply
+ExecStop=/usr/bin/smackctl clear
+RemainAfterExit=yes
