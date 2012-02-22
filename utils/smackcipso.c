@@ -24,17 +24,30 @@
 #include "common.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 int main(int argc, char **argv)
 {
-	if (argc != 2) {
+	if (is_smackfs_mounted() != 1) {
+		fprintf(stderr, "SmackFS is not mounted.\n");
+		exit(1);
+	}
+
+	if (argc > 2) {
 		fprintf(stderr, "Usage: %s <path>\n", argv[0]);
 		exit(1);
 	}
 
-	if (apply_cipso(argv[1])) {
-		perror("Failure to apply cipso : ");
-		exit(1);
+	if (argc == 1) {
+		if (apply_cipso_file(STDIN_FILENO)) {
+			perror("apply_cipso_file");
+			exit(1);
+		}
+	} else {
+		if (apply_cipso(argv[1])) {
+			perror("apply_cipso");
+			exit(1);
+		}
 	}
 
 	exit(0);
