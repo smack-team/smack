@@ -38,10 +38,10 @@ static int apply_all(void)
 		return -1;
 
 	if (apply_rules(ACCESSES_D_PATH, 0))
-		perror("apply_rules Path");
+		perror("apply_rules");
 
 	if (apply_cipso(CIPSO_D_PATH))
-		perror("apply_cipso Path");
+		perror("apply_cipso");
 
 	return 0;
 }
