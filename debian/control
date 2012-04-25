@@ -1,0 +1,37 @@
+Source: smack
+Section: Administration
+Priority: Optional
+Maintainer: Brian McGillion <brian.mcgillion@intel.com>
+Build-Depends: debhelper (>= 7.0.50), autoconf, libtool, dh-autoreconf
+Standards-Version: 3.9.1
+Vcs-Git: git://github.com/organizations/smack-team/smack.git
+Vcs-Browser: https://github.com/organizations/smack-team/smack
+
+Package: libsmack
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Package to interact with Smack
+ Library allows applications to work with Smack.
+
+Package: libsmack-dev
+Section: devel
+Architecture: any
+Depends: ${misc:Depends}, libsmack (= ${binary:Version})
+Description: Developmnent headers and libs for libsmack
+
+Package: libsmack-dbg
+Section: debug
+Architecture: any
+Depends: ${misc:Depends}, libsmack (= ${binary:Version})
+Description: Debug symbols for libsmack
+
+Package: smack-utils
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsmack (= ${binary:Version})
+Description: A selection of tools for developers working with Smack.
+
+Package: smack-utils-dbg
+Section: debug
+Architecture: any
+Depends: ${misc:Depends}, smack-utils (= ${binary:Version})
+Description: Debug symbols for smack-utils

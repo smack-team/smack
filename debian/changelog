@@ -1,0 +1,5 @@
+smack (1.0) unstable; urgency=low
+
+  * Initial package release for debian
+
+ -- Brian McGillion <brian.mcgillion@intel.com>  Wed, 25 Apr 2012 11:00:09 +0900
