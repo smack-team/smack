@@ -1,5 +1,8 @@
 [Unit]
 Description=Smack
+DefaultDependencies=no
+After=smack.mount
+Requires=smack.mount
 After=basic.target
 
 [Service]

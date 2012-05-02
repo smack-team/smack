@@ -1,6 +1,6 @@
 [Unit]
 Description=Smack filesystem mounting
-Before=local-fs.target
+WantedBy=local-fs.target
 
 [Mount]
 What=smackfs

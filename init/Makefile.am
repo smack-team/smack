@@ -1,2 +1,5 @@
-initdir = /lib/systemd/system
-init_DATA = smack.mount smack.service
+if HAVE_SYSTEMD
+systemdsystemunit_DATA = \
+        smack.mount \
+        smack.service
+endif
