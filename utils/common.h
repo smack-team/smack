@@ -25,7 +25,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define LABEL_LEN 23
+#define LABEL_LEN 255
 #define SMACKFS_MNT "/smack"
 #define ACCESSES_D_PATH "/etc/smack/accesses.d"
 #define CIPSO_D_PATH "/etc/smack/cipso.d"

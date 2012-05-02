@@ -43,6 +43,7 @@
 
 #define CIPSO_POS(i)   (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
 #define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
+#define CIPSO_NUM_LEN_STR "%-4d"
 
 #define BUF_SIZE 512
 
@@ -91,7 +92,7 @@ int clear(void)
 	if (is_smackfs_mounted() != 1)
 		return -1;
 
-	fd = open(SMACKFS_MNT "/load", O_RDONLY);
+	fd = open(SMACKFS_MNT "/load2", O_RDONLY);
 	if (fd < 0)
 		return -1;
 
@@ -337,17 +338,17 @@ static int cipso_apply(struct cipso *cipso)
 	int fd;
 	int i;
 
-	fd = open(SMACKFS_MNT "/cipso", O_WRONLY);
+	fd = open(SMACKFS_MNT "/cipso2", O_WRONLY);
 	if (fd < 0)
 		return -1;
 
 	for (m = cipso->first; m != NULL; m = m->next) {
-		sprintf(buf, "%-23s ", m->label);
-		sprintf(&buf[LABEL_LEN + 1], "%-4d", m->level);
-		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], "%-4d", m->ncats);
+		sprintf(buf, "%s ", m->label);
+		sprintf(&buf[LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
+		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
 
 		for (i = 0; i < m->ncats; i++)
-			sprintf(&buf[CIPSO_POS(i)], "%-4d", m->cats[i]);
+			sprintf(&buf[CIPSO_POS(i)], CIPSO_NUM_LEN_STR, m->cats[i]);
 
 		if (write(fd, buf, strlen(buf)) < 0) {
 			close(fd);

@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LSIZE 23
+#define LSIZE 255
 
 static inline int leads(char *in, char *lead)
 {
