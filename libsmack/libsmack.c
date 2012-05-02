@@ -182,6 +182,8 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 	}
 
 	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
+		if (strcmp(buf, "\n") == 0)
+			continue;
 		subject = strtok_r(buf, " \t\n", &ptr);
 		object = strtok_r(NULL, " \t\n", &ptr);
 		access = strtok_r(NULL, " \t\n", &ptr);
