@@ -34,9 +34,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define LABEL_LEN 23
-#define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
+#define LABEL_LEN 255
 #define ACC_LEN 5
+#define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
 
 #define ACC_R 0x01
 #define ACC_W 0x02
@@ -44,8 +44,8 @@
 #define ACC_A 0x08
 #define ACC_T 0x10
 
-#define KERNEL_FORMAT "%-23s %-23s %5s"
-#define READ_BUF_SIZE 512
+#define KERNEL_FORMAT "%s %s %s"
+#define READ_BUF_SIZE LOAD_LEN + 10
 #define SMACKFS_MNT "/smack"
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
@@ -227,7 +227,7 @@ int smack_have_access(const char *subject, const char *object,
 	if (ret < 0)
 		return -1;
 
-	fd = open(SMACKFS_MNT "/access", O_RDWR);
+	fd = open(SMACKFS_MNT "/access2", O_RDWR);
 	if (fd < 0)
 		return -1;
 
@@ -305,7 +305,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int ret;
 	int fd;
 
-	fd = open(SMACKFS_MNT "/load", O_WRONLY);
+	fd = open(SMACKFS_MNT "/load2", O_WRONLY);
 	if (fd < 0)
 		return -1;
 
