@@ -1,0 +1,76 @@
+'\" t
+.\" This file is part of libsmack
+.\" Copyright (C) 2012 Intel Corporation
+.\"
+.\" This library is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU Lesser General Public License
+.\" version 2.1 as published by the Free Software Foundation.
+.\"
+.\" This library is distributed in the hope that it will be useful, but
+.\" WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+.\" Lesser General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU Lesser General Public
+.\" License along with this library; if not, write to the Free Software
+.\" Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+.\" 02110-1301 USA
+.\"
+.\" Author:
+.\" Brian McGillion <brian.mcgillion@intel.com>
+.\"
+.TH "CHSMACK" "8" "03/05/2012" "smack-utils 1\&.0"
+.SH NAME
+chsmack \- Change the Smack properties of a filesystem object
+.SH SYNOPSIS 
+.B chsmack [\-a|\-\-access=] [-e|--exec=|--execute=] [-m|--mmap=]
+.I <context>
+.B [-t|--transmute]
+.SH DESCRIPTION
+.B chsmack
+can be used to query or change the Smack context of a file.  Depending on the state and type of the file the different labels, which are stored as xattrs on the file, have a different effect.  If the file is a process binary then the
+.I exec
+label will take effect when the process is launched and this label will be assigned as the context of the running process. Whereas the
+.I transmute
+flag only affects directories and ensures that all files created beneath it have their label set to the label of the directory on which the transmute bit is set.  This process needs to be launched with CAP_MAC_ADMIN capabilities in order to change any of the contexts.
+.SH OPTIONS
+.TP
+.B \-a\fR, \-\-access=
+Set the access context for this file.  This context is used to confine the access modes, which are defined by the set "rwaxt", which refer to read, write, append, execute and transmute.  The exec here is not to be confused with the
+.B \-e
+option listed below. This access mode "exec" specifies restrictions on who is allowed to launch this process.  A common rule for this might look like
+.B (launcher application rx)
+where the
+.B \-\-access
+label is set to
+.BR "application" .
+This would ensure that the process with context
+.B launcher
+would be able to read and execute the binary from the
+.B application
+context.
+This label is stored in the
+.B security.SMACK64
+extended attribute.
+.TP
+.B \-e\fR, \-\-exec=
+If this file is an application binary, this flag defines the context that it will be launched in.  It is accessible from the
+.B security.SMACK64EXEC
+extended attribute.
+.TP
+.B \-m\fR, \-\-mmap=
+A file with the mmap attribute set can only be mapped by processes with access to all of the labels that a process with the mmap label would have access to.  the label is set and retrieved from the
+.B security.SMACK64MMAP
+extended attribute.
+.TP
+.I context
+The context to assign to label for the file
+.TP
+.B \-t\fR, \-\-transmute
+When used this will set the transmute flag of a directory to True.  This will mean that all files and directories created under it will have the same label as the directory.  By default all files created by a process are created with the same context label as the process. Transmute provides a very useful feature for sharing access to resources. The common example would be a Docs directory where all documents created by word processors and text editors can be stored.  Each of the text editors can open the files and edit them in a shared fashion, while still ensuring that the config files of the editor remain protected.  The label is stored in the
+.B security.SMACK64TRANSMUTE
+extended attribute.
+.SH RETURN VALUE
+The current values for the labels will be printed to stdout on success.
+.SH EXIT STATUS
+A successful call will return 0, where as a non zero value will be returned on error.

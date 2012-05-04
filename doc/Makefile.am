@@ -19,3 +19,6 @@ clean-local:
 	rm -rf html
 
 endif
+
+man_MANS = chsmack.8 smackaccess.1 smack_access_add.3 smackctl.8 smack_have_access.3 smackload.8
+EXTRA_DIST += $(man_MANS)

@@ -1,0 +1,42 @@
+'\" t
+.\" This file is part of libsmack
+.\" Copyright (C) 2012 Intel Corporation
+.\"
+.\" This library is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU Lesser General Public License
+.\" version 2.1 as published by the Free Software Foundation.
+.\"
+.\" This library is distributed in the hope that it will be useful, but
+.\" WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+.\" Lesser General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU Lesser General Public
+.\" License along with this library; if not, write to the Free Software
+.\" Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+.\" 02110-1301 USA
+.\"
+.\" Author:
+.\" Brian McGillion <brian.mcgillion@intel.com>
+.\"
+.TH "SMACKACCESS" "8" "03/05/2012" "smack-utils 1\&.0"
+.SH NAME
+smackaccess \- Determine if a rule is permitted by the current Smack policy
+.SH SYNOPSIS
+.B smackaccess <subject> <object> <access_type>
+.SH DESCRIPTION
+.B smackaccess
+allows for the caller to test if a process has access to another object and the type of access that is granted.
+.SH OPTIONS
+.IP subject
+The context of the process that will be doing the access request
+.IP object
+The context of the filesystem object or process that is going to be accessed
+.IP access_type
+The type of access that will be requested e.g. "rwaxt", which respectively refer to read, write, append, execute and transmute.
+.SH RETURN VALUE
+On success the result of the test will be printed, 1 indicates that the rule is permitted by the policy and 0 indicates that such an action would fail.
+.SH EXIT STATUS
+On success
+.B smackaccess
+returns 0 and 1 on failure.

@@ -1,0 +1,49 @@
+'\" t
+.\" This file is part of libsmack
+.\" Copyright (C) 2012 Intel Corporation
+.\"
+.\" This library is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU Lesser General Public License
+.\" version 2.1 as published by the Free Software Foundation.
+.\"
+.\" This library is distributed in the hope that it will be useful, but
+.\" WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+.\" Lesser General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU Lesser General Public
+.\" License along with this library; if not, write to the Free Software
+.\" Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+.\" 02110-1301 USA
+.\"
+.\" Author:
+.\" Brian McGillion <brian.mcgillion@intel.com>
+.\"
+.TH "SMACKLOAD" "8" "03/05/2012" "smack-utils 1\&.0"
+.SH NAME
+smackload \- Load and unload Smack rules from the kernel
+.SH SYNOPSIS
+.B smackload [\-c]
+.I <path>
+ 
+.SH DESCRIPTION
+.B smackload
+is a tool that can be used to load Smack rules into the kernel or to remove rules that have already been loaded.  The general use of
+.B smackload
+is to read a set of rules from a file, but it also supports the convenience of loading rules from the command line. This process needs to be started with CAP_MAC_ADMIN capability otherwise it will not have sufficient permission to make the changes.  Launching
+.B smackload
+without a path name will allow you to enter rules on the command line, these take the format "%s %s %s\\n"
+.B (subject object access_type)
+with ^D terminating the session and writing the rules to the kernel. The
+.B access_type
+refers to the access modes that are from the set "rwaxt", which refer to read, write, append, execute and transmute access respectively
+.SH OPTIONS
+.IP \-c
+Clear the specified rules from the kernel
+.IP path
+The path to the file from which to read the rules
+
+.SH EXIT STATUS
+On success
+.B smackload
+returns 0 and 1 on failure.

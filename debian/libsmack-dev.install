@@ -1,3 +1,4 @@
 usr/include/sys/*.h
 usr/lib/libsmack.so
 usr/lib/pkgconfig/*
+usr/share/man/man3/*
