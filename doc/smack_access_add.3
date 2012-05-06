@@ -101,11 +101,11 @@ int apply_rules_file(int fd, int clear)
 	int ret = 0;
 
 	if (smack_accesses_new(&rules))
-		return -1;
+		return \-1;
 
 	if (smack_accesses_add_from_file(rules, fd)) {
 		smack_accesses_free(rules);
-		return -1;
+		return \-1;
 	}
 
 	if (!clear)
