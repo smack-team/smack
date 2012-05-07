@@ -22,8 +22,8 @@
 # description: Initialize Smack policy
 ### BEGIN INIT INFO
 # Provides: smack-utils
-# Required-Start: $local_fs
-# Required-Stop:
+# Required-Start: $local_fs $remote_fs
+# Required-Stop: $local_fs $remote_fs
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: Set up Smack policy

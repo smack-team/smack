@@ -1,9 +1,9 @@
 Source: smack
-Section: Administration
-Priority: Optional
+Section: admin
+Priority: optional
 Maintainer: Brian McGillion <brian.mcgillion@intel.com>
 Build-Depends: debhelper (>= 7.0.50), autoconf, libtool, dh-autoreconf
-Standards-Version: 3.9.1
+Standards-Version: 3.9.3
 Vcs-Git: git://github.com/organizations/smack-team/smack.git
 Vcs-Browser: https://github.com/organizations/smack-team/smack
 
@@ -13,25 +13,31 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Package to interact with Smack
  Library allows applications to work with Smack.
 
-Package: libsmack-dev
-Section: devel
-Architecture: any
-Depends: ${misc:Depends}, libsmack (= ${binary:Version})
-Description: Developmnent headers and libs for libsmack
-
 Package: libsmack-dbg
 Section: debug
+Priority: extra
 Architecture: any
 Depends: ${misc:Depends}, libsmack (= ${binary:Version})
 Description: Debug symbols for libsmack
+ Standard debug symbols package
+
+Package: libsmack-dev
+Section: libdevel
+Architecture: any
+Depends: ${misc:Depends}, libsmack (= ${binary:Version})
+Description: Developmnent headers and libs for libsmack
+ Standard header files for use when developing Smack enabled applications
 
 Package: smack-utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libsmack (= ${binary:Version})
-Description: A selection of tools for developers working with Smack.
+Description: Selection of tools for developers working with Smack.
+ Tools provided to load and unload rules from the kernel and query the policy
 
 Package: smack-utils-dbg
 Section: debug
+Priority: extra
 Architecture: any
 Depends: ${misc:Depends}, smack-utils (= ${binary:Version})
 Description: Debug symbols for smack-utils
+ Standard set of external debug symbols

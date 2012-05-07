@@ -20,5 +20,5 @@ clean-local:
 
 endif
 
-man_MANS = chsmack.8 smackaccess.1 smack_access_add.3 smackctl.8 smack_have_access.3 smackload.8
+man_MANS = chsmack.8 smackaccess.1 smack_accesses_add.3 smackcipso.8 smackctl.8 smackd.8 smack_have_access.3 smackload.8
 EXTRA_DIST += $(man_MANS)
