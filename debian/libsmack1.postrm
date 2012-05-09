@@ -7,7 +7,12 @@ set -e
 
 case "$1" in
     purge|abort-install|remove|upgrade|failed-upgrade|abort-upgrade|disappear)
-        test -d /smack && rm -rf /smack
+        if [ -d /smack ] ; then
+	    if mountpoint -q "/smack" ; then
+		umount /smack
+	    fi 
+	    rm -rf /smack
+	fi
         ;;
     *)
         echo "postrm called with unknown argument \`$1'" >&2
