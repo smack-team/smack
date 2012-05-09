@@ -1,12 +1,14 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
 %:
-	dh --with autoreconf $@
+	dh $@ --with autoreconf
+
+override_dh_strip:
+	dh_strip -plibsmack1 --dbg-package=libsmack1-dbg
+	dh_strip -psmack-utils --dbg-package=smack-utils-dbg
 
 .PHONY: override_dh_strip
-override_dh_strip:
-	dh_strip -plibsmack --dbg-package=libsmack-dbg
-	dh_strip -psmack-utils --dbg-package=smack-utils-dbg

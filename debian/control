@@ -7,30 +7,30 @@ Standards-Version: 3.9.3
 Vcs-Git: git://github.com/organizations/smack-team/smack.git
 Vcs-Browser: https://github.com/organizations/smack-team/smack
 
-Package: libsmack
+Package: libsmack1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Package to interact with Smack
  Library allows applications to work with Smack.
 
-Package: libsmack-dbg
+Package: libsmack1-dbg
 Section: debug
 Priority: extra
 Architecture: any
-Depends: ${misc:Depends}, libsmack (= ${binary:Version})
+Depends: ${misc:Depends}, libsmack1 (= ${binary:Version})
 Description: Debug symbols for libsmack
  Standard debug symbols package
 
 Package: libsmack-dev
 Section: libdevel
 Architecture: any
-Depends: ${misc:Depends}, libsmack (= ${binary:Version})
+Depends: ${misc:Depends}, libsmack1 (= ${binary:Version})
 Description: Developmnent headers and libs for libsmack
  Standard header files for use when developing Smack enabled applications
 
 Package: smack-utils
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libsmack (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsmack1 (= ${binary:Version})
 Description: Selection of tools for developers working with Smack.
  Tools provided to load and unload rules from the kernel and query the policy
 
