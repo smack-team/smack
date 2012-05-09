@@ -64,8 +64,6 @@ static int status(void)
 
 int main(int argc, char **argv)
 {
-	int a;
-
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
 		return 1;

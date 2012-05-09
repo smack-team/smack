@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/inotify.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 
 #define PID_FILE "/var/run/smackd.pid"
 #define BUF_SIZE (4 * (sizeof(struct inotify_event) + NAME_MAX + 1))
@@ -284,7 +285,7 @@ static int monitor(int inotifyFd)
 	return select(inotifyFd + 1, &readSet, NULL, NULL, NULL);
 }
 
-void main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	struct sigaction sa;
 	int inotify_fd;
