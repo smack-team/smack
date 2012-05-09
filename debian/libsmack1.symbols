@@ -1,0 +1,12 @@
+libsmack.so.1 libsmack1 #MINVER#
+ LIBSMACK@LIBSMACK 1.0
+ smack_accesses_add@LIBSMACK 1.0
+ smack_accesses_add_from_file@LIBSMACK 1.0
+ smack_accesses_apply@LIBSMACK 1.0
+ smack_accesses_clear@LIBSMACK 1.0
+ smack_accesses_free@LIBSMACK 1.0
+ smack_accesses_new@LIBSMACK 1.0
+ smack_accesses_save@LIBSMACK 1.0
+ smack_have_access@LIBSMACK 1.0
+ smack_new_label_from_self@LIBSMACK 1.0
+ smack_new_label_from_socket@LIBSMACK 1.0
