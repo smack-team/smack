@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/sh
 #
 # Copyright (c) 2012 Intel Corporation
 #
@@ -19,32 +19,49 @@
 # Authors:
 #      Brian McGillion <brian.mcgillion@intel.com>
 #
-# description: Initialize Smack policy
+# Description: Initialize Smack policy
+#
 ### BEGIN INIT INFO
-# Provides: smack-utils
-# Required-Start: $local_fs $remote_fs
-# Required-Stop: $local_fs $remote_fs
-# Default-Start: 2 3 4 5
-# Default-Stop: 0 1 6
-# Short-Description: Set up Smack policy
-# Description: Smack is an LSM that provides Mandatory Access Control.
+# Provides:          smack-utils
+# Required-Start:    $remote_fs $local_fs
+# Required-Stop:     $remote_fs $local_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Utility to set up SMACK policy
+# Description:       SMACK is a simplified mandatory access control \
+#                    framework using an the LSM interface of the kernel. \
+#                    The access control rules are loaded using smackfs \
+#                    pseudo-filesystem.
 ### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+PROG=smack-utils
+DESC="Simplified MAC Kernel (SMACK)"
+SMACKCTL=/usr/bin/smackctl
+
+# Check kernel whether smack is supported
+[ `grep -c smack /proc/filesystems` -eq 1 ] || exit 0
 
 #
 # Mount smackfs in /smack
 #
 mount_smack() {
     if [ ! -d /smack ] ; then
-	rm -f /smack
-	mkdir /smack
+      test -e /smack && rm -f /smack
+      mkdir /smack
     fi
-    mount -t smackfs smackfs /smack >& /dev/null
+    if ! grep -E -qs smackfs /etc/mtab; then
+	mount -t smackfs smackfs /smack > /dev/null 2>&1
+    fi
 }
 
 case "$1" in
    start)
+	echo -n "Starting $DESC ..."
 	mount_smack
 	/usr/bin/smackctl apply
+	echo " done."
 	;;
    status)
 	if [ ! -e /smack/load2 ] ; then
@@ -52,13 +69,19 @@ case "$1" in
 	fi
 	;;
    reload|force-reload|restart|try-restart)
+	echo -n "Reloading $DESC ..."
 	/usr/bin/smackctl clear
 	/usr/bin/smackctl apply
+	echo " done."
 	;;
    stop)
+	echo -n "Stopping $DESC ..."
 	/usr/bin/smackctl clear
+	echo " done."
 	;;
    *)
+	echo $"Usage: $0 {start|stop|reload|force-reload|restart|try-restart|status}"
+	exit 3
 	;;
 esac
 
