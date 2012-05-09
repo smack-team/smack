@@ -2,42 +2,80 @@ Source: smack
 Section: admin
 Priority: optional
 Maintainer: Brian McGillion <brian.mcgillion@intel.com>
-Build-Depends: debhelper (>= 7.0.50), autoconf, libtool, dh-autoreconf
+Build-Depends: debhelper (>= 8),
+ pkg-config, autoconf,
+ libtool, dh-autoreconf
 Standards-Version: 3.9.3
 Vcs-Git: git://github.com/organizations/smack-team/smack.git
 Vcs-Browser: https://github.com/organizations/smack-team/smack
 
 Package: libsmack1
-Architecture: any
+Section: libs
+Architecture: linux-any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Package to interact with Smack
- Library allows applications to work with Smack.
+Description: Shared libraries for interaction with SMACK
+ Library allows applications to work with the smack kernel interface.
+ .
+ The Simplified Mandatory Access Control Kernel (SMACK) provides a
+ complete Linux kernel based mechanism for protecting processes and
+ data from inappropriate manipulation. Smack uses process, file, and
+ network labels combined with an easy to understand and manipulate
+ way to identify the kind of accesses that should be allowed.
 
 Package: libsmack1-dbg
 Section: debug
 Priority: extra
-Architecture: any
+Architecture: linux-any
 Depends: ${misc:Depends}, libsmack1 (= ${binary:Version})
-Description: Debug symbols for libsmack
- Standard debug symbols package
+Description: Debug symbols for shared libraries in libsmack1
+ Library for SMACK which allows applications to work with the smack
+ kernel interface. This package contains standard debug symbols.
+ .
+ The Simplified Mandatory Access Control Kernel (SMACK) provides a
+ complete Linux kernel based mechanism for protecting processes and
+ data from inappropriate manipulation. Smack uses process, file, and
+ network labels combined with an easy to understand and manipulate
+ way to identify the kind of accesses that should be allowed.
 
 Package: libsmack-dev
 Section: libdevel
-Architecture: any
+Architecture: linux-any
 Depends: ${misc:Depends}, libsmack1 (= ${binary:Version})
-Description: Developmnent headers and libs for libsmack
- Standard header files for use when developing Smack enabled applications
+Description: Development headers of shared libraries in libsmack1
+ Library for SMACK which allows applications to work with the smack
+ kernel interface. This package includes development header files.
+ .
+ The Simplified Mandatory Access Control Kernel (SMACK) provides a
+ complete Linux kernel based mechanism for protecting processes and
+ data from inappropriate manipulation. Smack uses process, file, and
+ network labels combined with an easy to understand and manipulate
+ way to identify the kind of accesses that should be allowed.
 
 Package: smack-utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libsmack1 (= ${binary:Version})
-Description: Selection of tools for developers working with Smack.
- Tools provided to load and unload rules from the kernel and query the policy
+Description: Administration tools for using SMACK
+ A selection of administration tools for using the smack kernel
+ interface. This package includes some tools and the init script
+ for loading and unloading rules and query the policy.
+ .
+ The Simplified Mandatory Access Control Kernel (SMACK) provides a
+ complete Linux kernel based mechanism for protecting processes and
+ data from inappropriate manipulation. Smack uses process, file, and
+ network labels combined with an easy to understand and manipulate
+ way to identify the kind of accesses that should be allowed.
 
 Package: smack-utils-dbg
 Section: debug
 Priority: extra
-Architecture: any
+Architecture: linux-any
 Depends: ${misc:Depends}, smack-utils (= ${binary:Version})
-Description: Debug symbols for smack-utils
- Standard set of external debug symbols
+Description: Debug symbols for administration tools in smack-utils
+ A selection of administration tools for using the smack kernel
+ interface. This package includes a standard set of debug symbols.
+ .
+ The Simplified Mandatory Access Control Kernel (SMACK) provides a
+ complete Linux kernel based mechanism for protecting processes and
+ data from inappropriate manipulation. Smack uses process, file, and
+ network labels combined with an easy to understand and manipulate
+ way to identify the kind of accesses that should be allowed.
