@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: smack
 Upstream-Contact: Brian McGillion <brian.mcgillion@intel.com>
-Source: https://github.com/organizations/smack-team/smack
+Source: https://github.com/smack-team/smack
 
 Files: *
 Copyright: 2011-2012 Intel Corperation

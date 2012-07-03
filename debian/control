@@ -6,8 +6,8 @@ Build-Depends: debhelper (>= 8),
  pkg-config, autoconf,
  libtool, dh-autoreconf
 Standards-Version: 3.9.3
-Vcs-Git: git://github.com/organizations/smack-team/smack.git
-Vcs-Browser: https://github.com/organizations/smack-team/smack
+Vcs-Git: git://github.com/smack-team/smack.git
+Vcs-Browser: https://github.com/smack-team/smack
 
 Package: libsmack1
 Section: libs
