@@ -283,7 +283,7 @@ int smack_new_label_from_socket(int fd, char **label)
 	if (ret < 0 && errno != ERANGE)
 		return -1;
 
-	result = calloc(length, 1);
+        result = calloc(length + 1, 1);
 	if (result == NULL)
 		return -1;
 
