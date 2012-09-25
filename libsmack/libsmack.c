@@ -44,8 +44,9 @@
 #define ACC_A 0x08
 #define ACC_T 0x10
 
-#define KERNEL_FORMAT "%s %s %s"
-#define READ_BUF_SIZE LOAD_LEN + 10
+#define KERNEL_LONG_FORMAT "%s %s %s"
+#define KERNEL_SHORT_FORMAT "%-23s %-23s %5s"
+#define READ_BUF_SIZE LOAD_LEN + 1
 #define SMACKFS_MNT "/smack"
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
@@ -218,20 +219,34 @@ int smack_have_access(const char *subject, const char *object,
 	unsigned access_code;
 	int ret;
 	int fd;
+	int access2 = 1;
 
 	access_code = access_type_to_int(access_type);
 	int_to_access_type_k(access_code, access_type_k);
 
-	ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, subject, object,
-		       access_type_k);
-	if (ret < 0)
-		return -1;
-
 	fd = open(SMACKFS_MNT "/access2", O_RDWR);
-	if (fd < 0)
-		return -1;
+	if (fd < 0) {
+		if (errno != ENOENT)
+			return -1;
+		fd = open(SMACKFS_MNT "/access", O_RDWR);
+		if (fd < 0)
+			return -1;
+		access2 = 0;
+	}
 
-	ret = write(fd, buf, LOAD_LEN);
+	if (access2)
+		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+			       subject, object, access_type_k);
+	else
+		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+			       subject, object, access_type_k);
+
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
+
+	ret = write(fd, buf, strlen(buf));
 	if (ret < 0) {
 		close(fd);
 		return -1;
@@ -304,10 +319,18 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	struct smack_rule *rule;
 	int ret;
 	int fd;
+	int load2 = 1;
 
 	fd = open(SMACKFS_MNT "/load2", O_WRONLY);
-	if (fd < 0)
-		return -1;
+	if (fd < 0) {
+		if (errno != ENOENT)
+			return -1;
+		/* fallback */
+		fd = open(SMACKFS_MNT "/load", O_WRONLY);
+		if (fd < 0)
+			return -1;
+		load2 = 0;
+	}
 
 	if (clear)
 		strcpy(access_type, "-----");
@@ -316,13 +339,20 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 		if (!clear)
 			int_to_access_type_k(rule->access_code, access_type);
 
-		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_FORMAT, rule->subject, rule->object, access_type);
+		if (load2)
+			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+				       rule->subject, rule->object,
+				       access_type);
+		else
+			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+				       rule->subject, rule->object,
+				       access_type);
 		if (ret < 0) {
 			close(fd);
 			return -1;
 		}
 
-		ret = write(fd, buf, LOAD_LEN);
+		ret = write(fd, buf, strlen(buf));
 		if (ret < 0) {
 			close(fd);
 			return -1;
