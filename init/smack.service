@@ -9,3 +9,6 @@ After=basic.target
 ExecStart=/usr/bin/smackctl apply
 ExecStop=/usr/bin/smackctl clear
 RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target
