@@ -36,6 +36,11 @@
  */
 struct smack_accesses;
 
+/*!
+ *
+ */
+struct smack_cipso;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -112,6 +117,12 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd);
 int smack_have_access(const char *subject, const char *object,
 		      const char *access_type);
 
+struct smack_cipso *smack_cipso_new(int fd);
+
+void smack_cipso_free(struct smack_cipso *cipso);
+
+int smack_cipso_apply(struct smack_cipso *cipso);
+
 /*!
   * Get the label that is associated with the callers process.
   * Caller is responsible of freeing the returned label.
@@ -131,6 +142,7 @@ int smack_new_label_from_self(char **label);
   * @return 0 on success and negative value on failure.
   */
 int smack_new_label_from_socket(int fd, char **label);
+
 
 #ifdef __cplusplus
 }
