@@ -36,35 +36,9 @@
 #include <string.h>
 
 #define SMACKFS_MAGIC 0x43415d53
-#define CAT_MAX_COUNT 240
-#define CAT_MAX_VALUE 63
-#define LEVEL_MAX 255
-#define NUM_LEN 4
-
-#define CIPSO_POS(i)   (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
-#define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
-#define CIPSO_NUM_LEN_STR "%-4d"
-
-#define BUF_SIZE 512
-
-struct cipso_mapping {
-	char label[LABEL_LEN + 1];
-	int cats[CAT_MAX_VALUE];
-	int ncats;
-	int level;
-	struct cipso_mapping *next;
-};
-
-struct cipso {
-	struct cipso_mapping *first;
-	struct cipso_mapping *last;
-};
 
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-static struct cipso *cipso_new(int fd);
-static void cipso_free(struct cipso *cipso);
-static int cipso_apply(struct cipso *cipso);
 
 int is_smackfs_mounted(void)
 {
@@ -170,15 +144,15 @@ int apply_rules_file(int fd, int clear)
 
 int apply_cipso_file(int fd)
 {
-	struct cipso *cipso = NULL;
+	struct smack_cipso *cipso = NULL;
 	int ret;
 
-	cipso = cipso_new(fd);
+	cipso = smack_cipso_new(fd);
 	if (cipso == NULL)
 		return -1;
 
-	ret = cipso_apply(cipso);
-	cipso_free(cipso);
+	ret = smack_cipso_apply(cipso);
+	smack_cipso_free(cipso);
 	if (ret)
 		return -1;
 
@@ -221,141 +195,4 @@ static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag
 	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
 	close(fd);
 	return ret;
-}
-
-static struct cipso *cipso_new(int fd)
-{
-	struct cipso *cipso = NULL;
-	struct cipso_mapping *mapping = NULL;
-	FILE *file = NULL;
-	char buf[BUF_SIZE];
-	char *label, *level, *cat, *ptr;
-	long int val;
-	int i;
-	int newfd;
-
-	newfd = dup(fd);
-	if (newfd == -1)
-		return NULL;
-
-	file = fdopen(newfd, "r");
-	if (file == NULL) {
-		close(newfd);
-		return NULL;
-	}
-
-	cipso = calloc(sizeof(struct cipso), 1);
-	if (cipso == NULL) {
-		fclose(file);
-		return NULL;
-	}
-
-	while (fgets(buf, BUF_SIZE, file) != NULL) {
-		mapping = calloc(sizeof(struct cipso_mapping), 1);
-		if (mapping == NULL)
-			goto err_out;
-
-		label = strtok_r(buf, " \t\n", &ptr);
-		level = strtok_r(NULL, " \t\n", &ptr);
-		cat = strtok_r(NULL, " \t\n", &ptr);
-		if (label == NULL || cat == NULL || level == NULL ||
-		    strlen(label) > LABEL_LEN) {
-			errno = EINVAL;
-			goto err_out;
-		}
-
-		strcpy(mapping->label, label);
-
-		errno = 0;
-		val = strtol(level, NULL, 10);
-		if (errno)
-			goto err_out;
-
-		if (val < 0 || val > LEVEL_MAX) {
-			errno = ERANGE;
-			goto err_out;
-		}
-
-		mapping->level = val;
-
-		for (i = 0; i < CAT_MAX_COUNT && cat != NULL; i++) {
-			errno = 0;
-			val = strtol(cat, NULL, 10);
-			if (errno)
-				goto err_out;
-
-			if (val < 0 || val > CAT_MAX_VALUE) {
-				errno = ERANGE;
-				goto err_out;
-			}
-
-			mapping->cats[i] = val;
-
-			cat = strtok_r(NULL, " \t\n", &ptr);
-		}
-
-		mapping->ncats = i;
-
-		if (cipso->first == NULL) {
-			cipso->first = cipso->last = mapping;
-		} else {
-			cipso->last->next = mapping;
-			cipso->last = mapping;
-		}
-	}
-
-	if (ferror(file))
-		goto err_out;
-
-	fclose(file);
-	return cipso;
-err_out:
-	fclose(file);
-	cipso_free(cipso);
-	free(mapping);
-	return NULL;
-}
-
-static void cipso_free(struct cipso *cipso)
-{
-	if (cipso == NULL)
-		return;
-
-	struct cipso_mapping *mapping = cipso->first;
-	struct cipso_mapping *next_mapping = NULL;
-
-	while (mapping != NULL) {
-		next_mapping = mapping->next;
-		free(mapping);
-		mapping = next_mapping;
-	}
-}
-
-static int cipso_apply(struct cipso *cipso)
-{
-	struct cipso_mapping *m = NULL;
-	char buf[CIPSO_MAX_SIZE];
-	int fd;
-	int i;
-
-	fd = open(SMACKFS_MNT "/cipso2", O_WRONLY);
-	if (fd < 0)
-		return -1;
-
-	for (m = cipso->first; m != NULL; m = m->next) {
-		sprintf(buf, "%s ", m->label);
-		sprintf(&buf[LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
-		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
-
-		for (i = 0; i < m->ncats; i++)
-			sprintf(&buf[CIPSO_POS(i)], CIPSO_NUM_LEN_STR, m->cats[i]);
-
-		if (write(fd, buf, strlen(buf)) < 0) {
-			close(fd);
-			return -1;
-		}
-	}
-
-	close(fd);
-	return 0;
 }

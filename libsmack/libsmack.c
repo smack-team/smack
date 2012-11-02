@@ -38,6 +38,15 @@
 #define ACC_LEN 5
 #define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
 
+#define LEVEL_MAX 255
+#define NUM_LEN 4
+#define BUF_SIZE 512
+#define CAT_MAX_COUNT 240
+#define CAT_MAX_VALUE 63
+#define CIPSO_POS(i)   (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
+#define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
+#define CIPSO_NUM_LEN_STR "%-4d"
+
 #define ACC_R 0x01
 #define ACC_W 0x02
 #define ACC_X 0x04
@@ -60,6 +69,19 @@ struct smack_rule {
 struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
+};
+
+struct cipso_mapping {
+	char label[LABEL_LEN + 1];
+	int cats[CAT_MAX_VALUE];
+	int ncats;
+	int level;
+	struct cipso_mapping *next;
+};
+
+struct smack_cipso {
+	struct cipso_mapping *first;
+	struct cipso_mapping *last;
 };
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
@@ -259,7 +281,142 @@ int smack_have_access(const char *subject, const char *object,
 
 	return buf[0] == '1';
 }
+void smack_cipso_free(struct smack_cipso *cipso)
+{
+	if (cipso == NULL)
+		return;
 
+	struct cipso_mapping *mapping = cipso->first;
+	struct cipso_mapping *next_mapping = NULL;
+
+	while (mapping != NULL) {
+		next_mapping = mapping->next;
+		free(mapping);
+		mapping = next_mapping;
+	}
+}
+
+struct smack_cipso *smack_cipso_new(int fd)
+{
+	struct smack_cipso *cipso = NULL;
+	struct cipso_mapping *mapping = NULL;
+	FILE *file = NULL;
+	char buf[BUF_SIZE];
+	char *label, *level, *cat, *ptr;
+	long int val;
+	int i;
+	int newfd;
+
+	newfd = dup(fd);
+	if (newfd == -1)
+		return NULL;
+
+	file = fdopen(newfd, "r");
+	if (file == NULL) {
+		close(newfd);
+		return NULL;
+	}
+
+	cipso = calloc(sizeof(struct smack_cipso ), 1);
+	if (cipso == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	while (fgets(buf, BUF_SIZE, file) != NULL) {
+		mapping = calloc(sizeof(struct cipso_mapping), 1);
+		if (mapping == NULL)
+			goto err_out;
+
+		label = strtok_r(buf, " \t\n", &ptr);
+		level = strtok_r(NULL, " \t\n", &ptr);
+		cat = strtok_r(NULL, " \t\n", &ptr);
+		if (label == NULL || cat == NULL || level == NULL ||
+		    strlen(label) > LABEL_LEN) {
+			errno = EINVAL;
+			goto err_out;
+		}
+
+		strcpy(mapping->label, label);
+
+		errno = 0;
+		val = strtol(level, NULL, 10);
+		if (errno)
+			goto err_out;
+
+		if (val < 0 || val > LEVEL_MAX) {
+			errno = ERANGE;
+			goto err_out;
+		}
+
+		mapping->level = val;
+
+		for (i = 0; i < CAT_MAX_COUNT && cat != NULL; i++) {
+			errno = 0;
+			val = strtol(cat, NULL, 10);
+			if (errno)
+				goto err_out;
+
+			if (val < 0 || val > CAT_MAX_VALUE) {
+				errno = ERANGE;
+				goto err_out;
+			}
+
+			mapping->cats[i] = val;
+
+			cat = strtok_r(NULL, " \t\n", &ptr);
+		}
+
+		mapping->ncats = i;
+
+		if (cipso->first == NULL) {
+			cipso->first = cipso->last = mapping;
+		} else {
+			cipso->last->next = mapping;
+			cipso->last = mapping;
+		}
+	}
+
+	if (ferror(file))
+		goto err_out;
+
+	fclose(file);
+	return cipso;
+err_out:
+	fclose(file);
+	smack_cipso_free(cipso);
+	free(mapping);
+	return NULL;
+}
+
+int smack_cipso_apply(struct smack_cipso *cipso)
+{
+	struct cipso_mapping *m = NULL;
+	char buf[CIPSO_MAX_SIZE];
+	int fd;
+	int i;
+
+	fd = open(SMACKFS_MNT "/cipso2", O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	for (m = cipso->first; m != NULL; m = m->next) {
+		sprintf(buf, "%s ", m->label);
+		sprintf(&buf[LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
+		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
+
+		for (i = 0; i < m->ncats; i++)
+			sprintf(&buf[CIPSO_POS(i)], CIPSO_NUM_LEN_STR, m->cats[i]);
+
+		if (write(fd, buf, strlen(buf)) < 0) {
+			close(fd);
+			return -1;
+		}
+	}
+
+	close(fd);
+	return 0;
+}
 int smack_new_label_from_self(char **label)
 {
 	char *result;
@@ -424,4 +581,5 @@ static inline void int_to_access_type_k(unsigned access, char *str)
 	str[4] = ((access & ACC_T) != 0) ? 't' : '-';
 	str[5] = '\0';
 }
+
 
