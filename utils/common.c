@@ -34,8 +34,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
-#define SMACKFS_MAGIC 0x43415d53
+#define SMACK_MAGIC 0x43415d53
 
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
@@ -44,15 +45,22 @@ int is_smackfs_mounted(void)
 {
 	struct statfs sfs;
 	int ret;
+	const char * smack_mnt;
+
+	smack_mnt = smack_smackfs_path();
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1;
+	}
 
 	do {
-		ret = statfs(SMACKFS_MNT, &sfs);
+		ret = statfs(smack_mnt, &sfs);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret)
 		return -1;
 
-	if (sfs.f_type == SMACKFS_MAGIC)
+	if (sfs.f_type == SMACK_MAGIC)
 		return 1;
 
 	return 0;
@@ -62,11 +70,20 @@ int clear(void)
 {
 	int fd;
 	int ret;
+	const char * smack_mnt;
+	char path[PATH_MAX];
+
+	smack_mnt = smack_smackfs_path();
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1;
+	}
 
 	if (is_smackfs_mounted() != 1)
 		return -1;
 
-	fd = open(SMACKFS_MNT "/load2", O_RDONLY);
+	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	fd = open(path, O_RDONLY);
 	if (fd < 0)
 		return -1;
 
