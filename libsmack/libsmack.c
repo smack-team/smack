@@ -21,6 +21,7 @@
  * Authors:
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  * Brian McGillion <brian.mcgillion@intel.com>
+ * Passion Zhao <passion.zhao@intel.com>
  */
 
 #include "sys/smack.h"
@@ -33,6 +34,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define LABEL_LEN 255
 #define ACC_LEN 5
@@ -56,8 +58,9 @@
 #define KERNEL_LONG_FORMAT "%s %s %s"
 #define KERNEL_SHORT_FORMAT "%-23s %-23s %5s"
 #define READ_BUF_SIZE LOAD_LEN + 1
-#define SMACKFS_MNT "/smack"
 #define SELF_LABEL_FILE "/proc/self/attr/current"
+
+const char *smack_mnt;
 
 struct smack_rule {
 	char subject[LABEL_LEN + 1];
@@ -242,19 +245,29 @@ int smack_have_access(const char *subject, const char *object,
 	int ret;
 	int fd;
 	int access2 = 1;
+	char path[PATH_MAX];
 
-	access_code = access_type_to_int(access_type);
-	int_to_access_type_k(access_code, access_type_k);
-
-	fd = open(SMACKFS_MNT "/access2", O_RDWR);
+	smack_mnt = smack_smackfs_path();
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1; 
+	}
+	
+	snprintf(path, sizeof path, "%s/access2", smack_mnt);
+	fd = open(path, O_RDWR);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
-		fd = open(SMACKFS_MNT "/access", O_RDWR);
+		
+	        snprintf(path, sizeof path, "%s/access", smack_mnt);
+		fd = open(path, O_RDWR);
 		if (fd < 0)
 			return -1;
 		access2 = 0;
 	}
+
+	access_code = access_type_to_int(access_type);
+	int_to_access_type_k(access_code, access_type_k);
 
 	if (access2)
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
@@ -395,8 +408,16 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	char buf[CIPSO_MAX_SIZE];
 	int fd;
 	int i;
+	char path[PATH_MAX];
 
-	fd = open(SMACKFS_MNT "/cipso2", O_WRONLY);
+	smack_mnt = smack_smackfs_path();
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1; 
+	}
+	
+	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
+	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
 
@@ -455,7 +476,7 @@ int smack_new_label_from_socket(int fd, char **label)
 	if (ret < 0 && errno != ERANGE)
 		return -1;
 
-        result = calloc(length + 1, 1);
+	result = calloc(length + 1, 1);
 	if (result == NULL)
 		return -1;
 
@@ -477,13 +498,22 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int ret;
 	int fd;
 	int load2 = 1;
+	char path[PATH_MAX];
 
-	fd = open(SMACKFS_MNT "/load2", O_WRONLY);
+	smack_mnt = smack_smackfs_path();
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1; 
+	}
+	
+	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	fd = open(path, O_WRONLY);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		/* fallback */
-		fd = open(SMACKFS_MNT "/load", O_WRONLY);
+	        snprintf(path, sizeof path, "%s/load", smack_mnt);
+		fd = open(path, O_WRONLY);
 		if (fd < 0)
 			return -1;
 		load2 = 0;
