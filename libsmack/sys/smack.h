@@ -124,6 +124,11 @@ void smack_cipso_free(struct smack_cipso *cipso);
 int smack_cipso_apply(struct smack_cipso *cipso);
 
 /*!
+ * Get the smackfs directory.
+ */
+const char *smack_smackfs_path(void);
+
+/*!
   * Get the label that is associated with the callers process.
   * Caller is responsible of freeing the returned label.
   *
