@@ -35,8 +35,6 @@
 #include <stdint.h>
 #include <limits.h>
 
-#include "dso.h"
-
 /*
  *  * smackfs magic number
  *   */
@@ -54,9 +52,6 @@ void set_smackmnt(const char *mnt)
 {
 	smack_mnt = strdup(mnt);
 }
-
-hidden_def(set_smackmnt)
-
 
 /* Verify the mount point for smack file system has a smackfs.
  * If the file system:
@@ -118,8 +113,6 @@ int smackfs_exists(void)
 	return exists;
 }
 
-hidden_def(smackfs_exists)
-
 static void init_smackmnt(void)
 {
 	char *buf=NULL, *p;
@@ -180,8 +173,6 @@ void fini_smackmnt(void)
 	free(smack_mnt);
 	smack_mnt = NULL;
 }
-
-hidden_def(fini_smackmnt)
 
 static void init_lib(void) __attribute__ ((constructor));
 static void init_lib(void)
