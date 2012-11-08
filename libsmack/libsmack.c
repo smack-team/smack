@@ -60,7 +60,7 @@
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
-const char *smack_mnt;
+extern char *smack_mnt;
 
 struct smack_rule {
 	char subject[LABEL_LEN + 1];
@@ -247,7 +247,6 @@ int smack_have_access(const char *subject, const char *object,
 	int access2 = 1;
 	char path[PATH_MAX];
 
-	smack_mnt = smack_smackfs_path();
 	if (!smack_mnt) {
 		errno = EFAULT;
 		return -1; 
@@ -402,6 +401,11 @@ err_out:
 	return NULL;
 }
 
+const char *smack_smackfs_path(void)
+{
+	return smack_mnt;
+}
+
 int smack_cipso_apply(struct smack_cipso *cipso)
 {
 	struct cipso_mapping *m = NULL;
@@ -410,7 +414,6 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int i;
 	char path[PATH_MAX];
 
-	smack_mnt = smack_smackfs_path();
 	if (!smack_mnt) {
 		errno = EFAULT;
 		return -1; 
@@ -438,6 +441,7 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	close(fd);
 	return 0;
 }
+
 int smack_new_label_from_self(char **label)
 {
 	char *result;
@@ -500,7 +504,6 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int load2 = 1;
 	char path[PATH_MAX];
 
-	smack_mnt = smack_smackfs_path();
 	if (!smack_mnt) {
 		errno = EFAULT;
 		return -1; 

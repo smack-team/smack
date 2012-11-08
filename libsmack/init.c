@@ -48,7 +48,7 @@
 #define SMACKFSMNT "/sys/fs/smackfs/"
 #define OLDSMACKFSMNT "/smack"
 
-static char *smack_mnt = NULL;
+char *smack_mnt = NULL;
 
 void set_smackmnt(const char *mnt)
 {
@@ -173,11 +173,6 @@ static void init_smackmnt(void)
 	if (fp)
 		fclose(fp);
 	return;
-}
-
-const char *smack_smackfs_path(void)
-{
-	return smack_mnt;
 }
 
 void fini_smackmnt(void)
