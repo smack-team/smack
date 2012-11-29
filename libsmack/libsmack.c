@@ -36,16 +36,15 @@
 #include <unistd.h>
 #include <limits.h>
 
-#define LABEL_LEN 255
 #define ACC_LEN 5
-#define LOAD_LEN (2 * (LABEL_LEN + 1) + ACC_LEN)
+#define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + ACC_LEN)
 
 #define LEVEL_MAX 255
 #define NUM_LEN 4
 #define BUF_SIZE 512
 #define CAT_MAX_COUNT 240
 #define CAT_MAX_VALUE 63
-#define CIPSO_POS(i)   (LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
+#define CIPSO_POS(i)   (SMACK_LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
 #define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
 #define CIPSO_NUM_LEN_STR "%-4d"
 
@@ -63,8 +62,8 @@
 extern char *smack_mnt;
 
 struct smack_rule {
-	char subject[LABEL_LEN + 1];
-	char object[LABEL_LEN + 1];
+	char subject[SMACK_LABEL_LEN + 1];
+	char object[SMACK_LABEL_LEN + 1];
 	int access_code;
 	struct smack_rule *next;
 };
@@ -75,7 +74,7 @@ struct smack_accesses {
 };
 
 struct cipso_mapping {
-	char label[LABEL_LEN + 1];
+	char label[SMACK_LABEL_LEN + 1];
 	int cats[CAT_MAX_VALUE];
 	int ncats;
 	int level;
@@ -175,8 +174,8 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, LABEL_LEN + 1);
-	strncpy(rule->object, object, LABEL_LEN + 1);
+	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
+	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
 	rule->access_code = access_type_to_int(access_type);
 
 	if (handle->first == NULL) {
@@ -344,7 +343,7 @@ struct smack_cipso *smack_cipso_new(int fd)
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
 		if (label == NULL || cat == NULL || level == NULL ||
-		    strlen(label) > LABEL_LEN) {
+		    strlen(label) > SMACK_LABEL_LEN) {
 			errno = EINVAL;
 			goto err_out;
 		}
@@ -426,8 +425,8 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 
 	for (m = cipso->first; m != NULL; m = m->next) {
 		sprintf(buf, "%s ", m->label);
-		sprintf(&buf[LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
-		sprintf(&buf[LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
+		sprintf(&buf[SMACK_LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
+		sprintf(&buf[SMACK_LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
 
 		for (i = 0; i < m->ncats; i++)
 			sprintf(&buf[CIPSO_POS(i)], CIPSO_NUM_LEN_STR, m->cats[i]);
@@ -448,7 +447,7 @@ int smack_new_label_from_self(char **label)
 	int fd;
 	int ret;
 
-	result = calloc(LABEL_LEN + 1, 1);
+	result = calloc(SMACK_LABEL_LEN + 1, 1);
 	if (result == NULL)
 		return -1;
 
@@ -458,7 +457,7 @@ int smack_new_label_from_self(char **label)
 		return -1;
 	}
 
-	ret = read(fd, result, LABEL_LEN);
+	ret = read(fd, result, SMACK_LABEL_LEN);
 	close(fd);
 	if (ret < 0) {
 		free(result);

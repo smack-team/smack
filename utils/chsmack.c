@@ -24,13 +24,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/xattr.h>
+#include <sys/smack.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define LSIZE 255
 
 static inline int leads(char *in, char *lead)
 {
@@ -43,7 +43,7 @@ main(int argc, char *argv[])
 	int rc;
 	int argi;
 	int transmute = 0;
-	char buffer[LSIZE + 1];
+	char buffer[SMACK_LABEL_LEN + 1];
 	char *access = NULL;
 	char *mm = NULL;
 	char *execute = NULL;
@@ -82,19 +82,19 @@ main(int argc, char *argv[])
 		fprintf(stderr, "No files specified.\n");
 		exit(1);
 	}
-	if (access != NULL && strlen(access) > LSIZE) {
+	if (access != NULL && strlen(access) > SMACK_LABEL_LEN) {
 		fprintf(stderr, "Access label \"%s\" exceeds %d characters.\n",
-			access, LSIZE);
+			access, SMACK_LABEL_LEN);
 		exit(1);
 	}
-	if (mm != NULL && strlen(mm) > LSIZE) {
+	if (mm != NULL && strlen(mm) > SMACK_LABEL_LEN) {
 		fprintf(stderr, "mmap label \"%s\" exceeds %d characters.\n",
-			mm, LSIZE);
+			mm, SMACK_LABEL_LEN);
 		exit(1);
 	}
-	if (execute != NULL && strlen(execute) > LSIZE) {
+	if (execute != NULL && strlen(execute) > SMACK_LABEL_LEN) {
 		fprintf(stderr, "execute label \"%s\" exceeds %d characters.\n",
-			execute, LSIZE);
+			execute, SMACK_LABEL_LEN);
 		exit(1);
 	}
 	for (; argi < argc; argi++) {
@@ -102,25 +102,25 @@ main(int argc, char *argv[])
 		    execute == NULL && !transmute) {
 			printf("%s", argv[argi]);
 			rc = lgetxattr(argv[argi], "security.SMACK64",
-				buffer, LSIZE + 1);
+				buffer, SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				buffer[rc] = '\0';
 				printf(" access=\"%s\"", buffer);
 			}
 			rc = lgetxattr(argv[argi], "security.SMACK64EXEC",
-				buffer, LSIZE + 1);
+				buffer, SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				buffer[rc] = '\0';
 				printf(" execute=\"%s\"", buffer);
 			}
 			rc = lgetxattr(argv[argi], "security.SMACK64MMAP",
-				buffer, LSIZE + 1);
+				buffer, SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				buffer[rc] = '\0';
 				printf(" mmap=\"%s\"", buffer);
 			}
 			rc = lgetxattr(argv[argi], "security.SMACK64TRANSMUTE",
-				buffer, LSIZE + 1);
+				buffer, SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				buffer[rc] = '\0';
 				printf(" transmute=\"%s\"", buffer);

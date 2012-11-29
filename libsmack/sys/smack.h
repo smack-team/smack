@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2010 Nokia Corporation
  * Copyright (C) 2011 Intel Corporation
+ * Copyright (C) 2012 Samsung Electronics Co.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -20,6 +21,7 @@
  *
  * Authors:
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
+ * Rafal Krypa <r.krypa@samsung.com>
  */
 
 /*!
@@ -30,6 +32,11 @@
 #define _SYS_SMACK_H
 
 #include <sys/types.h>
+
+/*!
+ * Maximum length of a smack label, excluding terminating null character.
+ */
+#define SMACK_LABEL_LEN 255
 
 /*!
  * Handle to a in-memory representation of set of Smack rules.
