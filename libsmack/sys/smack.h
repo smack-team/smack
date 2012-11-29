@@ -155,6 +155,13 @@ int smack_new_label_from_self(char **label);
   */
 int smack_new_label_from_socket(int fd, char **label);
 
+/*!
+ * Revoke all rules for a subject label.
+ *
+ * @param subject subject to revoke
+ * @return 0 on success and negative value on failure.
+ */
+int smack_revoke_subject(const char *subject);
 
 #ifdef __cplusplus
 }

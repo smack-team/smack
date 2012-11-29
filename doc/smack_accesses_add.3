@@ -1,6 +1,7 @@
 '\" t
 .\" This file is part of libsmack
 .\" Copyright (C) 2012 Intel Corporation
+.\" Copyright (C) 2012 Samsung Electronics Co.
 .\"
 .\" This library is free software; you can redistribute it and/or
 .\" modify it under the terms of the GNU Lesser General Public License
@@ -18,10 +19,11 @@
 .\"
 .\" Author:
 .\" Brian McGillion <brian.mcgillion@intel.com>
+.\" Rafal Krypa <r.krypa@samsung.com>
 .\"
-.TH "SMACK_ACCESSES_ADD" "3" "08/05/2012" "Libsmack 1\&.0"
+.TH "SMACK_ACCESSES_ADD" "3" "14/06/2012" "Libsmack 1\&.0"
 .SH NAME
-smack_accesses_new, smack_accesses_free, smack_accesses_save, smack_accesses_apply, smack_accesses_clear, smack_accesses_add, smack_accesses_add_from_file \- Manipulate Smack rules
+smack_accesses_new, smack_accesses_free, smack_accesses_save, smack_accesses_apply, smack_accesses_clear, smack_accesses_add, smack_accesses_add_from_file, smack_revoke_subject \- Manipulate Smack rules
 .SH SYNOPSIS
 .B #include <sys/smack.h>
 .sp
@@ -40,6 +42,9 @@ smack_accesses_new, smack_accesses_free, smack_accesses_save, smack_accesses_app
 .BI "int smack_accesses_apply(struct smack_accesses *" handle ");"
 .br
 .BI "int smack_accesses_clear(struct smack_accesses *" handle ");"
+.br
+
+.BI "int smack_revoke_subject(const char *" subject ");"
 .br
 
 .SH DESCRIPTION
@@ -85,6 +90,11 @@ directly to the kernel.  The calling process must have the CAP_MAC_ADMIN capabil
 remove the rules pointed to by
 .I handle
 directly from the kernel.  The calling process must have the CAP_MAC_ADMIN capability.
+
+.BR smack_revoke_subject ()
+Sets the access to '-' (no access allowed) for all access rules with given
+.I subject
+label directly in the kernel.  The calling process must have the CAP_MAC_ADMIN capability.
 .SH RETURN VALUE
 All methods, except
 .IR smack_accesses_free ,

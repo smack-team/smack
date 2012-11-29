@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2010 Nokia Corporation
  * Copyright (C) 2011 Intel Corporation
+ * Copyright (C) 2012 Samsung Electronics Co.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -22,6 +23,7 @@
  * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  * Brian McGillion <brian.mcgillion@intel.com>
  * Passion Zhao <passion.zhao@intel.com>
+ * Rafal Krypa <r.krypa@samsung.com>
  */
 
 #include "sys/smack.h"
@@ -491,6 +493,23 @@ int smack_new_label_from_socket(int fd, char **label)
 
 	*label = result;
 	return 0;
+}
+
+int smack_revoke_subject(const char *subject)
+{
+	int ret;
+	int fd;
+	char path[PATH_MAX];
+
+	snprintf(path, sizeof path, "%s/revoke-subject", smack_mnt);
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = write(fd, subject, strnlen(subject, SMACK_LABEL_LEN));
+	close(fd);
+
+	return (ret < 0) ? -1 : 0;
 }
 
 static int accesses_apply(struct smack_accesses *handle, int clear)
