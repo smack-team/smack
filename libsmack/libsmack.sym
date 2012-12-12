@@ -16,6 +16,12 @@ global:
 	smack_new_label_from_socket;
 	smack_set_label_for_self;
 	smack_revoke_subject;
+	smack_getlabel;
+	smack_lgetlabel;
+	smack_fgetlabel;
+	smack_setlabel;
+	smack_lsetlabel;
+	smack_fsetlabel;
 local:
 	*;
 };

@@ -12,3 +12,9 @@ libsmack.so.1 libsmack1 #MINVER#
  smack_new_label_from_socket@LIBSMACK 1.0
  smack_revoke_subject@LIBSMACK 1.0
  smack_set_label_for_self@LIBSMACK 1.0
+ smack_getlabel@LIBSMACK 1.0
+ smack_lgetlabel@LIBSMACK 1.0
+ smack_fgetlabel@LIBSMACK 1.0
+ smack_setlabel@LIBSMACK 1.0
+ smack_lsetlabel@LIBSMACK 1.0
+ smack_fsetlabel@LIBSMACK 1.0

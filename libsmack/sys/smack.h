@@ -38,6 +38,15 @@
  */
 #define SMACK_LABEL_LEN 255
 
+enum smack_label_type {
+	SMACK_LABEL_ACCESS,
+	SMACK_LABEL_EXEC,
+	SMACK_LABEL_MMAP,
+	SMACK_LABEL_TRANSMUTE,
+	SMACK_LABEL_IPIN,
+	SMACK_LABEL_IPOUT,
+};
+
 /*!
  * Handle to a in-memory representation of set of Smack rules.
  */
@@ -171,6 +180,87 @@ int smack_set_label_for_self(const char *label);
  * @return 0 on success and negative value on failure.
  */
 int smack_revoke_subject(const char *subject);
+
+/*!
+ * Get SMACK label from file.
+ * On successful call label will be stored on allocated memory.
+ * Caller should take care of freeing that memory later.
+ *
+ * @param path file system path
+ * @param label returned label
+ * @param type label type to get
+ * @return 0 on success and negative value on failure.
+ */
+int smack_getlabel(const char *path, char** label,
+		enum smack_label_type type);
+
+/*!
+ * Get SMACK label from file. If path points to a symbolic link, the
+ * function will return label of the link instead of file it refers to.
+ * On successful call label will be stored on allocated memory.
+ * Caller should take care of freeing that memory later.
+ *
+ * @param path file system path
+ * @param label returned label
+ * @param type label type to get
+ * @return 0 on success and negative value on failure.
+ */
+int smack_lgetlabel(const char *path, char** label,
+		enum smack_label_type type);
+
+/*!
+ * Get SMACK label from file descriptor.
+ * On successful call label will be stored on allocated memory.
+ * Caller should take care of freeing that memory later.
+ *
+ * @param fd file descriptor
+ * @param label returned label
+ * @param type label type to get
+ * @return 0 on success and negative value on failure.
+ */
+int smack_fgetlabel(int fd, char** label,
+		enum smack_label_type type);
+
+/*!
+ * Set SMACK label for file.
+ * On successful call label will be stored on allocated memory.
+ *
+ * @param path file system path
+ * @param label SMACK label to set
+ *   if equal to NULL or "", label will be removed
+ *   for type SMACK_LABEL_TRANSMUTE valid values are NULL, "", "0" or "1"
+ * @param type label type to get
+ * @return 0 on success and negative value on failure.
+ */
+int smack_setlabel(const char *path, const char* label,
+		enum smack_label_type type);
+
+/*!
+ * Set SMACK label for file. If path points to a symbolic link, the
+ * function will set label of the link instead of file it refers to.
+ *
+ * @param path file system path
+ * @param label SMACK label to set
+ *   if equal to NULL or "", label will be removed
+ *   for type SMACK_LABEL_TRANSMUTE valid values are NULL, "", "0" or "1"
+ * @param type label type to get
+ * @return 0 on success and negative value on failure.
+ */
+int smack_lsetlabel(const char *path, const char* label,
+		enum smack_label_type type);
+
+/*!
+ * Get SMACK label from file descriptor.
+ *
+ * @param fd file descriptor
+ * @param label SMACK label to set
+ *   if equal to NULL or "", label will be removed
+ *   for type SMACK_LABEL_TRANSMUTE valid values are NULL, "", "0" or "1"
+ * @param type label type to get
+ * @return 0 on success and negative value on failure.
+ */
+int smack_fsetlabel(int fd, const char* label,
+		enum smack_label_type type);
 
 #ifdef __cplusplus
 }

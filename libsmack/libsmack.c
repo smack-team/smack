@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/xattr.h>
 #include <unistd.h>
 #include <limits.h>
 
@@ -62,6 +63,10 @@
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
 extern char *smack_mnt;
+
+typedef int (*getxattr_func)(void*, const char*, void*, size_t);
+typedef int (*setxattr_func)(const void*, const char*, const void*, size_t, int);
+typedef int (*removexattr_func)(void*, const char*);
 
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
@@ -92,6 +97,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear);
 static inline int access_type_to_int(const char *access_type);
 static inline void int_to_access_type_c(unsigned ac, char *str);
 static inline void int_to_access_type_k(unsigned ac, char *str);
+static inline char* get_xattr_name(enum smack_label_type type);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -532,6 +538,99 @@ int smack_revoke_subject(const char *subject)
 	return (ret < 0) ? -1 : 0;
 }
 
+static int internal_getlabel(void* file, char** label,
+		enum smack_label_type type,
+		getxattr_func getfunc)
+{
+	char* xattr_name = get_xattr_name(type);
+	char value[SMACK_LABEL_LEN + 1];
+	int ret;
+
+	ret = getfunc(file, xattr_name, value, SMACK_LABEL_LEN + 1);
+	if (ret == -1) {
+		if (errno == ENODATA) {
+			*label = NULL;
+			return 0;
+		}
+		return -1;
+	}
+
+	value[ret] = '\0';
+	*label = calloc(ret + 1, 1);
+	if (*label == NULL)
+		return -1;
+	strncpy(*label, value, ret);
+	return 0;
+}
+
+static int internal_setlabel(void* file, const char* label,
+		enum smack_label_type type,
+		setxattr_func setfunc, removexattr_func removefunc)
+{
+	char* xattr_name = get_xattr_name(type);
+
+	/* Check validity of labels for LABEL_TRANSMUTE */
+	if (type == SMACK_LABEL_TRANSMUTE && label != NULL) {
+		if (!strcmp(label, "0"))
+			label = NULL;
+		else if (!strcmp(label, "1"))
+			label = "TRUE";
+		else
+			return -1;
+	}
+
+	if (label == NULL || label[0] == '\0') {
+		return removefunc(file, xattr_name);
+	} else {
+		int len = strnlen(label, SMACK_LABEL_LEN + 1);
+		if (len > SMACK_LABEL_LEN)
+			return -1;
+		return setfunc(file, xattr_name, label, len, 0);
+	}
+}
+
+int smack_getlabel(const char *path, char** label,
+		enum smack_label_type type)
+{
+	return internal_getlabel((void*) path, label, type,
+			(getxattr_func) getxattr);
+}
+
+int smack_lgetlabel(const char *path, char** label,
+		enum smack_label_type type)
+{
+	return internal_getlabel((void*) path, label, type,
+			(getxattr_func) lgetxattr);
+}
+
+int smack_fgetlabel(int fd, char** label,
+		enum smack_label_type type)
+{
+	return internal_getlabel((void*) fd, label, type,
+			(getxattr_func) fgetxattr);
+}
+
+int smack_setlabel(const char *path, const char* label,
+		enum smack_label_type type)
+{
+	return internal_setlabel((void*) path, label, type,
+			(setxattr_func) setxattr, (removexattr_func) removexattr);
+}
+
+int smack_lsetlabel(const char *path, const char* label,
+		enum smack_label_type type)
+{
+	return internal_setlabel((void*) path, label, type,
+			(setxattr_func) lsetxattr, (removexattr_func) lremovexattr);
+}
+
+int smack_fsetlabel(int fd, const char* label,
+		enum smack_label_type type)
+{
+	return internal_setlabel((void*) fd, label, type,
+			(setxattr_func) fsetxattr, (removexattr_func) fremovexattr);
+}
+
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	char buf[LOAD_LEN + 1];
@@ -653,4 +752,24 @@ static inline void int_to_access_type_k(unsigned access, char *str)
 	str[5] = '\0';
 }
 
+static inline char* get_xattr_name(enum smack_label_type type)
+{
+	switch (type) {
+	case SMACK_LABEL_ACCESS:
+		return "security.SMACK64";
+	case SMACK_LABEL_EXEC:
+		return "security.SMACK64EXEC";
+	case SMACK_LABEL_MMAP:
+		return "security.SMACK64MMAP";
+	case SMACK_LABEL_TRANSMUTE:
+		return "security.SMACK64TRANSMUTE";
+	case SMACK_LABEL_IPIN:
+		return "security.SMACK64IPIN";
+	case SMACK_LABEL_IPOUT:
+		return "security.SMACK64IPOUT";
+	default:
+		/* Should not reach this point */
+		return NULL;
+	}
 
+}
