@@ -1,6 +1,7 @@
 '\" t
 .\" This file is part of libsmack
 .\" Copyright (C) 2012 Intel Corporation
+.\" Copyright (C) 2012 Samsung Electronics Co.
 .\"
 .\" This library is free software; you can redistribute it and/or
 .\" modify it under the terms of the GNU Lesser General Public License
@@ -18,8 +19,9 @@
 .\"
 .\" Author:
 .\" Brian McGillion <brian.mcgillion@intel.com>
+.\" Rafal Krypa <r.krypa@samsung.com>
 .\"
-.TH "SMACK_HAVE_ACCESS" "3" "02/05/2012" "Libsmack 1\&.0"
+.TH "SMACK_HAVE_ACCESS" "3" "06/20/2012" "Libsmack 1\&.0"
 .SH NAME
 smack_have_access, smack_new_label_from_self, smack_new_label_from_socket \- Userspace interaction with Smack
 .SH SYNOPSIS
@@ -28,6 +30,8 @@ smack_have_access, smack_new_label_from_self, smack_new_label_from_socket \- Use
 .BI "int smack_have_access(const char *" subject ", const char *" object ", const char *" access ");"
 .br
 .BI "int smack_new_label_from_self(char **" label ");"
+.br
+.BI "int smack_set_label_for_self(char **" label ");"
 .br
 .BI "int smack_new_label_from_socket(int " fd ", char **" label ");"
 .sp
@@ -58,6 +62,11 @@ determines the context of the current process and creates a new storage for this
 to this upon return.  It is the responsibility of the caller to free
 .I label
 when it is no longer required.
+.PP
+.BR smack_set_label_for_self ()
+sets the context of the current process to
+.IR label .
+The calling process must have the CAP_MAC_ADMIN capability.
 .PP
 .BR smack_new_label_from_socket ()
 takes the file descriptor,

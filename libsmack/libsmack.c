@@ -495,6 +495,26 @@ int smack_new_label_from_socket(int fd, char **label)
 	return 0;
 }
 
+int smack_set_label_for_self(const char *label)
+{
+	int len;
+	int fd;
+	int ret;
+
+	len = strnlen(label, SMACK_LABEL_LEN + 1);
+	if (len > SMACK_LABEL_LEN)
+		return -1;
+
+	fd = open(SELF_LABEL_FILE, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = write(fd, label, len);
+	close(fd);
+
+	return (ret < 0) ? -1 : 0;
+}
+
 int smack_revoke_subject(const char *subject)
 {
 	int ret;

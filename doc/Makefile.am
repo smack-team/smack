@@ -31,6 +31,7 @@ man_MANS = smackaccess.1 \
 	   smack_have_access.3 \
 	   smack_new_label_from_self.3 \
 	   smack_new_label_from_socket.3 \
+	   smack_set_label_for_self.3 \
 	   smack_revoke_subject.3 \
 	   chsmack.8 \
 	   smackcipso.8 \

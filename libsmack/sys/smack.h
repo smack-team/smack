@@ -156,6 +156,15 @@ int smack_new_label_from_self(char **label);
 int smack_new_label_from_socket(int fd, char **label);
 
 /*!
+ * Set the label associated with the callers process.
+ * Caller must be run by privileged user to succeed.
+ *
+ * @param label to set
+ * @return 0 on success and negative value on failure.
+ */
+int smack_set_label_for_self(const char *label);
+
+/*!
  * Revoke all rules for a subject label.
  *
  * @param subject subject to revoke
