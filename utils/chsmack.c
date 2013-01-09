@@ -2,6 +2,7 @@
  * chsmack - Set smack attributes on files
  *
  * Copyright (C) 2011 Nokia Corporation.
+ * Copyright (C) 2012 Samsung Electronics Co.
  *
  *      This program is free software; you can redistribute it and/or modify
  *      it under the terms of the GNU General Public License as published by
@@ -19,11 +20,11 @@
  *
  * Author:
  *      Casey Schaufler <casey@schaufler-ca.com>
+ *      Rafal Krypa <r.krypa@samsung.com>
  */
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/xattr.h>
 #include <sys/smack.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -43,7 +44,7 @@ main(int argc, char *argv[])
 	int rc;
 	int argi;
 	int transmute = 0;
-	char buffer[SMACK_LABEL_LEN + 1];
+	char *buffer;
 	char *access = NULL;
 	char *mm = NULL;
 	char *execute = NULL;
@@ -101,54 +102,46 @@ main(int argc, char *argv[])
 		if (access == NULL && mm == NULL &&
 		    execute == NULL && !transmute) {
 			printf("%s", argv[argi]);
-			rc = lgetxattr(argv[argi], "security.SMACK64",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
+			rc = smack_lgetlabel(argv[argi], &buffer, SMACK_LABEL_ACCESS);
+			if (rc == 0 && buffer != NULL) {
 				printf(" access=\"%s\"", buffer);
+				free(buffer);
 			}
-			rc = lgetxattr(argv[argi], "security.SMACK64EXEC",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
+			rc = smack_lgetlabel(argv[argi], &buffer, SMACK_LABEL_EXEC);
+			if (rc == 0 && buffer != NULL) {
 				printf(" execute=\"%s\"", buffer);
+				free(buffer);
 			}
-			rc = lgetxattr(argv[argi], "security.SMACK64MMAP",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
+			rc = smack_lgetlabel(argv[argi], &buffer, SMACK_LABEL_MMAP);
+			if (rc == 0 && buffer != NULL) {
 				printf(" mmap=\"%s\"", buffer);
+				free(buffer);
 			}
-			rc = lgetxattr(argv[argi], "security.SMACK64TRANSMUTE",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
+			rc = smack_lgetlabel(argv[argi], &buffer, SMACK_LABEL_TRANSMUTE);
+			if (rc == 0 && buffer != NULL) {
 				printf(" transmute=\"%s\"", buffer);
+				free(buffer);
 			}
 			printf("\n");
 			continue;
 		}
 		if (access != NULL) {
-			rc = lsetxattr(argv[argi], "security.SMACK64",
-				access, strlen(access) + 1, 0);
+			rc = smack_lsetlabel(argv[argi], access, SMACK_LABEL_ACCESS);
 			if (rc < 0)
 				perror(argv[argi]);
 		}
 		if (execute != NULL) {
-			rc = lsetxattr(argv[argi], "security.SMACK64EXEC",
-				execute, strlen(execute) + 1, 0);
+			rc = smack_lsetlabel(argv[argi], execute, SMACK_LABEL_EXEC);
 			if (rc < 0)
 				perror(argv[argi]);
 		}
 		if (mm != NULL) {
-			rc = lsetxattr(argv[argi], "security.SMACK64MMAP",
-				mm, strlen(mm) + 1, 0);
+			rc = smack_lsetlabel(argv[argi], mm, SMACK_LABEL_MMAP);
 			if (rc < 0)
 				perror(argv[argi]);
 		}
 		if (transmute) {
-			rc = lsetxattr(argv[argi], "security.SMACK64TRANSMUTE",
-				"TRUE", 4, 0);
+			rc = smack_lsetlabel(argv[argi], "1", SMACK_LABEL_TRANSMUTE);
 			if (rc < 0)
 				perror(argv[argi]);
 		}

@@ -1,0 +1,121 @@
+'\" t
+.\" This file is part of libsmack
+.\" Copyright (C) 2012 Samsung Electronics Co.
+.\"
+.\" This library is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU Lesser General Public License
+.\" version 2.1 as published by the Free Software Foundation.
+.\"
+.\" This library is distributed in the hope that it will be useful, but
+.\" WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+.\" Lesser General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU Lesser General Public
+.\" License along with this library; if not, write to the Free Software
+.\" Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+.\" 02110-1301 USA
+.\"
+.\" Author:
+.\" Rafal Krypa <r.krypa@samsung.com>
+.\"
+.TH "SMACK_GETLABEL" "3" "07/05/2012" "Libsmack 1\&.0"
+.SH NAME
+smack_getlabel, smack_lgetlabel, smack_fgetlabel, smack_setlabel, smack_lsetlabel, smack_fsetlabel \- Manipulation of Smack labels for files
+.SH SYNOPSIS
+.B #include <sys/smack.h>
+.sp
+.BI "int smack_getlabel(const char *" path ", char **" label ", enum smack_label_type " type ");"
+.br
+.BI "int smack_lgetlabel(const char *" path ", char **" label ", enum smack_label_type " type ");"
+.br
+.BI "int smack_fgetlabel(int " fd ", char **" label ", enum smack_label_type " type ");"
+.br
+
+.BI "int smack_setlabel(const char *" path ", const char *" label ", enum smack_label_type " type ");"
+.br
+.BI "int smack_lsetlabel(const char *" path ", const char *" label ", enum smack_label_type " type ");"
+.br
+.BI "int smack_fsetlabel(int " fd ", const char *" label ", enum smack_label_type " type ");"
+.sp
+.SH DESCRIPTION
+Smack uses extended attributes (xattrs) to store labels on filesystem objects. The attributes are stored in the extended attribute security name space. A process must have CAP_MAC_ADMIN to change any of these attributes.
+These functions provide an interface for Smack label manipulation on files and file descriptors.
+.SS "Label types"
+There are several types of labels and not all of them are valid for every object. All valid types are defined in enum smack_label_type:
+.IP \[bu] 2
+.BR SMACK_LABEL_ACCESS :
+Label used as the object label for Smack access checks when a labeled file is accessed.
+.IP \[bu]
+.BR SMACK_LABEL_EXEC :
+Label used as the subject label for processes executed from a labeled file by means of
+.BR exec (3)
+functions family.
+.IP \[bu]
+.BR SMACK_LABEL_MMAP :
+Label used as the object label for Smack access checks when a labeled file is mmap-ed (see 
+.BR mmap (2)).
+.IP \[bu]
+.BR SMACK_LABEL_TRANSMUTE :
+Special purpose label for directories. In contrast with all other label types, this one is of boolean type. If set to true on a directory, all files and directories created in that directory will inherit the directory's
+.BR SMACK_LABEL_ACCESS
+label. Created subdirectories will also have
+.BR SMACK_LABEL_ACCESS
+set to true. The described behavior works only if a subject creating those files and directories has "t" (transmute) permission on the directory's
+.BR SMACK_LABEL_ACCESS
+label.
+.IP \[bu]
+.BR SMACK_LABEL_IPIN :
+Valid only for socket file descriptors. Used as the object label for packets incoming from the socket.
+.IP \[bu]
+.BR SMACK_LABEL_IPOUT :
+Valid only for socket file descriptors. Used as the Smack label transmitted with outgoing packets.
+.SS "Get functions"
+All of these functions allocate memory for the label contents and assign the pointer to
+.IR label .
+The caller is responsible for freeing the memory.
+.PP
+.BR smack_getlabel ()
+retrieves the label of specified
+.I type
+from the given
+.I path
+in the filesystem.
+.PP
+.BR smack_lgetlabel ()
+is identical to
+.BR smack_getlabel (),
+except in the case of a symbolic link, where the link itself is interrogated, not the file that it refers to.
+.PP
+.BR smack_fgetlabel ()
+is identical to
+.BR smack_getlabel (),
+only the open file pointed to by
+.I fd
+(as returned by
+.BR open(2))
+is interrogated in place of
+.IR path .
+.SS "Set functions"
+These functions work with files and file descriptors in the same way as the get functions described above.
+They set the label to the value passed in
+.I value
+argument. Valid values are:
+.IP \[bu] 2
+NULL or empty string - will cause removal of the label, if any was present on a file.
+.IP \[bu]
+"1" or "0" for the
+.BR SMACK_LABEL_TRANSMUTE
+label type on a directory will turn transmute on or off.
+.IP \[bu]
+Any string not longer than
+.BR SMACK_LABEL_LEN
+for other label types.
+.SH RETURN VALUE
+On success, zero is returned. On failure, \-1 is returned and
+.I errno
+is set appropriately.
+.SH SEE ALSO
+.BR smack_have_access (3),
+.BR attr (5),
+.BR open (2).

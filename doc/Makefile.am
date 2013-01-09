@@ -33,6 +33,12 @@ man_MANS = smackaccess.1 \
 	   smack_new_label_from_socket.3 \
 	   smack_set_label_for_self.3 \
 	   smack_revoke_subject.3 \
+	   smack_fgetlabel.3 \
+	   smack_fsetlabel.3 \
+	   smack_getlabel.3 \
+	   smack_lgetlabel.3 \
+	   smack_lsetlabel.3 \
+	   smack_setlabel.3 \
 	   chsmack.8 \
 	   smackcipso.8 \
 	   smackctl.8 \
