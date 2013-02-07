@@ -34,6 +34,8 @@ smack_accesses_new, smack_accesses_free, smack_accesses_save, smack_accesses_app
 
 .BI "int smack_accesses_add(struct smack_accesses *" handle ", const char *" subject ", const char *" object ", const char *" access_type ");"
 .br
+.BI "int smack_accesses_add_modify(struct smack_accesses *" handle ", const char *" subject ", const char *" object ", const char *" access_add ", const char *" access_del ");"
+.br
 .BI "int smack_accesses_add_from_file(struct smack_accesses *" accesses ", int " fd ");"
 .br
 .BI "int smack_accesses_save(struct smack_accesses *" handle ", int " fd ");"
@@ -69,6 +71,20 @@ with the type of access defined in
 .I access_type
 and store the result in
 .IR handle .
+If a rule for the specified labels already exists it will be overwritten.
+
+.BR smack_accesses_add_modify ()
+create a modification rule for the specified
+.I subject
+and
+.I object
+labels allowing the access specified in
+.I access_add
+and disallowing the access defined by
+.IR access_del .
+The result is stored in
+.IR handle .
+If a rule for the specified labels already exists it will be modified, otherwise a new rule will be created with the permissions specified in access_add added and those specified in access_del removed.
 
 .BR smack_accesses_add_from_file ()
 read a set of rules from a file and store them in

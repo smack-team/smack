@@ -39,7 +39,7 @@
 #include <limits.h>
 
 #define ACC_LEN 5
-#define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + ACC_LEN)
+#define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
 
 #define LEVEL_MAX 255
 #define NUM_LEN 4
@@ -50,14 +50,9 @@
 #define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
 #define CIPSO_NUM_LEN_STR "%-4d"
 
-#define ACC_R 0x01
-#define ACC_W 0x02
-#define ACC_X 0x04
-#define ACC_A 0x08
-#define ACC_T 0x10
-
 #define KERNEL_LONG_FORMAT "%s %s %s"
 #define KERNEL_SHORT_FORMAT "%-23s %-23s %5s"
+#define KERNEL_MODIFY_FORMAT "%s %s %s %s"
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
@@ -66,7 +61,10 @@ extern char *smack_mnt;
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
 	char object[SMACK_LABEL_LEN + 1];
-	int access_code;
+	int is_modify;
+	char access_set[ACC_LEN + 1];
+	char access_add[ACC_LEN + 1];
+	char access_del[ACC_LEN + 1];
 	struct smack_rule *next;
 };
 
@@ -89,9 +87,7 @@ struct smack_cipso {
 };
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
-static inline int access_type_to_int(const char *access_type);
-static inline void int_to_access_type_c(unsigned ac, char *str);
-static inline void int_to_access_type_k(unsigned ac, char *str);
+static inline void parse_access_type(const char *in, char out[ACC_LEN + 1]);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -125,7 +121,6 @@ void smack_accesses_free(struct smack_accesses *handle)
 int smack_accesses_save(struct smack_accesses *handle, int fd)
 {
 	struct smack_rule *rule = handle->first;
-	char access_type[ACC_LEN + 1];
 	FILE *file;
 	int ret;
 	int newfd;
@@ -141,10 +136,16 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 	}
 
 	while (rule) {
-		int_to_access_type_c(rule->access_code, access_type);
+		if (rule->is_modify) {
+			ret = fprintf(file, "%s %s %s %s\n",
+				      rule->subject, rule->object,
+				      rule->access_add, rule->access_del);
+		} else {
+			ret = fprintf(file, "%s %s %s\n",
+				      rule->subject, rule->object,
+				      rule->access_set);
+		}
 
-		ret = fprintf(file, "%s %s %s\n",
-			      rule->subject, rule->object, access_type);
 		if (ret < 0) {
 			fclose(file);
 			return -1;
@@ -178,7 +179,32 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 
 	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
 	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
-	rule->access_code = access_type_to_int(access_type);
+	parse_access_type(access_type, rule->access_set);
+
+	if (handle->first == NULL) {
+		handle->first = handle->last = rule;
+	} else {
+		handle->last->next = rule;
+		handle->last = rule;
+	}
+
+	return 0;
+}
+
+int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
+		       const char *object, const char *access_add, const char *access_del)
+{
+	struct smack_rule *rule = NULL;
+
+	rule = calloc(sizeof(struct smack_rule), 1);
+	if (rule == NULL)
+		return -1;
+
+	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
+	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
+	parse_access_type(access_add, rule->access_add);
+	parse_access_type(access_del, rule->access_del);
+	rule->is_modify = 1;
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -195,8 +221,9 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 	FILE *file = NULL;
 	char buf[READ_BUF_SIZE];
 	char *ptr;
-	const char *subject, *object, *access;
+	const char *subject, *object, *access, *access2;
 	int newfd;
+	int ret;
 
 	newfd = dup(fd);
 	if (newfd == -1)
@@ -214,6 +241,7 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 		subject = strtok_r(buf, " \t\n", &ptr);
 		object = strtok_r(NULL, " \t\n", &ptr);
 		access = strtok_r(NULL, " \t\n", &ptr);
+		access2 = strtok_r(NULL, " \t\n", &ptr);
 
 		if (subject == NULL || object == NULL || access == NULL ||
 		    strtok_r(NULL, " \t\n", &ptr) != NULL) {
@@ -222,7 +250,12 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 			return -1;
 		}
 
-		if (smack_accesses_add(accesses, subject, object, access)) {
+		if (access2 == NULL)
+			ret = smack_accesses_add(accesses, subject, object, access);
+		else
+			ret = smack_accesses_add_modify(accesses, subject, object, access, access2);
+
+		if (ret) {
 			fclose(file);
 			return -1;
 		}
@@ -242,7 +275,6 @@ int smack_have_access(const char *subject, const char *object,
 {
 	char buf[LOAD_LEN + 1];
 	char access_type_k[ACC_LEN + 1];
-	unsigned access_code;
 	int ret;
 	int fd;
 	int access2 = 1;
@@ -266,8 +298,7 @@ int smack_have_access(const char *subject, const char *object,
 		access2 = 0;
 	}
 
-	access_code = access_type_to_int(access_type);
-	int_to_access_type_k(access_code, access_type_k);
+	parse_access_type(access_type, access_type_k);
 
 	if (access2)
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
@@ -549,10 +580,11 @@ int smack_revoke_subject(const char *subject)
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	char buf[LOAD_LEN + 1];
-	char access_type[ACC_LEN + 1];
 	struct smack_rule *rule;
 	int ret;
 	int fd;
+	int load_fd;
+	int change_fd;
 	int load2 = 1;
 	char path[PATH_MAX];
 
@@ -562,109 +594,104 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	}
 	
 	snprintf(path, sizeof path, "%s/load2", smack_mnt);
-	fd = open(path, O_WRONLY);
-	if (fd < 0) {
+	load_fd = open(path, O_WRONLY);
+	if (load_fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		/* fallback */
 	        snprintf(path, sizeof path, "%s/load", smack_mnt);
-		fd = open(path, O_WRONLY);
-		if (fd < 0)
+		load_fd = open(path, O_WRONLY);
+		/* Try to continue if the file doesn't exist, we might not need it. */
+		if (load_fd < 0 && errno != ENOENT)
 			return -1;
 		load2 = 0;
 	}
 
-	if (clear)
-		strcpy(access_type, "-----");
+	snprintf(path, sizeof path, "%s/change-rule", smack_mnt);
+	change_fd = open(path, O_WRONLY);
+	/* Try to continue if the file doesn't exist, we might not need it. */
+	if (change_fd < 0 && errno != ENOENT) {
+		ret = -1;
+		goto err_out;
+	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		if (!clear)
-			int_to_access_type_k(rule->access_code, access_type);
+		if (clear) {
+			strcpy(rule->access_set, "-----");
+			rule->is_modify = 0;
+		}
 
-		if (load2)
-			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-				       rule->subject, rule->object,
-				       access_type);
-		else
-			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-				       rule->subject, rule->object,
-				       access_type);
-		if (ret < 0) {
-			close(fd);
-			return -1;
+		if (rule->is_modify) {
+			fd = change_fd;
+			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
+						rule->subject, rule->object,
+						rule->access_add, rule->access_del);
+		} else {
+			fd = load_fd;
+			if (load2)
+				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+					       rule->subject, rule->object,
+					       rule->access_set);
+			else
+				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+					       rule->subject, rule->object,
+					       rule->access_set);
+		}
+
+		if (ret < 0 || fd < 0) {
+			ret = -1;
+			goto err_out;
 		}
 
 		ret = write(fd, buf, strlen(buf));
 		if (ret < 0) {
-			close(fd);
-			return -1;
+			ret = -1;
+			goto err_out;
 		}
 	}
+	ret = 0;
 
-	close(fd);
-	return 0;
+err_out:
+	if (load_fd >= 0)
+		close(load_fd);
+	if (change_fd >= 0)
+		close(change_fd);
+	return ret;
 }
 
-static inline int access_type_to_int(const char *access_type)
+static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 {
 	int i;
-	unsigned access;
 
-	access = 0;
-	for (i = 0; access_type[i] != '\0'; i++)
-		switch (access_type[i]) {
+	for (i = 0; i < ACC_LEN; ++i)
+		out[i] = '-';
+	out[ACC_LEN] = '\0';
+
+	for (i = 0; in[i] != '\0'; i++)
+		switch (in[i]) {
 		case 'r':
 		case 'R':
-			access |= ACC_R;
+			out[0] = 'r';
 			break;
 		case 'w':
 		case 'W':
-			access |= ACC_W;
+			out[1] = 'w';
 			break;
 		case 'x':
 		case 'X':
-			access |= ACC_X;
+			out[2] = 'x';
 			break;
 		case 'a':
 		case 'A':
-			access |= ACC_A;
+			out[3] = 'a';
 			break;
 		case 't':
 		case 'T':
-			access |= ACC_T;
+			out[4] = 't';
 			break;
 		default:
 			break;
 		}
-
-	return access;
-}
-
-static inline void int_to_access_type_c(unsigned access, char *str)
-{
-	int i;
-	i = 0;
-	if ((access & ACC_R) != 0)
-		str[i++] = 'r';
-	if ((access & ACC_W) != 0)
-		str[i++] = 'w';
-	if ((access & ACC_X) != 0)
-		str[i++] = 'x';
-	if ((access & ACC_A) != 0)
-		str[i++] = 'a';
-	if ((access & ACC_T) != 0)
-		str[i++] = 't';
-	str[i] = '\0';
-}
-
-static inline void int_to_access_type_k(unsigned access, char *str)
-{
-	str[0] = ((access & ACC_R) != 0) ? 'r' : '-';
-	str[1] = ((access & ACC_W) != 0) ? 'w' : '-';
-	str[2] = ((access & ACC_X) != 0) ? 'x' : '-';
-	str[3] = ((access & ACC_A) != 0) ? 'a' : '-';
-	str[4] = ((access & ACC_T) != 0) ? 't' : '-';
-	str[5] = '\0';
 }
 
 

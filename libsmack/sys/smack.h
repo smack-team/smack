@@ -105,6 +105,24 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type);
 
 /*!
+ * Add a modification rule to a rule set.
+ * The modification rule will change access permissions for a given subject and
+ * object.
+ * If such rule already existend (in the kernel or earlier in the rule set),
+ * it will be modified. Otherwise a new rule will be created, with permissions
+ * from access_add minus permissions from access_del.
+ *
+ * @param handle handle to a rule set
+ * @param subject subject of the rule
+ * @param object object of the rule
+ * @param access_add access type
+ * @param access_del access type
+ * @return Returns 0 on success.
+ */
+int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
+		       const char *object, const char *access_add, const char *access_del);
+
+/*!
  * Add rules from file.
  *
  * @param accesses instance
