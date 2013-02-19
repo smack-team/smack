@@ -519,14 +519,19 @@ int smack_revoke_subject(const char *subject)
 {
 	int ret;
 	int fd;
+	int len;
 	char path[PATH_MAX];
+
+	len = strnlen(subject, SMACK_LABEL_LEN + 1);
+	if (len > SMACK_LABEL_LEN)
+		return -1;
 
 	snprintf(path, sizeof path, "%s/revoke-subject", smack_mnt);
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
 
-	ret = write(fd, subject, strnlen(subject, SMACK_LABEL_LEN));
+	ret = write(fd, subject, len);
 	close(fd);
 
 	return (ret < 0) ? -1 : 0;
