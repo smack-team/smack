@@ -414,6 +414,7 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int fd;
 	int i;
 	char path[PATH_MAX];
+	int offset=0;
 
 	if (!smack_mnt) {
 		errno = EFAULT;
@@ -425,15 +426,23 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	if (fd < 0)
 		return -1;
 
+ 	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
-		sprintf(buf, "%s ", m->label);
-		sprintf(&buf[SMACK_LABEL_LEN + 1], CIPSO_NUM_LEN_STR, m->level);
-		sprintf(&buf[SMACK_LABEL_LEN + 1 + NUM_LEN], CIPSO_NUM_LEN_STR, m->ncats);
-
-		for (i = 0; i < m->ncats; i++)
-			sprintf(&buf[CIPSO_POS(i)], CIPSO_NUM_LEN_STR, m->cats[i]);
-
-		if (write(fd, buf, strlen(buf)) < 0) {
+ 		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
+ 		offset += strlen(buf) + 1;
+  
+ 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
+ 		offset += NUM_LEN;
+  
+ 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->ncats);
+ 		offset += NUM_LEN;
+ 
+ 		for (i = 0; i < m->ncats; i++){
+ 			sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->cats[i]);
+ 			offset += NUM_LEN;
+ 		}
+ 		
+ 		if (write(fd, buf, offset) < 0) {
 			close(fd);
 			return -1;
 		}
