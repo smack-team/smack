@@ -2,7 +2,7 @@ Source: smack
 Section: admin
 Priority: optional
 Maintainer: Brian McGillion <brian.mcgillion@intel.com>
-Build-Depends: debhelper (>= 8),
+Build-Depends: debhelper (>= 9),
  pkg-config, autoconf,
  libtool, dh-autoreconf,
  doxygen
@@ -12,7 +12,9 @@ Vcs-Browser: https://github.com/smack-team/smack
 
 Package: libsmack1
 Section: libs
+Multi-Arch: same
 Architecture: linux-any
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Shared libraries for interaction with SMACK
  Library allows applications to work with the smack kernel interface.
@@ -40,6 +42,7 @@ Description: Debug symbols for shared libraries in libsmack1
 
 Package: libsmack-dev
 Section: libdevel
+Multi-Arch: same
 Architecture: linux-any
 Depends: ${misc:Depends}, libsmack1 (= ${binary:Version})
 Description: Development headers of shared libraries in libsmack1
