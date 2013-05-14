@@ -6,6 +6,7 @@ global:
 	smack_accesses_apply;
 	smack_accesses_clear;
 	smack_accesses_add;
+	smack_accesses_add_modify;
 	smack_accesses_add_from_file;
 	smack_have_access;
         smack_cipso_free;

@@ -23,6 +23,7 @@ endif
 man_MANS = smackaccess.1 \
 	   smack_accesses_add.3 \
 	   smack_accesses_add_from_file.3 \
+	   smack_accesses_add_modify.3 \
 	   smack_accesses_apply.3 \
 	   smack_accesses_clear.3 \
 	   smack_accesses_free.3 \
