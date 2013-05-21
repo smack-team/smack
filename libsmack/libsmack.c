@@ -325,6 +325,19 @@ int smack_have_access(const char *subject, const char *object,
 
 	return buf[0] == '1';
 }
+
+int smack_cipso_new(struct smack_cipso **cipso)
+{
+	struct smack_cipso *result;
+
+	result = calloc(sizeof(struct smack_cipso), 1);
+	if (result == NULL)
+		return -1;
+
+	*cipso = result;
+	return 0;
+}
+
 void smack_cipso_free(struct smack_cipso *cipso)
 {
 	if (cipso == NULL)
@@ -340,9 +353,53 @@ void smack_cipso_free(struct smack_cipso *cipso)
 	}
 }
 
-struct smack_cipso *smack_cipso_new(int fd)
+int smack_cipso_apply(struct smack_cipso *cipso)
 {
-	struct smack_cipso *cipso = NULL;
+	struct cipso_mapping *m = NULL;
+	char buf[CIPSO_MAX_SIZE];
+	int fd;
+	int i;
+	char path[PATH_MAX];
+	int offset=0;
+
+	if (!smack_mnt) {
+		errno = EFAULT;
+		return -1;
+	}
+
+	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	memset(buf,0,CIPSO_MAX_SIZE);
+	for (m = cipso->first; m != NULL; m = m->next) {
+		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
+		offset += strlen(buf) + 1;
+
+		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
+		offset += NUM_LEN;
+
+		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->ncats);
+		offset += NUM_LEN;
+
+		for (i = 0; i < m->ncats; i++){
+			sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->cats[i]);
+			offset += NUM_LEN;
+		}
+
+		if (write(fd, buf, offset) < 0) {
+			close(fd);
+			return -1;
+		}
+	}
+
+	close(fd);
+	return 0;
+}
+
+int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
+{
 	struct cipso_mapping *mapping = NULL;
 	FILE *file = NULL;
 	char buf[BUF_SIZE];
@@ -353,18 +410,12 @@ struct smack_cipso *smack_cipso_new(int fd)
 
 	newfd = dup(fd);
 	if (newfd == -1)
-		return NULL;
+		return -1;
 
 	file = fdopen(newfd, "r");
 	if (file == NULL) {
 		close(newfd);
-		return NULL;
-	}
-
-	cipso = calloc(sizeof(struct smack_cipso ), 1);
-	if (cipso == NULL) {
-		fclose(file);
-		return NULL;
+		return -1;
 	}
 
 	while (fgets(buf, BUF_SIZE, file) != NULL) {
@@ -425,62 +476,16 @@ struct smack_cipso *smack_cipso_new(int fd)
 		goto err_out;
 
 	fclose(file);
-	return cipso;
+	return 0;
 err_out:
 	fclose(file);
-	smack_cipso_free(cipso);
 	free(mapping);
-	return NULL;
+	return -1;
 }
 
 const char *smack_smackfs_path(void)
 {
 	return smack_mnt;
-}
-
-int smack_cipso_apply(struct smack_cipso *cipso)
-{
-	struct cipso_mapping *m = NULL;
-	char buf[CIPSO_MAX_SIZE];
-	int fd;
-	int i;
-	char path[PATH_MAX];
-	int offset=0;
-
-	if (!smack_mnt) {
-		errno = EFAULT;
-		return -1; 
-	}
-	
-	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
-	fd = open(path, O_WRONLY);
-	if (fd < 0)
-		return -1;
-
- 	memset(buf,0,CIPSO_MAX_SIZE);
-	for (m = cipso->first; m != NULL; m = m->next) {
- 		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
- 		offset += strlen(buf) + 1;
-  
- 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
- 		offset += NUM_LEN;
-  
- 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->ncats);
- 		offset += NUM_LEN;
- 
- 		for (i = 0; i < m->ncats; i++){
- 			sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->cats[i]);
- 			offset += NUM_LEN;
- 		}
- 		
- 		if (write(fd, buf, offset) < 0) {
-			close(fd);
-			return -1;
-		}
-	}
-
-	close(fd);
-	return 0;
 }
 
 int smack_new_label_from_self(char **label)

@@ -164,9 +164,15 @@ int apply_cipso_file(int fd)
 	struct smack_cipso *cipso = NULL;
 	int ret;
 
-	cipso = smack_cipso_new(fd);
-	if (cipso == NULL)
+	ret = smack_cipso_new(&cipso);
+	if (ret)
 		return -1;
+
+	ret = smack_cipso_add_from_file(cipso, fd);
+	if (ret) {
+		smack_cipso_free(cipso);
+		return -1;
+	}
 
 	ret = smack_cipso_apply(cipso);
 	smack_cipso_free(cipso);

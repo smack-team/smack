@@ -142,11 +142,37 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd);
 int smack_have_access(const char *subject, const char *object,
 		      const char *access_type);
 
-struct smack_cipso *smack_cipso_new(int fd);
+/*!
+ * Creates a new empty smack_cipso instance.
+ *
+ * @param cipso created instance
+ * @return 0 on success and negative value on failure.
+ */
+int smack_cipso_new(struct smack_cipso **cipso);
 
+/*!
+ * Destroy a struct smack_cipso *instance.
+ *
+ * @param handle handle to a struct smack_cipso *instance
+ */
 void smack_cipso_free(struct smack_cipso *cipso);
 
+/*!
+ * Write rules to kernel.
+ *
+ * @param handle handle to a rules
+ * @return 0 on success and negative value on failure.
+ */
 int smack_cipso_apply(struct smack_cipso *cipso);
+
+/*!
+ * Add rules from file.
+ *
+ * @param cipso instance
+ * @param fd file descriptor
+ * @return 0 on success and negative value on failure.
+ */
+int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd);
 
 /*!
  * Get the smackfs directory.
