@@ -540,6 +540,31 @@ int smack_new_label_from_socket(int fd, char **label)
 	return 0;
 }
 
+int smack_new_label_from_path(const char *path, const char *xattr,
+			      const char **label)
+{
+	char *result;
+	ssize_t ret = 0;
+
+	ret = getxattr(path, xattr, NULL, 0);
+	if (ret < 0 && errno != ERANGE)
+		return -1;
+
+	result = calloc(ret + 1, 1);
+	if (result == NULL)
+		return -1;
+
+	ret = getxattr(path, xattr, result, ret);
+	if (ret < 0) {
+		free(result);
+		return -1;
+	}
+
+	*label = result;
+	return 0;
+}
+
+
 int smack_set_label_for_self(const char *label)
 {
 	int len;
