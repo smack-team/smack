@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
+#include <attr/xattr.h>
 
 #define ACC_LEN 5
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
@@ -540,13 +541,15 @@ int smack_new_label_from_socket(int fd, char **label)
 	return 0;
 }
 
-int smack_new_label_from_path(const char *path, const char *xattr,
+int smack_new_label_from_path(const char *path, const char *xattr, int follow,
 			      const char **label)
 {
 	char *result;
 	ssize_t ret = 0;
 
-	ret = getxattr(path, xattr, NULL, 0);
+	ret = follow ?
+		lgetxattr(path, xattr, NULL, 0) :
+		getxattr(path, xattr, NULL, 0);
 	if (ret < 0 && errno != ERANGE)
 		return -1;
 
@@ -554,7 +557,9 @@ int smack_new_label_from_path(const char *path, const char *xattr,
 	if (result == NULL)
 		return -1;
 
-	ret = getxattr(path, xattr, result, ret);
+	ret = follow ?
+		lgetxattr(path, xattr, result, ret) :
+		getxattr(path, xattr, result, ret);
 	if (ret < 0) {
 		free(result);
 		return -1;

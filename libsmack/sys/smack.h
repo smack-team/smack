@@ -200,15 +200,18 @@ int smack_new_label_from_self(char **label);
 int smack_new_label_from_socket(int fd, char **label);
 
 /*!
-  * Get the label that is contained in an extended attribute.
+  * Get the SMACK label that is contained in an extended attribute.
   * Caller is responsible of freeing the returned label.
   *
   * @param path path of the file
-  * @param xattr extended attribute containing the label
+  * @param xattr extended attribute containing the SMACK label
+  * @param follow whether or not to follow symbolic link
   * @param label returned label
   * @return 0 on success and negative value on failure.
   */
-int smack_new_label_from_path(const char *path, const char *xattr,
+int smack_new_label_from_path(const char *path,
+			      const char *xattr,
+			      int follow,
 			      const char **label);
 
 /*!
