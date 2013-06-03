@@ -215,7 +215,7 @@ ssize_t smack_new_label_from_socket(int fd, char **label);
 ssize_t smack_new_label_from_path(const char *path,
 				  const char *xattr,
 				  int follow,
-				  const char **label);
+				  char **label);
 
 /*!
  * Set the label associated with the callers process.
