@@ -184,9 +184,10 @@ const char *smack_smackfs_path(void);
   * Caller is responsible of freeing the returned label.
   *
   * @param label returned label
-  * @return 0 on success and negative value on failure.
+  * @return Returns lenght of the label  on success and negative value
+  * on failure.
   */
-int smack_new_label_from_self(char **label);
+ssize_t smack_new_label_from_self(char **label);
 
 /*!
   * Get the label that is associated with a peer on the other end of an
@@ -195,9 +196,10 @@ int smack_new_label_from_self(char **label);
   *
   * @param fd socket file descriptor
   * @param label returned label
-  * @return 0 on success and negative value on failure.
+  * @return Returns lenght of the label  on success and negative value
+  * on failure.
   */
-int smack_new_label_from_socket(int fd, char **label);
+ssize_t smack_new_label_from_socket(int fd, char **label);
 
 /*!
   * Get the SMACK label that is contained in an extended attribute.
@@ -207,12 +209,13 @@ int smack_new_label_from_socket(int fd, char **label);
   * @param xattr extended attribute containing the SMACK label
   * @param follow whether or not to follow symbolic link
   * @param label returned label
-  * @return 0 on success and negative value on failure.
+  * @return Returns lenght of the label  on success and negative value
+  * on failure.
   */
-int smack_new_label_from_path(const char *path,
-			      const char *xattr,
-			      int follow,
-			      const char **label);
+ssize_t smack_new_label_from_path(const char *path,
+				  const char *xattr,
+				  int follow,
+				  const char **label);
 
 /*!
  * Set the label associated with the callers process.
