@@ -548,8 +548,8 @@ int smack_new_label_from_path(const char *path, const char *xattr, int follow,
 	ssize_t ret = 0;
 
 	ret = follow ?
-		lgetxattr(path, xattr, NULL, 0) :
-		getxattr(path, xattr, NULL, 0);
+		getxattr(path, xattr, NULL, 0) :
+		lgetxattr(path, xattr, NULL, 0);
 	if (ret < 0 && errno != ERANGE)
 		return -1;
 
@@ -558,8 +558,8 @@ int smack_new_label_from_path(const char *path, const char *xattr, int follow,
 		return -1;
 
 	ret = follow ?
-		lgetxattr(path, xattr, result, ret) :
-		getxattr(path, xattr, result, ret);
+		getxattr(path, xattr, result, ret) :
+		lgetxattr(path, xattr, result, ret);
 	if (ret < 0) {
 		free(result);
 		return -1;
