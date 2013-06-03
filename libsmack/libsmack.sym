@@ -16,6 +16,7 @@ global:
 	smack_smackfs_path;
 	smack_new_label_from_self;
 	smack_new_label_from_socket;
+	smack_new_label_from_path;
 	smack_set_label_for_self;
 	smack_revoke_subject;
 local:
