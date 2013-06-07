@@ -37,7 +37,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
-#include <attr/xattr.h>
+#include <sys/xattr.h>
 
 #define ACC_LEN 5
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
