@@ -155,7 +155,7 @@ int smack_cipso_new(struct smack_cipso **cipso);
  *
  * @param handle handle to a struct smack_cipso *instance
  */
-void smack_cipso_free(struct smack_cipso *cipso);
+void smack_cipso_free(struct smack_cipso *handle);
 
 /*!
  * Write rules to kernel.
@@ -163,7 +163,7 @@ void smack_cipso_free(struct smack_cipso *cipso);
  * @param handle handle to a rules
  * @return 0 on success and negative value on failure.
  */
-int smack_cipso_apply(struct smack_cipso *cipso);
+int smack_cipso_apply(struct smack_cipso *handle);
 
 /*!
  * Add rules from file.
