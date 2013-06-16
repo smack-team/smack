@@ -1,4 +1,4 @@
-LIBSMACK {
+LIBSMACK_1.0 {
 global:
 	smack_accesses_new;
 	smack_accesses_free;
