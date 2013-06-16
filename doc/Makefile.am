@@ -37,6 +37,7 @@ man_MANS = smackaccess.1 \
 	   smack_revoke_subject.3 \
 	   chsmack.8 \
 	   smackcipso.8 \
-	   smackload.8
+	   smackload.8 \
+	   smackctl.8
 
 EXTRA_DIST += $(man_MANS)
