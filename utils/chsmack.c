@@ -19,6 +19,7 @@
  *
  * Author:
  *      Casey Schaufler <casey@schaufler-ca.com>
+ *      Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
  */
 
 #include <sys/types.h>
@@ -30,128 +31,133 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 
-
-static inline int leads(char *in, char *lead)
+int main(int argc, char *argv[])
 {
-	return (strncmp(in, lead, strlen(lead)) == 0);
-}
+	static struct option long_options[] = {
+		{"access", required_argument, 0, 'a'},
+		{"exec", required_argument, 0, 'e'},
+		{"mmap", required_argument, 0, 'm'},
+		{"transmute", no_argument, 0, 't'},
+		{0, 0, 0, 0}
+	};
 
-int
-main(int argc, char *argv[])
-{
+	/*  Buffers are zeroed automatically by keeping them static variables.
+	 *  No separate memset is needed this way.
+	 */
+	static char access_buf[SMACK_LABEL_LEN + 1];
+	static char exec_buf[SMACK_LABEL_LEN + 1];
+	static char mmap_buf[SMACK_LABEL_LEN + 1];
+
+	int transmute_flag = 0;
+	int option_flag = 0;
+	int option_index;
 	int rc;
-	int argi;
-	int transmute = 0;
-	char buffer[SMACK_LABEL_LEN + 1];
-	char *access = NULL;
-	char *mm = NULL;
-	char *execute = NULL;
+	int c;
+	int i;
 
-	for (argi = 1; argi < argc; argi++) {
-		if (strcmp(argv[argi], "-a") == 0)
-			access = argv[++argi];
-		else if (leads(argv[argi], "--access="))
-			access = argv[argi] + strlen("--access=");
-		else if (strcmp(argv[argi], "-e") == 0)
-			execute = argv[++argi];
-		else if (leads(argv[argi], "--exec="))
-			execute = argv[argi] + strlen("--exec=");
-		else if (leads(argv[argi], "--execute="))
-			execute = argv[argi] + strlen("--execute=");
-		else if (strcmp(argv[argi], "-m") == 0)
-			mm = argv[++argi];
-		else if (leads(argv[argi], "--mmap="))
-			mm = argv[argi] + strlen("--mmap=");
-		else if (strcmp(argv[argi], "-t") == 0)
-			transmute = 1;
-		else if (strcmp(argv[argi], "--transmute") == 0)
-			transmute = 1;
-		else if (*argv[argi] == '-') {
-			fprintf(stderr, "Invalid argument \"%s\".\n",
-				argv[argi]);
-			exit(1);
+	while ((c = getopt_long(argc, argv, "a:e:m:t", long_options,
+				&option_index)) != -1) {
+		if ((c == 'a' || c == 'e' || c == 'm')
+		    && strnlen(optarg, SMACK_LABEL_LEN + 1)
+		       == (SMACK_LABEL_LEN + 1)) {
+			fprintf(stderr, "%s label \"%s\" "
+					"exceeds %d characters.\n",
+				long_options[option_index].name, optarg,
+				SMACK_LABEL_LEN);
 		}
-		/*
-		 * Indicates the start of filenames.
-		 */
-		else
-			break;
+
+		switch (c) {
+			case 'a':
+				strncpy(access_buf, optarg, SMACK_LABEL_LEN + 1);
+				break;
+			case 'e':
+				strncpy(exec_buf, optarg, SMACK_LABEL_LEN + 1);
+				break;
+			case 'm':
+				strncpy(mmap_buf, optarg, SMACK_LABEL_LEN + 1);
+				break;
+			case 't':
+				transmute_flag = 1;
+				break;
+			default:
+				printf("Usage: %s [options] <path>\n", argv[0]);
+				printf("options:\n");
+				printf(" [--access|-a] set security.SMACK64\n");
+				printf(" [--exec|-e] set security.SMACK64EXEC\n");
+				printf(" [--mmap|-m] set security.SMACK64MMAP\n");
+				printf(" [--transmute|-t] set security.SMACK64TRANSMUTE\n");
+				exit(1);
+		}
+
+		option_flag = 1;
 	}
-	if (argi >= argc) {
-		fprintf(stderr, "No files specified.\n");
-		exit(1);
-	}
-	if (access != NULL && strlen(access) > SMACK_LABEL_LEN) {
-		fprintf(stderr, "Access label \"%s\" exceeds %d characters.\n",
-			access, SMACK_LABEL_LEN);
-		exit(1);
-	}
-	if (mm != NULL && strlen(mm) > SMACK_LABEL_LEN) {
-		fprintf(stderr, "mmap label \"%s\" exceeds %d characters.\n",
-			mm, SMACK_LABEL_LEN);
-		exit(1);
-	}
-	if (execute != NULL && strlen(execute) > SMACK_LABEL_LEN) {
-		fprintf(stderr, "execute label \"%s\" exceeds %d characters.\n",
-			execute, SMACK_LABEL_LEN);
-		exit(1);
-	}
-	for (; argi < argc; argi++) {
-		if (access == NULL && mm == NULL &&
-		    execute == NULL && !transmute) {
-			printf("%s", argv[argi]);
-			rc = lgetxattr(argv[argi], "security.SMACK64",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
-				printf(" access=\"%s\"", buffer);
+
+	for (i = optind; i < argc; i++) {
+		if (option_flag) {
+			if (strlen(access_buf) > 0) {
+				rc = lsetxattr(argv[i], "security.SMACK64",
+					       access_buf, strlen(access_buf) + 1, 0);
+				if (rc < 0)
+					perror(argv[i]);
 			}
-			rc = lgetxattr(argv[argi], "security.SMACK64EXEC",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
-				printf(" execute=\"%s\"", buffer);
+
+			if (strlen(exec_buf) > 0) {
+				rc = lsetxattr(argv[i], "security.SMACK64EXEC",
+					       exec_buf, strlen(exec_buf) + 1, 0);
+				if (rc < 0)
+					perror(argv[i]);
 			}
-			rc = lgetxattr(argv[argi], "security.SMACK64MMAP",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
-				printf(" mmap=\"%s\"", buffer);
+
+			if (strlen(mmap_buf) > 0) {
+				rc = lsetxattr(argv[i], "security.SMACK64MMAP",
+					       mmap_buf, strlen(mmap_buf) + 1, 0);
+				if (rc < 0)
+					perror(argv[i]);
 			}
-			rc = lgetxattr(argv[argi], "security.SMACK64TRANSMUTE",
-				buffer, SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				buffer[rc] = '\0';
-				printf(" transmute=\"%s\"", buffer);
+
+			if (transmute_flag) {
+				rc = lsetxattr(argv[i], "security.SMACK64TRANSMUTE",
+					       "TRUE", 4, 0);
+				if (rc < 0)
+					perror(argv[i]);
 			}
+		} else {
+			/* Print file path. */
+			printf("%s", argv[i]);
+
+			rc = lgetxattr(argv[i], "security.SMACK64", access_buf,
+				       SMACK_LABEL_LEN + 1);
+			if (rc > 0) {
+				access_buf[rc] = '\0';
+				printf(" access=\"%s\"", access_buf);
+			}
+
+			rc = lgetxattr(argv[i], "security.SMACK64EXEC", access_buf,
+				       SMACK_LABEL_LEN + 1);
+			if (rc > 0) {
+				access_buf[rc] = '\0';
+				printf(" execute=\"%s\"", access_buf);
+
+			}
+			rc = lgetxattr(argv[i], "security.SMACK64MMAP", access_buf,
+				       SMACK_LABEL_LEN + 1);
+			if (rc > 0) {
+				access_buf[rc] = '\0';
+				printf(" mmap=\"%s\"", access_buf);
+			}
+
+			rc = lgetxattr(argv[i], "security.SMACK64TRANSMUTE",
+				       access_buf, SMACK_LABEL_LEN + 1);
+			if (rc > 0) {
+				access_buf[rc] = '\0';
+				printf(" transmute=\"%s\"", access_buf);
+			}
+
 			printf("\n");
-			continue;
-		}
-		if (access != NULL) {
-			rc = lsetxattr(argv[argi], "security.SMACK64",
-				access, strlen(access) + 1, 0);
-			if (rc < 0)
-				perror(argv[argi]);
-		}
-		if (execute != NULL) {
-			rc = lsetxattr(argv[argi], "security.SMACK64EXEC",
-				execute, strlen(execute) + 1, 0);
-			if (rc < 0)
-				perror(argv[argi]);
-		}
-		if (mm != NULL) {
-			rc = lsetxattr(argv[argi], "security.SMACK64MMAP",
-				mm, strlen(mm) + 1, 0);
-			if (rc < 0)
-				perror(argv[argi]);
-		}
-		if (transmute) {
-			rc = lsetxattr(argv[argi], "security.SMACK64TRANSMUTE",
-				"TRUE", 4, 0);
-			if (rc < 0)
-				perror(argv[argi]);
 		}
 	}
+
 	exit(0);
 }
