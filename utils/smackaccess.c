@@ -17,9 +17,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
- *
- * Authors:
- * Jarkko Sakkinen <jarkko.sakkinen@intel.com>
  */
 
 #include <sys/smack.h>

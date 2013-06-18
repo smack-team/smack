@@ -16,10 +16,6 @@
  *	License along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  *	02110-1301 USA
- *
- * Author:
- *      Casey Schaufler <casey@schaufler-ca.com>
- *      Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
  */
 
 #include <sys/types.h>
