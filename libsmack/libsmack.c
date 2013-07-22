@@ -30,7 +30,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
 #include <sys/xattr.h>
 
 #define ACC_LEN 5
@@ -52,6 +51,7 @@
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
 extern char *smack_mnt;
+extern int smack_mnt_dirfd;
 
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
@@ -285,21 +285,18 @@ int smack_have_access(const char *subject, const char *object,
 	int ret;
 	int fd;
 	int access2 = 1;
-	char path[PATH_MAX];
 
-	if (!smack_mnt) {
+	if (smack_mnt_dirfd < 0) {
 		errno = EFAULT;
-		return -1; 
+		return -1;
 	}
-	
-	snprintf(path, sizeof path, "%s/access2", smack_mnt);
-	fd = open(path, O_RDWR);
+
+	fd = openat(smack_mnt_dirfd, "access2", O_RDWR);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
-		
-	        snprintf(path, sizeof path, "%s/access", smack_mnt);
-		fd = open(path, O_RDWR);
+
+		fd = openat(smack_mnt_dirfd, "access", O_RDWR);
 		if (fd < 0)
 			return -1;
 		access2 = 0;
@@ -366,16 +363,14 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	char buf[CIPSO_MAX_SIZE];
 	int fd;
 	int i;
-	char path[PATH_MAX];
 	int offset=0;
 
-	if (!smack_mnt) {
+	if (smack_mnt_dirfd < 0) {
 		errno = EFAULT;
 		return -1;
 	}
 
-	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
-	fd = open(path, O_WRONLY);
+	fd = openat(smack_mnt_dirfd, "cipso2", O_WRONLY);
 	if (fd < 0)
 		return -1;
 
@@ -600,14 +595,17 @@ int smack_revoke_subject(const char *subject)
 	int ret;
 	int fd;
 	int len;
-	char path[PATH_MAX];
+
+	if (smack_mnt_dirfd < 0) {
+		errno = EFAULT;
+		return -1;
+	}
 
 	len = strnlen(subject, SMACK_LABEL_LEN + 1);
 	if (len > SMACK_LABEL_LEN)
 		return -1;
 
-	snprintf(path, sizeof path, "%s/revoke-subject", smack_mnt);
-	fd = open(path, O_WRONLY);
+	fd = openat(smack_mnt_dirfd, "revoke-subject", O_WRONLY);
 	if (fd < 0)
 		return -1;
 
@@ -626,29 +624,25 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int load_fd;
 	int change_fd;
 	int load2 = 1;
-	char path[PATH_MAX];
 
-	if (!smack_mnt) {
+	if (smack_mnt_dirfd < 0) {
 		errno = EFAULT;
-		return -1; 
+		return -1;
 	}
-	
-	snprintf(path, sizeof path, "%s/load2", smack_mnt);
-	load_fd = open(path, O_WRONLY);
+
+	load_fd = openat(smack_mnt_dirfd, "load2", O_WRONLY);
 	if (load_fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		/* fallback */
-	        snprintf(path, sizeof path, "%s/load", smack_mnt);
-		load_fd = open(path, O_WRONLY);
+		load_fd = openat(smack_mnt_dirfd, "load", O_WRONLY);
 		/* Try to continue if the file doesn't exist, we might not need it. */
 		if (load_fd < 0 && errno != ENOENT)
 			return -1;
 		load2 = 0;
 	}
 
-	snprintf(path, sizeof path, "%s/change-rule", smack_mnt);
-	change_fd = open(path, O_WRONLY);
+	change_fd = openat(smack_mnt_dirfd, "change-rule", O_WRONLY);
 	/* Try to continue if the file doesn't exist, we might not need it. */
 	if (change_fd < 0 && errno != ENOENT) {
 		ret = -1;

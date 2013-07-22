@@ -44,6 +44,7 @@
 #define OLDSMACKFSMNT "/smack"
 
 char *smack_mnt = NULL;
+int smack_mnt_dirfd = -1;
 
 void set_smackmnt(const char *mnt)
 {
@@ -61,24 +62,31 @@ static int verify_smackmnt(const char *mnt)
 {
 	struct statfs sfbuf;
 	int rc;
+	int fd;
+
+	fd = open(mnt, O_RDONLY, 0);
+	if (fd < 0)
+		return -1;
 
 	do {
-		rc = statfs(mnt, &sfbuf);
+		rc = fstatfs(fd, &sfbuf);
 	} while (rc < 0 && errno == EINTR);
 
 	if (rc == 0) {
 		if ((uint32_t)sfbuf.f_type == (uint32_t)SMACK_MAGIC) {
 			struct statvfs vfsbuf;
-			rc = statvfs(mnt, &vfsbuf);
+			rc = fstatvfs(fd, &vfsbuf);
 			if (rc == 0) {
 				if (!(vfsbuf.f_flag & ST_RDONLY)) {
 					set_smackmnt(mnt);
 				}
+				smack_mnt_dirfd = fd;
 				return 0;
 			}
 		}
 	}
 
+	close(fd);
 	return -1;
 }
 
