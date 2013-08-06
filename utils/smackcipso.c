@@ -36,15 +36,11 @@ int main(int argc, char **argv)
 	}
 
 	if (argc == 1) {
-		if (apply_cipso_file(STDIN_FILENO)) {
-			perror("apply_cipso_file");
+		if (apply_cipso_file(STDIN_FILENO))
 			exit(1);
-		}
 	} else {
-		if (apply_cipso(argv[1])) {
-			perror("apply_cipso");
+		if (apply_cipso(argv[1]))
 			exit(1);
-		}
 	}
 
 	exit(0);
