@@ -20,6 +20,7 @@
 
 #include "common.h"
 #include <sys/smack.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -35,10 +36,10 @@ static int apply_all(void)
 		return -1;
 
 	if (apply_rules(ACCESSES_D_PATH, 0))
-		perror("apply_rules");
+		return -1;
 
 	if (apply_cipso(CIPSO_D_PATH))
-		perror("apply_cipso");
+		return -1;
 
 	return 0;
 }
@@ -48,24 +49,24 @@ int main(int argc, char **argv)
 	const char *tmp = smack_smackfs_path();
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
-		return 1;
+		exit(1);
 	}
 
 	if (!strcmp(argv[1], "apply")) {
 		if (apply_all())
-			return 1;
+			exit(1);
 	} else if (!strcmp(argv[1], "clear")) {
 		if (clear())
-			return 1;
+			exit(1);
 	} else if (!strcmp(argv[1], "status")) {
 		if (smack_smackfs_path())
 			printf("SmackFS is mounted to %s.\n",
 			       smack_smackfs_path());
 		else
 			printf("SmackFS is not mounted.\n");
-		return 0;
+		exit(0);
 	}
 
 	fprintf(stderr, "Uknown action: %s\n", argv[1]);
-	return 1;
+	exit(1);
 }

@@ -50,15 +50,11 @@ int main(int argc, char **argv)
 	}
 
 	if (optind == argc) {
-		if (apply_rules_file(STDIN_FILENO, clear)) {
-			perror("apply_rules_file");
+		if (apply_rules_file(STDIN_FILENO, clear))
 			exit(1);
-		}
 	} else {
-		if (apply_rules(argv[optind], clear)) {
-			perror("apply_rules");
+		if (apply_rules(argv[optind], clear))
 			exit(1);
-		}
 	}
 
 	exit(0);
