@@ -174,12 +174,18 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
+	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
+	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
+		errno = ERANGE;
+		return -1;
+	}
+
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
-	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
+	strcpy(rule->subject, subject);
+	strcpy(rule->object, object);
 	parse_access_type(access_type, rule->access_set);
 
 	if (handle->first == NULL) {
@@ -197,12 +203,18 @@ int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject
 {
 	struct smack_rule *rule = NULL;
 
+	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
+	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
+		errno = ERANGE;
+		return -1;
+	}
+
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN + 1);
-	strncpy(rule->object, object, SMACK_LABEL_LEN + 1);
+	strcpy(rule->subject, subject);
+	strcpy(rule->object, object);
 	parse_access_type(access_add, rule->access_add);
 	parse_access_type(access_del, rule->access_del);
 	rule->is_modify = 1;
