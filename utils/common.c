@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #define SMACK_MAGIC 0x43415d53
 
@@ -66,8 +67,10 @@ int clear(void)
 	int fd;
 	int ret;
 	const char * smack_mnt;
+	char path[PATH_MAX];
 
-	if (smack_mnt_dirfd < 0) {
+	smack_mnt = smack_smackfs_path();
+	if (!smack_mnt) {
 		errno = EFAULT;
 		return -1;
 	}
@@ -75,7 +78,8 @@ int clear(void)
 	if (is_smackfs_mounted() != 1)
 		return -1;
 
-	fd = openat(smack_mnt_dirfd, "load2", O_RDONLY);
+	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	fd = open(path, O_RDONLY);
 	if (fd < 0)
 		return -1;
 
