@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	int clear = 0;
 	int c;
 
-	if (is_smackfs_mounted() != 1) {
+	if (!smack_smackfs_path()) {
 		fprintf(stderr, "SmackFS is not mounted.\n");
 		exit(1);
 	}
