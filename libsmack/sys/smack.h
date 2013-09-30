@@ -49,53 +49,57 @@ extern "C" {
 #endif
 
 /*!
- * Creates a new empty smack_accesses instance.
+ * Allocates memory for a new empty smack_accesses instance. The returned
+ * instance must be later freed with smack_accesses_free().
  *
- * @param accesses created instance
- * @return 0 on success and negative value on failure.
+ * @param handle output variable for the struct smack_accesses instance
+ * @return Returns 0 on success and negative on failure. If the operation
+ * is succesful 'accesses' variable will contain a valid pointer.
  */
-int smack_accesses_new(struct smack_accesses **accesses);
+int smack_accesses_new(struct smack_accesses **handle);
 
 /*!
- * Destroy a struct smack_accesses *instance.
+ * Destroys a struct smack_accesses instance.
  *
- * @param handle handle to a struct smack_accesses *instance
+ * @param handle handle to a struct smack_accesses instance
  */
 void smack_accesses_free(struct smack_accesses *handle);
 
 /*!
  * Write access rules to a given file.
  *
- * @param handle handle to a rules
- * @param fd file descriptor
- * @return 0 on success and negative value on failure.
+ * @param handle handle to a struct smack_accesses instance
+ * @param fd file descriptor to the open file
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_accesses_save(struct smack_accesses *handle, int fd);
 
 /*!
- * Write rules to kernel.
+ * Apply access rules to the kernel.
  *
- * @param handle handle to a rules
- * @return 0 on success and negative value on failure.
+ * @param handle handle to a struct smack_accesses instance
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_accesses_apply(struct smack_accesses *handle);
 
 /*!
- * Clear rules from kernel.
+ * Clear access rules from the kernel. Clears the rules by writing
+ * corresponding rules with zero access. Note that this function
+ * does not check whether the rules pre-exist or not.
  *
- * @param handle handle to a rules
- * @return 0 on success and negative value on failure.
+ * @param handle handle to a struct smack_accesses instance
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_accesses_clear(struct smack_accesses *handle);
 
 /*!
- * Add new rule to a rule set.
+ * Add a new rule to the given access rules.
  *
- * @param handle handle to a rule set
+ * @param handle handle to a struct smack_accesses instance
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access_type access type
- * @return Returns 0 on success.
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type);
@@ -108,70 +112,77 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
  * it will be modified. Otherwise a new rule will be created, with permissions
  * from access_add minus permissions from access_del.
  *
- * @param handle handle to a rule set
+ * @param handle handle to a struct smack_accesses instance
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access_add access type
  * @param access_del access type
- * @return Returns 0 on success.
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_add, const char *access_del);
 
 /*!
- * Add rules from file.
+ * Load access rules from the given file.
  *
- * @param accesses instance
+ * @param handle handle to a struct smack_accesses instance
  * @param fd file descriptor
- * @return 0 on success and negative value on failure.
+ * @return Returns 0 on success and negative on failure.
  */
-int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd);
+int smack_accesses_add_from_file(struct smack_accesses *handle, int fd);
 
 /*!
- * Check for Smack access.
+ * Check whether SMACK allows access for given subject, object and requested
+ * access.
  *
  * @param subject subject of the rule
  * @param object object of the rule
- * @param access_type access type
- * @return 1 if access, 0 if no access and -1 on error.
+ * @param access_type requested access type
+ * @return Returns 1 if access is allowed, 0 if access is not allowed and
+ * negative on error.
  */
 int smack_have_access(const char *subject, const char *object,
 		      const char *access_type);
 
 /*!
- * Creates a new empty smack_cipso instance.
+ * Allocates memory for a new empty smack_cipso instance. The returned
+ * instance must be later freed with smack_cipso_free().
  *
- * @param cipso created instance
- * @return 0 on success and negative value on failure.
+ * @param handle output variable for the struct smack_cipso instance
+ * @return Returns 0 on success and negative on failure. If the operation
+ * is succesful 'cipso' variable will contain a valid pointer.
  */
 int smack_cipso_new(struct smack_cipso **cipso);
 
 /*!
- * Destroy a struct smack_cipso *instance.
+ * Destroys a struct smack_cipso instance.
  *
- * @param handle handle to a struct smack_cipso *instance
+ * @param handle handle to a struct smack_cipso instance
  */
 void smack_cipso_free(struct smack_cipso *handle);
 
 /*!
- * Write rules to kernel.
+ * Apply CIPSO rules to the kernel.
  *
- * @param handle handle to a rules
- * @return 0 on success and negative value on failure.
+ * @param handle handle to a struct smack_cipso instance
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_cipso_apply(struct smack_cipso *handle);
 
 /*!
- * Add rules from file.
+ * Add CIPSO rules from the given file.
  *
  * @param cipso instance
- * @param fd file descriptor
- * @return 0 on success and negative value on failure.
+ * @param handle handle to a struct smack_cipso instance
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd);
 
 /*!
- * Get the smackfs directory.
+ * Get pointer to a string containing path to the mounted SmackFS.
+ *
+ * @return Returns a string contain path to the mount SmackFS if SMACK is
+ * enabled and SmackFS is mounted. Otherwise, NULL is returned.
  */
 const char *smack_smackfs_path(void);
 
@@ -179,20 +190,20 @@ const char *smack_smackfs_path(void);
   * Get the label that is associated with the callers process.
   * Caller is responsible of freeing the returned label.
   *
-  * @param label returned label
-  * @return Returns lenght of the label  on success and negative value
+  * @param label output variable for the label
+  * @return Returns length of the label on success and negative value
   * on failure.
   */
 ssize_t smack_new_label_from_self(char **label);
 
 /*!
-  * Get the label that is associated with a peer on the other end of an
-  * Unix socket (SO_PEERSEC). Caller is responsible of freeing the 
-  * returned label.
+  * Get the label that is associated with a peer on the other end of a
+  * UDS socket (SO_PEERSEC). Caller is responsible of freeing the returned
+  * label.
   *
-  * @param fd socket file descriptor
-  * @param label returned label
-  * @return Returns lenght of the label  on success and negative value
+  * @param fd file descriptor of the socket
+  * @param label output variable for the label
+  * @return Returns length of the label on success and negative value
   * on failure.
   */
 ssize_t smack_new_label_from_socket(int fd, char **label);
@@ -202,10 +213,10 @@ ssize_t smack_new_label_from_socket(int fd, char **label);
   * Caller is responsible of freeing the returned label.
   *
   * @param path path of the file
-  * @param xattr extended attribute containing the SMACK label
+  * @param xattr the extended attribute containing the SMACK label
   * @param follow whether or not to follow symbolic link
-  * @param label returned label
-  * @return Returns lenght of the label  on success and negative value
+  * @param label output variable for the returned label
+  * @return Returns length of the label on success and negative value
   * on failure.
   */
 ssize_t smack_new_label_from_path(const char *path,
@@ -214,19 +225,19 @@ ssize_t smack_new_label_from_path(const char *path,
 				  char **label);
 
 /*!
- * Set the label associated with the callers process.
- * Caller must be run by privileged user to succeed.
+ * Set the label associated with the callers process. The caller must have
+ * CAP_MAC_ADMIN POSIX capability in order to do this.
  *
- * @param label to set
- * @return 0 on success and negative value on failure.
+ * @param label a string containing the new label
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_set_label_for_self(const char *label);
 
 /*!
- * Revoke all rules for a subject label.
+ * Revoke all rules for the given subject label.
  *
  * @param subject subject to revoke
- * @return 0 on success and negative value on failure.
+ * @return Returns 0 on success and negative on failure.
  */
 int smack_revoke_subject(const char *subject);
 
