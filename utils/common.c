@@ -37,31 +37,6 @@
 static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 
-int is_smackfs_mounted(void)
-{
-	struct statfs sfs;
-	int ret;
-	const char * smack_mnt;
-
-	smack_mnt = smack_smackfs_path();
-	if (!smack_mnt) {
-		errno = EFAULT;
-		return -1;
-	}
-
-	do {
-		ret = statfs(smack_mnt, &sfs);
-	} while (ret < 0 && errno == EINTR);
-
-	if (ret)
-		return -1;
-
-	if (sfs.f_type == SMACK_MAGIC)
-		return 1;
-
-	return 0;
-}
-
 int clear(void)
 {
 	int fd;
@@ -75,7 +50,7 @@ int clear(void)
 		return -1;
 	}
 
-	if (is_smackfs_mounted() != 1)
+	if (!smack_smackfs_path())
 		return -1;
 
 	snprintf(path, sizeof path, "%s/load2", smack_mnt);

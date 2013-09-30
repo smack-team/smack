@@ -19,14 +19,15 @@
  */
 
 #include "common.h"
+#include <sys/smack.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 
 static int apply_all(void)
 {
-	if (is_smackfs_mounted() != 1) {
-		fprintf(stderr, "ERROR: SmackFS is not mounted.\n");
+	if (!smack_smackfs_path()) {
+		fprintf(stderr, "SmackFS is not mounted.\n");
 		return -1;
 	}
 
@@ -42,24 +43,9 @@ static int apply_all(void)
 	return 0;
 }
 
-static int status(void)
-{
-	int ret = is_smackfs_mounted();
-
-	switch (ret) {
-	case 1:
-		printf("SmackFS is mounted.\n");
-		return 0;
-	case 0:
-		printf("SmackFS is not mounted.\n");
-		return 0;
-	default:
-		return -1;
-	}
-}
-
 int main(int argc, char **argv)
 {
+	const char *tmp = smack_smackfs_path();
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
 		return 1;
@@ -72,12 +58,14 @@ int main(int argc, char **argv)
 		if (clear())
 			return 1;
 	} else if (!strcmp(argv[1], "status")) {
-		if (status())
-			return 1;
-	} else {
-		fprintf(stderr, "Uknown action: %s\n", argv[1]);
-		return 1;
+		if (smack_smackfs_path())
+			printf("SmackFS is mounted to %s.\n",
+			       smack_smackfs_path());
+		else
+			printf("SmackFS is not mounted.\n");
+		return 0;
 	}
 
-	return 0;
+	fprintf(stderr, "Uknown action: %s\n", argv[1]);
+	return 1;
 }
