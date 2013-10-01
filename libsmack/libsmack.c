@@ -51,7 +51,7 @@
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
-extern char *smack_mnt;
+extern char *smackfs_mnt;
 
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
@@ -287,18 +287,18 @@ int smack_have_access(const char *subject, const char *object,
 	int access2 = 1;
 	char path[PATH_MAX];
 
-	if (!smack_mnt) {
+	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1; 
 	}
 	
-	snprintf(path, sizeof path, "%s/access2", smack_mnt);
+	snprintf(path, sizeof path, "%s/access2", smackfs_mnt);
 	fd = open(path, O_RDWR);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		
-	        snprintf(path, sizeof path, "%s/access", smack_mnt);
+	        snprintf(path, sizeof path, "%s/access", smackfs_mnt);
 		fd = open(path, O_RDWR);
 		if (fd < 0)
 			return -1;
@@ -369,12 +369,12 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	char path[PATH_MAX];
 	int offset=0;
 
-	if (!smack_mnt) {
+	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1;
 	}
 
-	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
+	snprintf(path, sizeof path, "%s/cipso2", smackfs_mnt);
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
@@ -492,7 +492,7 @@ err_out:
 
 const char *smack_smackfs_path(void)
 {
-	return smack_mnt;
+	return smackfs_mnt;
 }
 
 ssize_t smack_new_label_from_self(char **label)
@@ -606,7 +606,7 @@ int smack_revoke_subject(const char *subject)
 	if (len > SMACK_LABEL_LEN)
 		return -1;
 
-	snprintf(path, sizeof path, "%s/revoke-subject", smack_mnt);
+	snprintf(path, sizeof path, "%s/revoke-subject", smackfs_mnt);
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
@@ -628,18 +628,18 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int load2 = 1;
 	char path[PATH_MAX];
 
-	if (!smack_mnt) {
+	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1; 
 	}
 	
-	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	snprintf(path, sizeof path, "%s/load2", smackfs_mnt);
 	load_fd = open(path, O_WRONLY);
 	if (load_fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		/* fallback */
-	        snprintf(path, sizeof path, "%s/load", smack_mnt);
+	        snprintf(path, sizeof path, "%s/load", smackfs_mnt);
 		load_fd = open(path, O_WRONLY);
 		/* Try to continue if the file doesn't exist, we might not need it. */
 		if (load_fd < 0 && errno != ENOENT)
@@ -647,7 +647,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 		load2 = 0;
 	}
 
-	snprintf(path, sizeof path, "%s/change-rule", smack_mnt);
+	snprintf(path, sizeof path, "%s/change-rule", smackfs_mnt);
 	change_fd = open(path, O_WRONLY);
 	/* Try to continue if the file doesn't exist, we might not need it. */
 	if (change_fd < 0 && errno != ENOENT) {
