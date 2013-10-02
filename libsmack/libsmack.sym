@@ -22,3 +22,8 @@ global:
 local:
 	*;
 };
+
+LIBSMACK_1.1 {
+global:
+	smack_is_label_valid;
+} LIBSMACK_1.0;

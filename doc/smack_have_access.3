@@ -19,7 +19,7 @@
 .\"
 .TH "SMACK_HAVE_ACCESS" "3" "06/20/2012" "Libsmack 1\&.0"
 .SH NAME
-smack_have_access, smack_new_label_from_self, smack_new_label_from_socket \- Userspace interaction with Smack
+smack_have_access, smack_new_label_from_self, smack_new_label_from_socket, smack_is_label_valid \- Userspace interaction with Smack
 .SH SYNOPSIS
 .B #include <sys/smack.h>
 .sp
@@ -30,6 +30,8 @@ smack_have_access, smack_new_label_from_self, smack_new_label_from_socket \- Use
 .BI "int smack_set_label_for_self(char **" label ");"
 .br
 .BI "int smack_new_label_from_socket(int " fd ", char **" label ");"
+.br
+.BI "int smack_is_label_valid(const char *" label ");"
 .sp
 .SH DESCRIPTION
 Smack is a Mandatory Access Control (MAC) based security mechanism for the Linux kernel.  It works on the basis of context, which is stored as a label in the extended attributes (xattr) of a file.  When a process is started the kernel ensures that this context is assigned to the running process.  By default a process can only interact with processes and filesystem objects that have the same context as itself and is denied access to all other contexts.  Rules can be created to grant access to other contexts, these are generally created on package installation and can only be modified by a process that has the CAP_MAC_ADMIN capability.
@@ -72,6 +74,11 @@ of the socket and determines it's context and creates a new storage for this whi
 on return.  It is the callers responsibility to free
 .I label
 when it is no longer required.
+.PP
+.BR smack_is_label_valid ()
+takes a
+.IR label ,
+and checks if it's correct Smack label.
 .SH RETURN VALUE
 .BR smack_new_label_from_self ()
 and
@@ -84,3 +91,8 @@ is set appropriately).
 returns 1 if allowed, 0 if no access and \-1 on error (in which case,
 .I errno
 is set appropriately).
+
+.BR smack_is_label_valid ()
+returns 1 if
+.I label
+is valid and 0 if it's not.
