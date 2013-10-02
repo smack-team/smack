@@ -156,7 +156,7 @@ int smack_have_access(const char *subject, const char *object,
  * @return Returns 0 on success and negative on failure. If the operation
  * is succesful 'cipso' variable will contain a valid pointer.
  */
-int smack_cipso_new(struct smack_cipso **cipso);
+int smack_cipso_new(struct smack_cipso **handle);
 
 /*!
  * Destroys a struct smack_cipso instance.
@@ -176,11 +176,11 @@ int smack_cipso_apply(struct smack_cipso *handle);
 /*!
  * Add CIPSO rules from the given file.
  *
- * @param cipso instance
  * @param handle handle to a struct smack_cipso instance
+ * @param fd file descriptor
  * @return Returns 0 on success and negative on failure.
  */
-int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd);
+int smack_cipso_add_from_file(struct smack_cipso *handle, int fd);
 
 /*!
  * Get pointer to a string containing path to the mounted SmackFS.
