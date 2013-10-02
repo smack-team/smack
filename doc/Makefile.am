@@ -34,6 +34,7 @@ man_MANS = smackaccess.1 \
 	   smack_new_label_from_socket.3 \
 	   smack_new_label_from_path.3 \
 	   smack_set_label_for_self.3 \
+	   smack_label_length.3 \
 	   smack_revoke_subject.3 \
 	   chsmack.8 \
 	   smackcipso.8 \

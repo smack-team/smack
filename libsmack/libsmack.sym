@@ -22,3 +22,10 @@ global:
 local:
 	*;
 };
+
+LIBSMACK_1.1 {
+global:
+	smack_label_length;
+local:
+	*;
+} LIBSMACK_1.0;
