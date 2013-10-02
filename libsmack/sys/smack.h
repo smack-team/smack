@@ -75,7 +75,8 @@ void smack_accesses_free(struct smack_accesses *handle);
 int smack_accesses_save(struct smack_accesses *handle, int fd);
 
 /*!
- * Apply access rules to the kernel.
+ * Apply access rules to the kernel. Rules are applied in the order that
+ * they were added.
  *
  * @param handle handle to a struct smack_accesses instance
  * @return Returns 0 on success and negative on failure.
