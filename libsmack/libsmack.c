@@ -739,4 +739,25 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		}
 }
 
+int smack_label_length(const char *label)
+{
+	int i;
 
+	if (!label || label[0] == '\0' || label[0] == '-')
+		return 0;
+
+	for (i = 0; i < (SMACK_LABEL_LEN + 1) && label[i]; i++) {
+		switch (label[i]) {
+		case ' ':
+		case '/':
+		case '"':
+		case '\\':
+		case '\'':
+			return -1;
+		default:
+			break;
+		}
+	}
+
+	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
+}
