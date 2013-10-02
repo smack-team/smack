@@ -57,9 +57,9 @@ struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
 	char object[SMACK_LABEL_LEN + 1];
 	int is_modify;
-	char access_set[ACC_LEN + 1];
-	char access_add[ACC_LEN + 1];
-	char access_del[ACC_LEN + 1];
+	char access_type[ACC_LEN + 1];
+	char allow_access_type[ACC_LEN + 1];
+	char deny_access_type[ACC_LEN + 1];
 	struct smack_rule *next;
 };
 
@@ -134,11 +134,12 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 		if (rule->is_modify) {
 			ret = fprintf(file, "%s %s %s %s\n",
 				      rule->subject, rule->object,
-				      rule->access_add, rule->access_del);
+				      rule->allow_access_type,
+				      rule->deny_access_type);
 		} else {
 			ret = fprintf(file, "%s %s %s\n",
 				      rule->subject, rule->object,
-				      rule->access_set);
+				      rule->access_type);
 		}
 
 		if (ret < 0) {
@@ -180,7 +181,7 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 
 	strcpy(rule->subject, subject);
 	strcpy(rule->object, object);
-	parse_access_type(access_type, rule->access_set);
+	parse_access_type(access_type, rule->access_type);
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -192,8 +193,11 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	return 0;
 }
 
-int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
-		       const char *object, const char *access_add, const char *access_del)
+int smack_accesses_add_modify(struct smack_accesses *handle,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type)
 {
 	struct smack_rule *rule = NULL;
 
@@ -209,8 +213,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject
 
 	strcpy(rule->subject, subject);
 	strcpy(rule->object, object);
-	parse_access_type(access_add, rule->access_add);
-	parse_access_type(access_del, rule->access_del);
+	parse_access_type(allow_access_type, rule->allow_access_type);
+	parse_access_type(deny_access_type, rule->deny_access_type);
 	rule->is_modify = 1;
 
 	if (handle->first == NULL) {
@@ -657,25 +661,26 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
 		if (clear) {
-			strcpy(rule->access_set, "-----");
+			strcpy(rule->access_type, "-----");
 			rule->is_modify = 0;
 		}
 
 		if (rule->is_modify) {
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-						rule->subject, rule->object,
-						rule->access_add, rule->access_del);
+				       rule->subject, rule->object,
+				       rule->allow_access_type,
+				       rule->deny_access_type);
 		} else {
 			fd = load_fd;
 			if (load2)
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 					       rule->subject, rule->object,
-					       rule->access_set);
+					       rule->access_type);
 			else
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
 					       rule->subject, rule->object,
-					       rule->access_set);
+					       rule->access_type);
 		}
 
 		if (ret < 0 || fd < 0) {

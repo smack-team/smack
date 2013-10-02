@@ -105,22 +105,26 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type);
 
 /*!
- * Add a modification rule to a rule set.
- * The modification rule will change access permissions for a given subject and
- * object.
- * If such rule already existend (in the kernel or earlier in the rule set),
- * it will be modified. Otherwise a new rule will be created, with permissions
- * from access_add minus permissions from access_del.
+ * Add a modification rule to the given access rules. A modification rule
+ * is written to the kernel file 'change-rule' when you apply rules with
+ * smack_accesses_apply(). It can be used to turn on and off a certain access
+ * type like write access.
+ *
+ * When a modification rule is applied to the kernel it will turn on access
+ * types in allow_access and turn off access types in deny_access.
  *
  * @param handle handle to a struct smack_accesses instance
  * @param subject subject of the rule
  * @param object object of the rule
- * @param access_add access type
- * @param access_del access type
+ * @param allow_access_type access type to be turned on
+ * @param deny_access_type access type to be turned off
  * @return Returns 0 on success and negative on failure.
  */
-int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
-		       const char *object, const char *access_add, const char *access_del);
+int smack_accesses_add_modify(struct smack_accesses *handle,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type);
 
 /*!
  * Load access rules from the given file.
