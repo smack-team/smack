@@ -75,7 +75,8 @@ void smack_accesses_free(struct smack_accesses *handle);
 int smack_accesses_save(struct smack_accesses *handle, int fd);
 
 /*!
- * Apply access rules to the kernel.
+ * Apply access rules to the kernel. Rules are applied in the order that
+ * they were added.
  *
  * @param handle handle to a struct smack_accesses instance
  * @return Returns 0 on success and negative on failure.
@@ -105,22 +106,26 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type);
 
 /*!
- * Add a modification rule to a rule set.
- * The modification rule will change access permissions for a given subject and
- * object.
- * If such rule already existend (in the kernel or earlier in the rule set),
- * it will be modified. Otherwise a new rule will be created, with permissions
- * from access_add minus permissions from access_del.
+ * Add a modification rule to the given access rules. A modification rule
+ * is written to the kernel file 'change-rule' when you apply rules with
+ * smack_accesses_apply(). It can be used to turn on and off a certain access
+ * type like write access.
+ *
+ * When a modification rule is applied to the kernel it will turn on access
+ * types in allow_access and turn off access types in deny_access.
  *
  * @param handle handle to a struct smack_accesses instance
  * @param subject subject of the rule
  * @param object object of the rule
- * @param access_add access type
- * @param access_del access type
+ * @param allow_access_type access type to be turned on
+ * @param deny_access_type access type to be turned off
  * @return Returns 0 on success and negative on failure.
  */
-int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
-		       const char *object, const char *access_add, const char *access_del);
+int smack_accesses_add_modify(struct smack_accesses *handle,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type);
 
 /*!
  * Load access rules from the given file.
@@ -152,7 +157,7 @@ int smack_have_access(const char *subject, const char *object,
  * @return Returns 0 on success and negative on failure. If the operation
  * is succesful 'cipso' variable will contain a valid pointer.
  */
-int smack_cipso_new(struct smack_cipso **cipso);
+int smack_cipso_new(struct smack_cipso **handle);
 
 /*!
  * Destroys a struct smack_cipso instance.
@@ -172,11 +177,11 @@ int smack_cipso_apply(struct smack_cipso *handle);
 /*!
  * Add CIPSO rules from the given file.
  *
- * @param cipso instance
  * @param handle handle to a struct smack_cipso instance
+ * @param fd file descriptor
  * @return Returns 0 on success and negative on failure.
  */
-int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd);
+int smack_cipso_add_from_file(struct smack_cipso *handle, int fd);
 
 /*!
  * Get pointer to a string containing path to the mounted SmackFS.

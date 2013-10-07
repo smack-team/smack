@@ -51,15 +51,15 @@
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 
-extern char *smack_mnt;
+extern char *smackfs_mnt;
 
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
 	char object[SMACK_LABEL_LEN + 1];
 	int is_modify;
-	char access_set[ACC_LEN + 1];
-	char access_add[ACC_LEN + 1];
-	char access_del[ACC_LEN + 1];
+	char access_type[ACC_LEN + 1];
+	char allow_access_type[ACC_LEN + 1];
+	char deny_access_type[ACC_LEN + 1];
 	struct smack_rule *next;
 };
 
@@ -134,11 +134,12 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 		if (rule->is_modify) {
 			ret = fprintf(file, "%s %s %s %s\n",
 				      rule->subject, rule->object,
-				      rule->access_add, rule->access_del);
+				      rule->allow_access_type,
+				      rule->deny_access_type);
 		} else {
 			ret = fprintf(file, "%s %s %s\n",
 				      rule->subject, rule->object,
-				      rule->access_set);
+				      rule->access_type);
 		}
 
 		if (ret < 0) {
@@ -180,7 +181,7 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 
 	strcpy(rule->subject, subject);
 	strcpy(rule->object, object);
-	parse_access_type(access_type, rule->access_set);
+	parse_access_type(access_type, rule->access_type);
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -192,8 +193,11 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	return 0;
 }
 
-int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject,
-		       const char *object, const char *access_add, const char *access_del)
+int smack_accesses_add_modify(struct smack_accesses *handle,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type)
 {
 	struct smack_rule *rule = NULL;
 
@@ -209,8 +213,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle, const char *subject
 
 	strcpy(rule->subject, subject);
 	strcpy(rule->object, object);
-	parse_access_type(access_add, rule->access_add);
-	parse_access_type(access_del, rule->access_del);
+	parse_access_type(allow_access_type, rule->allow_access_type);
+	parse_access_type(deny_access_type, rule->deny_access_type);
 	rule->is_modify = 1;
 
 	if (handle->first == NULL) {
@@ -287,18 +291,18 @@ int smack_have_access(const char *subject, const char *object,
 	int access2 = 1;
 	char path[PATH_MAX];
 
-	if (!smack_mnt) {
+	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1; 
 	}
 	
-	snprintf(path, sizeof path, "%s/access2", smack_mnt);
+	snprintf(path, sizeof path, "%s/access2", smackfs_mnt);
 	fd = open(path, O_RDWR);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		
-	        snprintf(path, sizeof path, "%s/access", smack_mnt);
+	        snprintf(path, sizeof path, "%s/access", smackfs_mnt);
 		fd = open(path, O_RDWR);
 		if (fd < 0)
 			return -1;
@@ -369,12 +373,12 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	char path[PATH_MAX];
 	int offset=0;
 
-	if (!smack_mnt) {
+	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1;
 	}
 
-	snprintf(path, sizeof path, "%s/cipso2", smack_mnt);
+	snprintf(path, sizeof path, "%s/cipso2", smackfs_mnt);
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
@@ -492,7 +496,7 @@ err_out:
 
 const char *smack_smackfs_path(void)
 {
-	return smack_mnt;
+	return smackfs_mnt;
 }
 
 ssize_t smack_new_label_from_self(char **label)
@@ -606,7 +610,7 @@ int smack_revoke_subject(const char *subject)
 	if (len > SMACK_LABEL_LEN)
 		return -1;
 
-	snprintf(path, sizeof path, "%s/revoke-subject", smack_mnt);
+	snprintf(path, sizeof path, "%s/revoke-subject", smackfs_mnt);
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
@@ -628,18 +632,18 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int load2 = 1;
 	char path[PATH_MAX];
 
-	if (!smack_mnt) {
+	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1; 
 	}
 	
-	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	snprintf(path, sizeof path, "%s/load2", smackfs_mnt);
 	load_fd = open(path, O_WRONLY);
 	if (load_fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		/* fallback */
-	        snprintf(path, sizeof path, "%s/load", smack_mnt);
+	        snprintf(path, sizeof path, "%s/load", smackfs_mnt);
 		load_fd = open(path, O_WRONLY);
 		/* Try to continue if the file doesn't exist, we might not need it. */
 		if (load_fd < 0 && errno != ENOENT)
@@ -647,7 +651,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 		load2 = 0;
 	}
 
-	snprintf(path, sizeof path, "%s/change-rule", smack_mnt);
+	snprintf(path, sizeof path, "%s/change-rule", smackfs_mnt);
 	change_fd = open(path, O_WRONLY);
 	/* Try to continue if the file doesn't exist, we might not need it. */
 	if (change_fd < 0 && errno != ENOENT) {
@@ -657,25 +661,26 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
 		if (clear) {
-			strcpy(rule->access_set, "-----");
+			strcpy(rule->access_type, "-----");
 			rule->is_modify = 0;
 		}
 
 		if (rule->is_modify) {
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-						rule->subject, rule->object,
-						rule->access_add, rule->access_del);
+				       rule->subject, rule->object,
+				       rule->allow_access_type,
+				       rule->deny_access_type);
 		} else {
 			fd = load_fd;
 			if (load2)
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 					       rule->subject, rule->object,
-					       rule->access_set);
+					       rule->access_type);
 			else
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
 					       rule->subject, rule->object,
-					       rule->access_set);
+					       rule->access_type);
 		}
 
 		if (ret < 0 || fd < 0) {

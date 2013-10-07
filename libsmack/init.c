@@ -32,32 +32,14 @@
 #include <stdint.h>
 #include <limits.h>
 
-/*
- *  * smackfs magic number
- *   */
-#define SMACK_MAGIC     0x43415d53 /* "SMAC" */
+#define SMACK_MAGIC	0x43415d53 /* "SMAC" */
+#define SMACKFS		"smackfs"
+#define SMACKFSMNT	"/sys/fs/smackfs/"
+#define OLDSMACKFSMNT	"/smack"
 
-/* smack file system type */
-#define SMACKFS "smackfs"
+char *smackfs_mnt = NULL;
 
-#define SMACKFSMNT "/sys/fs/smackfs/"
-#define OLDSMACKFSMNT "/smack"
-
-char *smack_mnt = NULL;
-
-void set_smackmnt(const char *mnt)
-{
-	smack_mnt = strdup(mnt);
-}
-
-/* Verify the mount point for smack file system has a smackfs.
- * If the file system:
- * Exist,
- * Is mounted with an smack file system,
- * The file system is read/write
- * then set this as the default file system.
- */
-static int verify_smackmnt(const char *mnt)
+static int verify_smackfs_mnt(const char *mnt)
 {
 	struct statfs sfbuf;
 	int rc;
@@ -71,9 +53,8 @@ static int verify_smackmnt(const char *mnt)
 			struct statvfs vfsbuf;
 			rc = statvfs(mnt, &vfsbuf);
 			if (rc == 0) {
-				if (!(vfsbuf.f_flag & ST_RDONLY)) {
-					set_smackmnt(mnt);
-				}
+				if (!(vfsbuf.f_flag & ST_RDONLY))
+					smackfs_mnt = strdup(mnt);
 				return 0;
 			}
 		}
@@ -82,7 +63,7 @@ static int verify_smackmnt(const char *mnt)
 	return -1;
 }
 
-int smackfs_exists(void)
+static int smackfs_exists(void)
 {
 	int exists = 0;
 	FILE *fp = NULL;
@@ -90,9 +71,12 @@ int smackfs_exists(void)
 	size_t len;
 	ssize_t num;
 
+	/* Fail as SmackFS would exist since we are checking mounts after
+	 * this.
+	 */
 	fp = fopen("/proc/filesystems", "r");
 	if (!fp)
-		return 1; /* Fail as if it exists */
+		return 1;
 
 	__fsetlocking(fp, FSETLOCKING_BYCALLER);
 
@@ -117,21 +101,18 @@ static void init_smackmnt(void)
 	size_t len;
 	ssize_t num;
 
-	if (smack_mnt)
+	if (smackfs_mnt)
 		return;
 
-	if (verify_smackmnt(SMACKFSMNT) == 0) 
+	if (verify_smackfs_mnt(SMACKFSMNT) == 0) 
 		return;
 
-	if (verify_smackmnt(OLDSMACKFSMNT) == 0) 
+	if (verify_smackfs_mnt(OLDSMACKFSMNT) == 0) 
 		return;
 
-	/* Drop back to detecting it the long way. */
 	if (!smackfs_exists())
 		goto out;
 
-	/* At this point, the usual spot doesn't have an smackfs so
-	 * we look around for it */
 	fp = fopen("/proc/mounts", "r");
 	if (!fp)
 		goto out;
@@ -154,11 +135,10 @@ static void init_smackmnt(void)
 		}
 	}
 
-	/* If we found something, dup it */
 	if (num > 0)
-		verify_smackmnt(p);
+		verify_smackfs_mnt(p);
 
-      out:
+out:
 	free(buf);
 	if (fp)
 		fclose(fp);
@@ -167,8 +147,8 @@ static void init_smackmnt(void)
 
 void fini_smackmnt(void)
 {
-	free(smack_mnt);
-	smack_mnt = NULL;
+	free(smackfs_mnt);
+	smackfs_mnt = NULL;
 }
 
 static void init_lib(void) __attribute__ ((constructor));
