@@ -437,7 +437,7 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		label = strtok_r(buf, " \t\n", &ptr);
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
-		if (label == NULL || cat == NULL || level == NULL ||
+		if (label == NULL || level == NULL ||
 		    strlen(label) > SMACK_LABEL_LEN) {
 			errno = EINVAL;
 			goto err_out;
