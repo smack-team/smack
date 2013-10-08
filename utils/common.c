@@ -186,7 +186,7 @@ static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag
 	if (fd < 0)
 		return -1;
 
-	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
+	ret = apply_cipso_file(fd) ? FTW_STOP : FTW_CONTINUE;
 	close(fd);
 	return ret;
 }
