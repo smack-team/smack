@@ -83,6 +83,7 @@ struct smack_cipso {
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
 static inline void parse_access_type(const char *in, char out[ACC_LEN + 1]);
+static int smack_is_label_valid(const char *label);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -169,9 +170,8 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
-	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
-	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
-		errno = ERANGE;
+	if (smack_is_label_valid(subject) || smack_is_label_valid(object)) {
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -201,9 +201,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 {
 	struct smack_rule *rule = NULL;
 
-	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
-	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
-		errno = ERANGE;
+	if (smack_is_label_valid(subject) || smack_is_label_valid(object)) {
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -294,6 +293,11 @@ int smack_have_access(const char *subject, const char *object,
 	if (!smackfs_mnt) {
 		errno = EFAULT;
 		return -1; 
+	}
+
+	if (smack_is_label_valid(subject) || smack_is_label_valid(object)) {
+		errno = EINVAL;
+		return -1;
 	}
 	
 	snprintf(path, sizeof path, "%s/access2", smackfs_mnt);
@@ -581,19 +585,19 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 
 int smack_set_label_for_self(const char *label)
 {
-	int len;
 	int fd;
 	int ret;
 
-	len = strnlen(label, SMACK_LABEL_LEN + 1);
-	if (len > SMACK_LABEL_LEN)
+	if (smack_is_label_valid(label)) {
+		errno = EINVAL;
 		return -1;
+	}
 
 	fd = open(SELF_LABEL_FILE, O_WRONLY);
 	if (fd < 0)
 		return -1;
 
-	ret = write(fd, label, len);
+	ret = write(fd, label, strnlen(label, SMACK_LABEL_LEN));
 	close(fd);
 
 	return (ret < 0) ? -1 : 0;
@@ -603,19 +607,19 @@ int smack_revoke_subject(const char *subject)
 {
 	int ret;
 	int fd;
-	int len;
 	char path[PATH_MAX];
 
-	len = strnlen(subject, SMACK_LABEL_LEN + 1);
-	if (len > SMACK_LABEL_LEN)
+	if (smack_is_label_valid(subject)) {
+		errno = EINVAL;
 		return -1;
+	}
 
 	snprintf(path, sizeof path, "%s/revoke-subject", smackfs_mnt);
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -1;
 
-	ret = write(fd, subject, len);
+	ret = write(fd, subject, strnlen(subject, SMACK_LABEL_LEN));
 	close(fd);
 
 	return (ret < 0) ? -1 : 0;
@@ -739,4 +743,25 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		}
 }
 
+static int smack_is_label_valid(const char *label)
+{
+	int i;
 
+	if (!label || label[0] == '\0' || label[0] == '-')
+		return 0;
+
+	for (i = 0; i < SMACK_LABEL_LEN && label[i]; ++i) {
+		switch (label[i]) {
+		case ' ':
+		case '/':
+		case '"':
+		case '\\':
+		case '\'':
+			return 0;
+		default:
+			break;
+		}
+	}
+
+	return i < SMACK_LABEL_LEN;
+}
