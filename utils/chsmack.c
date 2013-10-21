@@ -94,21 +94,21 @@ int main(int argc, char *argv[])
 		if (option_flag) {
 			if (strlen(access_buf) > 0) {
 				rc = lsetxattr(argv[i], "security.SMACK64",
-					       access_buf, strlen(access_buf) + 1, 0);
+					       access_buf, strlen(access_buf), 0);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(exec_buf) > 0) {
 				rc = lsetxattr(argv[i], "security.SMACK64EXEC",
-					       exec_buf, strlen(exec_buf) + 1, 0);
+					       exec_buf, strlen(exec_buf), 0);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(mmap_buf) > 0) {
 				rc = lsetxattr(argv[i], "security.SMACK64MMAP",
-					       mmap_buf, strlen(mmap_buf) + 1, 0);
+					       mmap_buf, strlen(mmap_buf), 0);
 				if (rc < 0)
 					perror(argv[i]);
 			}
