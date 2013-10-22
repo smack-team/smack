@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 					"exceeds %d characters.\n",
 				long_options[option_index].name, optarg,
 				SMACK_LABEL_LEN);
+			exit(1);
 		}
 
 		switch (c) {
