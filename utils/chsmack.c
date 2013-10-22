@@ -31,12 +31,12 @@
 
 int main(int argc, char *argv[])
 {
-	static struct option long_options[] = {
+	static struct option options[] = {
 		{"access", required_argument, 0, 'a'},
 		{"exec", required_argument, 0, 'e'},
 		{"mmap", required_argument, 0, 'm'},
 		{"transmute", no_argument, 0, 't'},
-		{0, 0, 0, 0}
+		{NULL, 0, 0, 0}
 	};
 
 	/*  Buffers are zeroed automatically by keeping them static variables.
@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
 	static char access_buf[SMACK_LABEL_LEN + 1];
 	static char exec_buf[SMACK_LABEL_LEN + 1];
 	static char mmap_buf[SMACK_LABEL_LEN + 1];
+	static int options_map[128];
 
 	int transmute_flag = 0;
 	int option_flag = 0;
@@ -52,14 +53,18 @@ int main(int argc, char *argv[])
 	int c;
 	int i;
 
-	while ((c = getopt_long(argc, argv, "a:e:m:t", long_options,
+	for (i = 0; options[i].name != NULL; i++)
+		options_map[options[i].val] = i;
+
+	while ((c = getopt_long(argc, argv, "a:e:m:t", options,
 				NULL)) != -1) {
 		if ((c == 'a' || c == 'e' || c == 'm')
 		    && strnlen(optarg, SMACK_LABEL_LEN + 1)
 		       == (SMACK_LABEL_LEN + 1)) {
-			fprintf(stderr, "label \"%s\" "
+			fprintf(stderr, "%s: %s: \"%s\" " \
 					"exceeds %d characters.\n",
-				optarg, SMACK_LABEL_LEN);
+				basename(argv[0]), options[options_map[c]].name, optarg,
+					 SMACK_LABEL_LEN);
 			exit(1);
 		}
 
@@ -77,7 +82,7 @@ int main(int argc, char *argv[])
 				transmute_flag = 1;
 				break;
 			default:
-				printf("Usage: %s [options] <path>\n", argv[0]);
+				printf("Usage: %s [options] <path>\n", basename(argv[0]));
 				printf("options:\n");
 				printf(" [--access|-a] set security.SMACK64\n");
 				printf(" [--exec|-e] set security.SMACK64EXEC\n");
