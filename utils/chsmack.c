@@ -48,20 +48,18 @@ int main(int argc, char *argv[])
 
 	int transmute_flag = 0;
 	int option_flag = 0;
-	int option_index;
 	int rc;
 	int c;
 	int i;
 
 	while ((c = getopt_long(argc, argv, "a:e:m:t", long_options,
-				&option_index)) != -1) {
+				NULL)) != -1) {
 		if ((c == 'a' || c == 'e' || c == 'm')
 		    && strnlen(optarg, SMACK_LABEL_LEN + 1)
 		       == (SMACK_LABEL_LEN + 1)) {
-			fprintf(stderr, "%s label \"%s\" "
+			fprintf(stderr, "label \"%s\" "
 					"exceeds %d characters.\n",
-				long_options[option_index].name, optarg,
-				SMACK_LABEL_LEN);
+				optarg, SMACK_LABEL_LEN);
 			exit(1);
 		}
 
