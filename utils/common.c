@@ -55,8 +55,10 @@ int clear(void)
 
 	snprintf(path, sizeof path, "%s/load2", smack_mnt);
 	fd = open(path, O_RDONLY);
-	if (fd < 0)
+	if (fd < 0) {
+		fprintf(stderr, "open() failed for '%s' : %s\n", path, strerror(errno));
 		return -1;
+	}
 
 	ret = apply_rules_file(fd, 1);
 	close(fd);
@@ -69,18 +71,23 @@ int apply_rules(const char *path, int clear)
 	int fd;
 	int ret;
 
-	errno = 0;
-	if (stat(path, &sbuf))
+	if (stat(path, &sbuf)) {
+		fprintf(stderr, "stat() failed for '%s' : %s\n", path, strerror(errno));
 		return -1;
+	}
 
 	if (S_ISDIR(sbuf.st_mode))
 		return nftw(path, apply_rules_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
 
 	fd = open(path, O_RDONLY);
-	if (fd < 0)
+	if (fd < 0) {
+		fprintf(stderr, "open() failed for '%s' : %s\n", path, strerror(errno));
 		return -1;
+	}
 
 	ret = apply_rules_file(fd, clear);
+	if (ret)
+		fprintf(stderr, "Applying rules failed for '%s'.\n",  path);
 	close(fd);
 	return ret;
 }
@@ -91,18 +98,23 @@ int apply_cipso(const char *path)
 	int fd;
 	int ret;
 
-	errno = 0;
-	if (stat(path, &sbuf))
+	if (stat(path, &sbuf)) {
+		fprintf(stderr, "stat() failed for '%s' : %s\n", path, strerror(errno));
 		return -1;
+	}
 
 	if (S_ISDIR(sbuf.st_mode))
 		return nftw(path, apply_cipso_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
 
 	fd = open(path, O_RDONLY);
-	if (fd < 0)
+	if (fd < 0) {
+		fprintf(stderr, "open() failed for '%s' : %s\n", path, strerror(errno));
 		return -1;
+	}
 
 	ret = apply_cipso_file(fd);
+	if (ret)
+		fprintf(stderr, "Applying rules failed for '%s'.\n",  path);
 	close(fd);
 	return ret;
 }
@@ -164,10 +176,14 @@ static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag
 		return FTW_STOP;
 
 	fd = open(fpath, O_RDONLY);
-	if (fd < 0)
+	if (fd < 0) {
+		fprintf(stderr, "open() failed for '%s' : %s\n", fpath, strerror(errno));
 		return -1;
+	}
 
 	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
+	if (ret == FTW_STOP)
+		fprintf(stderr, "Applying rules failed for '%s'.\n",  fpath);
 	close(fd);
 	return ret;
 }
@@ -183,10 +199,14 @@ static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag
 		return FTW_STOP;
 
 	fd = open(fpath, O_RDONLY);
-	if (fd < 0)
+	if (fd < 0) {
+		fprintf(stderr, "open() failed for '%s' : %s\n", fpath, strerror(errno));
 		return -1;
+	}
 
 	ret = apply_cipso_file(fd) ? FTW_STOP : FTW_CONTINUE;
+	if (ret == FTW_STOP)
+		fprintf(stderr, "Applying rules failed for '%s'.\n",  fpath);
 	close(fd);
 	return ret;
 }
