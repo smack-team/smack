@@ -246,6 +246,14 @@ int smack_set_label_for_self(const char *label);
  */
 int smack_revoke_subject(const char *subject);
 
+/*!
+ * Check if SMACK label is valid
+ *
+ * @param label to verify
+ * @return 1 if label is correct and 0 if it's not
+ */
+int smack_is_label_valid(const char *label);
+
 #ifdef __cplusplus
 }
 #endif
