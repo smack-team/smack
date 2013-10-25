@@ -171,10 +171,8 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	struct smack_rule *rule = NULL;
 
 	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
-	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
-		errno = ERANGE;
+	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN)
 		return -1;
-	}
 
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
@@ -203,10 +201,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	struct smack_rule *rule = NULL;
 
 	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
-	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN) {
-		errno = ERANGE;
+	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN)
 		return -1;
-	}
 
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
@@ -257,7 +253,6 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 
 		if (subject == NULL || object == NULL || access == NULL ||
 		    strtok_r(NULL, " \t\n", &ptr) != NULL) {
-			errno = EINVAL;
 			fclose(file);
 			return -1;
 		}
@@ -292,10 +287,8 @@ int smack_have_access(const char *subject, const char *object,
 	int access2 = 1;
 	char path[PATH_MAX];
 
-	if (!smackfs_mnt) {
-		errno = EFAULT;
+	if (!smackfs_mnt)
 		return -1; 
-	}
 	
 	snprintf(path, sizeof path, "%s/access2", smackfs_mnt);
 	fd = open(path, O_RDWR);
@@ -374,10 +367,8 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	char path[PATH_MAX];
 	int offset=0;
 
-	if (!smackfs_mnt) {
-		errno = EFAULT;
+	if (!smackfs_mnt)
 		return -1;
-	}
 
 	snprintf(path, sizeof path, "%s/cipso2", smackfs_mnt);
 	fd = open(path, O_WRONLY);
@@ -439,10 +430,8 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
 		if (label == NULL || level == NULL ||
-		    strlen(label) > SMACK_LABEL_LEN) {
-			errno = EINVAL;
+		    strlen(label) > SMACK_LABEL_LEN)
 			goto err_out;
-		}
 
 		strcpy(mapping->label, label);
 
@@ -451,10 +440,8 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		if (errno)
 			goto err_out;
 
-		if (val < 0 || val > LEVEL_MAX) {
-			errno = ERANGE;
+		if (val < 0 || val > LEVEL_MAX)
 			goto err_out;
-		}
 
 		mapping->level = val;
 
@@ -464,10 +451,8 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 			if (errno)
 				goto err_out;
 
-			if (val < 0 || val > CAT_MAX_VALUE) {
-				errno = ERANGE;
+			if (val < 0 || val > CAT_MAX_VALUE)
 				goto err_out;
-			}
 
 			mapping->cats[i] = val;
 
@@ -633,10 +618,8 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int load2 = 1;
 	char path[PATH_MAX];
 
-	if (!smackfs_mnt) {
-		errno = EFAULT;
+	if (!smackfs_mnt)
 		return -1; 
-	}
 	
 	snprintf(path, sizeof path, "%s/load2", smackfs_mnt);
 	load_fd = open(path, O_WRONLY);
