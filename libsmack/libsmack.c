@@ -83,6 +83,7 @@ struct smack_cipso {
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
 static inline void parse_access_type(const char *in, char out[ACC_LEN + 1]);
+static int smack_label_length(const char *label) __attribute__((unused));
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -739,7 +740,7 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		}
 }
 
-int smack_label_length(const char *label)
+static int smack_label_length(const char *label)
 {
 	int i;
 

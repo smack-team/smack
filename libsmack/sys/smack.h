@@ -246,14 +246,6 @@ int smack_set_label_for_self(const char *label);
  */
 int smack_revoke_subject(const char *subject);
 
-/*!
- * Validate a SMACK label and calculate its length.
- *
- * @param label label to verify
- * @return Returns length of the label on success and negative on failure.
- */
-int smack_label_length(const char *label);
-
 #ifdef __cplusplus
 }
 #endif
