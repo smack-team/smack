@@ -252,7 +252,7 @@ int smack_revoke_subject(const char *subject);
  * @param label label to verify
  * @return Returns length of the label on success and negative on failure.
  */
-int smack_label_length(const char *label);
+ssize_t smack_label_length(const char *label);
 
 #ifdef __cplusplus
 }

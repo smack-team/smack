@@ -739,7 +739,7 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		}
 }
 
-int smack_label_length(const char *label)
+ssize_t smack_label_length(const char *label)
 {
 	int i;
 
