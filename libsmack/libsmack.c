@@ -728,7 +728,7 @@ static int smack_label_length(const char *label)
 	int i;
 
 	if (!label || label[0] == '\0' || label[0] == '-')
-		return 0;
+		return -1;
 
 	for (i = 0; i < (SMACK_LABEL_LEN + 1) && label[i]; i++) {
 		switch (label[i]) {
