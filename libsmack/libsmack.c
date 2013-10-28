@@ -170,8 +170,8 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
-	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
-	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN)
+	if (smack_label_length(subject) < 0 ||
+	    smack_label_length(object) < 0)
 		return -1;
 
 	rule = calloc(sizeof(struct smack_rule), 1);
@@ -200,8 +200,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 {
 	struct smack_rule *rule = NULL;
 
-	if (strnlen(subject, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN ||
-	    strnlen(object, SMACK_LABEL_LEN + 1) > SMACK_LABEL_LEN)
+	if (smack_label_length(subject) < 0 ||
+	    smack_label_length(object) < 0)
 		return -1;
 
 	rule = calloc(sizeof(struct smack_rule), 1);
@@ -429,8 +429,7 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		label = strtok_r(buf, " \t\n", &ptr);
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
-		if (label == NULL || level == NULL ||
-		    strlen(label) > SMACK_LABEL_LEN)
+		if (smack_label_length(label) < 0 || level == NULL)
 			goto err_out;
 
 		strcpy(mapping->label, label);
@@ -571,8 +570,8 @@ int smack_set_label_for_self(const char *label)
 	int fd;
 	int ret;
 
-	len = strnlen(label, SMACK_LABEL_LEN + 1);
-	if (len > SMACK_LABEL_LEN)
+	len = smack_label_length(label);
+	if (len < 0)
 		return -1;
 
 	fd = open(SELF_LABEL_FILE, O_WRONLY);
@@ -592,8 +591,8 @@ int smack_revoke_subject(const char *subject)
 	int len;
 	char path[PATH_MAX];
 
-	len = strnlen(subject, SMACK_LABEL_LEN + 1);
-	if (len > SMACK_LABEL_LEN)
+	len = smack_label_length(subject);
+	if (len < 0)
 		return -1;
 
 	snprintf(path, sizeof path, "%s/revoke-subject", smackfs_mnt);
