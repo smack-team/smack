@@ -45,12 +45,7 @@ int clear(void)
 	char path[PATH_MAX];
 
 	smack_mnt = smack_smackfs_path();
-	if (!smack_mnt) {
-		errno = EFAULT;
-		return -1;
-	}
-
-	if (!smack_smackfs_path())
+	if (!smack_mnt)
 		return -1;
 
 	snprintf(path, sizeof path, "%s/load2", smack_mnt);
