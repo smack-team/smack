@@ -50,6 +50,7 @@
 #define KERNEL_MODIFY_FORMAT "%s %s %s %s"
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
+#define ACC_CLEAR "-----"
 
 extern char *smackfs_mnt;
 
@@ -643,12 +644,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		if (clear) {
-			strcpy(rule->access_type, "-----");
-			rule->is_modify = 0;
-		}
-
-		if (rule->is_modify) {
+		if (rule->is_modify && !clear) {
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
 				       rule->subject, rule->object,
@@ -659,11 +655,11 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 			if (load2)
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 					       rule->subject, rule->object,
-					       rule->access_type);
+					       clear ? ACC_CLEAR : rule->access_type);
 			else
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
 					       rule->subject, rule->object,
-					       rule->access_type);
+					       clear ? ACC_CLEAR : rule->access_type);
 		}
 
 		if (ret < 0 || fd < 0) {
