@@ -1,9 +1,9 @@
 /*
  * This file is part of libsmack
  *
- * Copyright (C) 2010 Nokia Corporation
- * Copyright (C) 2011 Intel Corporation
- * Copyright (C) 2012 Samsung Electronics Co.
+ * Copyright (C) 2010, 2011 Nokia Corporation
+ * Copyright (C) 2011, 2012, 2013 Intel Corporation
+ * Copyright (C) 2012, 2013 Samsung Electronics Co.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
