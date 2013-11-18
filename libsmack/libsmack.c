@@ -179,8 +179,8 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	if (rule == NULL)
 		return -1;
 
-	strcpy(rule->subject, subject);
-	strcpy(rule->object, object);
+	strncpy(rule->subject, subject, SMACK_LABEL_LEN);
+	strncpy(rule->object, object, SMACK_LABEL_LEN);
 	parse_access_type(access_type, rule->access_type);
 
 	if (handle->first == NULL) {
@@ -209,8 +209,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	if (rule == NULL)
 		return -1;
 
-	strcpy(rule->subject, subject);
-	strcpy(rule->object, object);
+	strncpy(rule->subject, subject, SMACK_LABEL_LEN);
+	strncpy(rule->object, object, SMACK_LABEL_LEN);
 	parse_access_type(allow_access_type, rule->allow_access_type);
 	parse_access_type(deny_access_type, rule->deny_access_type);
 	rule->is_modify = 1;
@@ -433,7 +433,7 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		if (smack_label_length(label) < 0 || level == NULL)
 			goto err_out;
 
-		strcpy(mapping->label, label);
+		strncpy(mapping->label, label, SMACK_LABEL_LEN);
 
 		errno = 0;
 		val = strtol(level, NULL, 10);
