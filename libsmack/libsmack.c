@@ -171,16 +171,16 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
-	if (smack_label_length(subject) < 0 ||
-	    smack_label_length(object) < 0)
-		return -1;
-
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN);
-	strncpy(rule->object, object, SMACK_LABEL_LEN);
+	if (get_label(rule->subject, subject) < 0 ||
+	    get_label(rule->object, object) < 0) {
+		free(rule);
+		return -1;
+	}
+
 	parse_access_type(access_type, rule->access_type);
 
 	if (handle->first == NULL) {
@@ -201,16 +201,16 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 {
 	struct smack_rule *rule = NULL;
 
-	if (smack_label_length(subject) < 0 ||
-	    smack_label_length(object) < 0)
-		return -1;
-
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN);
-	strncpy(rule->object, object, SMACK_LABEL_LEN);
+	if (get_label(rule->subject, subject) < 0 ||
+	    get_label(rule->object, object) < 0) {
+		free(rule);
+		return -1;
+	}
+
 	parse_access_type(allow_access_type, rule->allow_access_type);
 	parse_access_type(deny_access_type, rule->deny_access_type);
 	rule->is_modify = 1;
@@ -430,10 +430,9 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		label = strtok_r(buf, " \t\n", &ptr);
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
-		if (smack_label_length(label) < 0 || level == NULL)
-			goto err_out;
 
-		strncpy(mapping->label, label, SMACK_LABEL_LEN);
+		if (level == NULL || get_label(mapping->label, label) < 0)
+			goto err_out;
 
 		errno = 0;
 		val = strtol(level, NULL, 10);
@@ -571,7 +570,7 @@ int smack_set_label_for_self(const char *label)
 	int fd;
 	int ret;
 
-	len = smack_label_length(label);
+	len = get_label(NULL, label);
 	if (len < 0)
 		return -1;
 
@@ -592,7 +591,7 @@ int smack_revoke_subject(const char *subject)
 	int len;
 	char path[PATH_MAX];
 
-	len = smack_label_length(subject);
+	len = get_label(NULL, subject);
 	if (len < 0)
 		return -1;
 
