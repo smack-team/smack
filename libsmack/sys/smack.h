@@ -53,7 +53,7 @@ extern "C" {
  * instance must be later freed with smack_accesses_free().
  *
  * @param handle output variable for the struct smack_accesses instance
- * @return Returns 0 on success and negative on failure. If the operation
+ * @return Returns 0 on success and -1 on failure. If the operation
  * is succesful 'accesses' variable will contain a valid pointer.
  */
 int smack_accesses_new(struct smack_accesses **handle);
@@ -70,7 +70,7 @@ void smack_accesses_free(struct smack_accesses *handle);
  *
  * @param handle handle to a struct smack_accesses instance
  * @param fd file descriptor to the open file
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_accesses_save(struct smack_accesses *handle, int fd);
 
@@ -79,7 +79,7 @@ int smack_accesses_save(struct smack_accesses *handle, int fd);
  * they were added.
  *
  * @param handle handle to a struct smack_accesses instance
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_accesses_apply(struct smack_accesses *handle);
 
@@ -89,7 +89,7 @@ int smack_accesses_apply(struct smack_accesses *handle);
  * does not check whether the rules pre-exist or not.
  *
  * @param handle handle to a struct smack_accesses instance
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_accesses_clear(struct smack_accesses *handle);
 
@@ -100,7 +100,7 @@ int smack_accesses_clear(struct smack_accesses *handle);
  * @param subject subject of the rule
  * @param object object of the rule
  * @param access_type access type
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type);
@@ -119,7 +119,7 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
  * @param object object of the rule
  * @param allow_access_type access type to be turned on
  * @param deny_access_type access type to be turned off
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_accesses_add_modify(struct smack_accesses *handle,
 			      const char *subject,
@@ -132,7 +132,7 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
  *
  * @param handle handle to a struct smack_accesses instance
  * @param fd file descriptor
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_accesses_add_from_file(struct smack_accesses *handle, int fd);
 
@@ -144,7 +144,7 @@ int smack_accesses_add_from_file(struct smack_accesses *handle, int fd);
  * @param object object of the rule
  * @param access_type requested access type
  * @return Returns 1 if access is allowed, 0 if access is not allowed and
- * negative on error.
+ * -1 on error.
  */
 int smack_have_access(const char *subject, const char *object,
 		      const char *access_type);
@@ -154,7 +154,7 @@ int smack_have_access(const char *subject, const char *object,
  * instance must be later freed with smack_cipso_free().
  *
  * @param handle output variable for the struct smack_cipso instance
- * @return Returns 0 on success and negative on failure. If the operation
+ * @return Returns 0 on success and -1 on failure. If the operation
  * is succesful 'cipso' variable will contain a valid pointer.
  */
 int smack_cipso_new(struct smack_cipso **handle);
@@ -170,7 +170,7 @@ void smack_cipso_free(struct smack_cipso *handle);
  * Apply CIPSO rules to the kernel.
  *
  * @param handle handle to a struct smack_cipso instance
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_cipso_apply(struct smack_cipso *handle);
 
@@ -179,7 +179,7 @@ int smack_cipso_apply(struct smack_cipso *handle);
  *
  * @param handle handle to a struct smack_cipso instance
  * @param fd file descriptor
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_cipso_add_from_file(struct smack_cipso *handle, int fd);
 
@@ -196,7 +196,7 @@ const char *smack_smackfs_path(void);
   * Caller is responsible of freeing the returned label.
   *
   * @param label output variable for the label
-  * @return Returns length of the label on success and negative value
+  * @return Returns length of the label on success and -1 value
   * on failure.
   */
 ssize_t smack_new_label_from_self(char **label);
@@ -208,7 +208,7 @@ ssize_t smack_new_label_from_self(char **label);
   *
   * @param fd file descriptor of the socket
   * @param label output variable for the label
-  * @return Returns length of the label on success and negative value
+  * @return Returns length of the label on success and -1 value
   * on failure.
   */
 ssize_t smack_new_label_from_socket(int fd, char **label);
@@ -221,7 +221,7 @@ ssize_t smack_new_label_from_socket(int fd, char **label);
   * @param xattr the extended attribute containing the SMACK label
   * @param follow whether or not to follow symbolic link
   * @param label output variable for the returned label
-  * @return Returns length of the label on success and negative value
+  * @return Returns length of the label on success and -1 value
   * on failure.
   */
 ssize_t smack_new_label_from_path(const char *path,
@@ -234,7 +234,7 @@ ssize_t smack_new_label_from_path(const char *path,
  * CAP_MAC_ADMIN POSIX capability in order to do this.
  *
  * @param label a string containing the new label
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_set_label_for_self(const char *label);
 
@@ -242,7 +242,7 @@ int smack_set_label_for_self(const char *label);
  * Revoke all rules for the given subject label.
  *
  * @param subject subject to revoke
- * @return Returns 0 on success and negative on failure.
+ * @return Returns 0 on success and -1 on failure.
  */
 int smack_revoke_subject(const char *subject);
 
@@ -250,7 +250,7 @@ int smack_revoke_subject(const char *subject);
  * Validate a SMACK label and calculate its length.
  *
  * @param label label to verify
- * @return Returns length of the label on success and negative on failure.
+ * @return Returns length of the label on success and -1 on failure.
  */
 ssize_t smack_label_length(const char *label);
 
