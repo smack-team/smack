@@ -84,6 +84,7 @@ struct smack_cipso {
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
 static inline void parse_access_type(const char *in, char out[ACC_LEN + 1]);
+static inline ssize_t get_label(char *dest, const char *src);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -170,16 +171,16 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 {
 	struct smack_rule *rule = NULL;
 
-	if (smack_label_length(subject) < 0 ||
-	    smack_label_length(object) < 0)
-		return -1;
-
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN);
-	strncpy(rule->object, object, SMACK_LABEL_LEN);
+	if (get_label(rule->subject, subject) < 0 ||
+	    get_label(rule->object, object) < 0) {
+		free(rule);
+		return -1;
+	}
+
 	parse_access_type(access_type, rule->access_type);
 
 	if (handle->first == NULL) {
@@ -200,16 +201,16 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 {
 	struct smack_rule *rule = NULL;
 
-	if (smack_label_length(subject) < 0 ||
-	    smack_label_length(object) < 0)
-		return -1;
-
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	strncpy(rule->subject, subject, SMACK_LABEL_LEN);
-	strncpy(rule->object, object, SMACK_LABEL_LEN);
+	if (get_label(rule->subject, subject) < 0 ||
+	    get_label(rule->object, object) < 0) {
+		free(rule);
+		return -1;
+	}
+
 	parse_access_type(allow_access_type, rule->allow_access_type);
 	parse_access_type(deny_access_type, rule->deny_access_type);
 	rule->is_modify = 1;
@@ -429,10 +430,9 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		label = strtok_r(buf, " \t\n", &ptr);
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
-		if (smack_label_length(label) < 0 || level == NULL)
-			goto err_out;
 
-		strncpy(mapping->label, label, SMACK_LABEL_LEN);
+		if (level == NULL || get_label(mapping->label, label) < 0)
+			goto err_out;
 
 		errno = 0;
 		val = strtol(level, NULL, 10);
@@ -570,7 +570,7 @@ int smack_set_label_for_self(const char *label)
 	int fd;
 	int ret;
 
-	len = smack_label_length(label);
+	len = get_label(NULL, label);
 	if (len < 0)
 		return -1;
 
@@ -591,7 +591,7 @@ int smack_revoke_subject(const char *subject)
 	int len;
 	char path[PATH_MAX];
 
-	len = smack_label_length(subject);
+	len = get_label(NULL, subject);
 	if (len < 0)
 		return -1;
 
@@ -604,6 +604,11 @@ int smack_revoke_subject(const char *subject)
 	close(fd);
 
 	return (ret < 0) ? -1 : 0;
+}
+
+ssize_t smack_label_length(const char *label)
+{
+	return get_label(NULL, label);
 }
 
 static int accesses_apply(struct smack_accesses *handle, int clear)
@@ -717,15 +722,15 @@ static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
 		}
 }
 
-ssize_t smack_label_length(const char *label)
+static inline ssize_t get_label(char *dest, const char *src)
 {
 	int i;
 
-	if (!label || label[0] == '\0' || label[0] == '-')
+	if (!src || src[0] == '\0' || src[0] == '-')
 		return -1;
 
-	for (i = 0; i < (SMACK_LABEL_LEN + 1) && label[i]; i++) {
-		switch (label[i]) {
+	for (i = 0; i < (SMACK_LABEL_LEN + 1) && src[i]; i++) {
+		switch (src[i]) {
 		case ' ':
 		case '/':
 		case '"':
@@ -735,7 +740,13 @@ ssize_t smack_label_length(const char *label)
 		default:
 			break;
 		}
+
+		if (dest)
+			dest[i] = src[i];
 	}
+
+	if (i < (SMACK_LABEL_LEN + 1))
+		dest[i] = '\0';
 
 	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
 }
