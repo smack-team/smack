@@ -7,3 +7,7 @@ systemdsystemunit_DATA = \
         smack.service
 endif
 endif
+
+EXTRA_DIST = \
+        smack.mount \
+        smack.service
