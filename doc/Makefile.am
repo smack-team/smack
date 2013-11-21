@@ -26,9 +26,7 @@ clean-local:
 	rm -rf html
 	rm -rf man
 
-man/man3/SMACK_LABEL_LEN.3: doxygen.stamp
-
-man_MANS += \
+EXTRA_MANS = \
 	man/man3/SMACK_LABEL_LEN.3 \
 	man/man3/smack.h.3 \
 	man/man3/smack_accesses_add.3 \
@@ -50,6 +48,10 @@ man_MANS += \
 	man/man3/smack_revoke_subject.3 \
 	man/man3/smack_set_label_for_self.3 \
 	man/man3/smack_smackfs_path.3
+
+$(EXTRA_MANS): doxygen.stamp
+man_MANS += $(EXTRA_MANS)
+
 endif
 
 EXTRA_DIST += $(man_MANS)
