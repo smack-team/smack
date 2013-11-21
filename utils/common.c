@@ -34,8 +34,10 @@
 
 #define SMACK_MAGIC 0x43415d53
 
-static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
+static int apply_rules_cb(const char *fpath, const struct stat *sb,
+			  int typeflag, struct FTW *ftwbuf);
+static int apply_cipso_cb(const char *fpath, const struct stat *sb,
+			  int typeflag, struct FTW *ftwbuf);
 
 int clear(void)
 {
@@ -51,7 +53,8 @@ int clear(void)
 	snprintf(path, sizeof path, "%s/load2", smack_mnt);
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr, "open() failed for '%s' : %s\n", path, strerror(errno));
+		fprintf(stderr, "open() failed for '%s' : %s\n", path,
+			strerror(errno));
 		return -1;
 	}
 
@@ -67,7 +70,8 @@ int apply_rules(const char *path, int clear)
 	int ret;
 
 	if (stat(path, &sbuf)) {
-		fprintf(stderr, "stat() failed for '%s' : %s\n", path, strerror(errno));
+		fprintf(stderr, "stat() failed for '%s' : %s\n", path,
+			strerror(errno));
 		return -1;
 	}
 
@@ -76,13 +80,15 @@ int apply_rules(const char *path, int clear)
 
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr, "open() failed for '%s' : %s\n", path, strerror(errno));
+		fprintf(stderr, "open() failed for '%s' : %s\n", path,
+			strerror(errno));
 		return -1;
 	}
 
 	ret = apply_rules_file(fd, clear);
 	if (ret)
-		fprintf(stderr, "Applying rules failed for '%s'.\n",  path);
+		fprintf(stderr, "Applying rules failed for the file '%s'.\n",
+			path);
 	close(fd);
 	return ret;
 }
@@ -94,7 +100,8 @@ int apply_cipso(const char *path)
 	int ret;
 
 	if (stat(path, &sbuf)) {
-		fprintf(stderr, "stat() failed for '%s' : %s\n", path, strerror(errno));
+		fprintf(stderr, "stat() failed for '%s' : %s\n", path,
+			strerror(errno));
 		return -1;
 	}
 
@@ -103,13 +110,15 @@ int apply_cipso(const char *path)
 
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr, "open() failed for '%s' : %s\n", path, strerror(errno));
+		fprintf(stderr, "open() failed for '%s' : %s\n", path,
+			strerror(errno));
 		return -1;
 	}
 
 	ret = apply_cipso_file(fd);
 	if (ret)
-		fprintf(stderr, "Applying rules failed for '%s'.\n",  path);
+		fprintf(stderr, "Applying CIPSO failed for the file '%s'.\n",
+			path);
 	close(fd);
 	return ret;
 }
@@ -160,7 +169,8 @@ int apply_cipso_file(int fd)
 	return 0;
 }
 
-static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+static int apply_rules_cb(const char *fpath, const struct stat *sb,
+			  int typeflag, struct FTW *ftwbuf)
 {
 	int fd;
 	int ret;
@@ -172,18 +182,21 @@ static int apply_rules_cb(const char *fpath, const struct stat *sb, int typeflag
 
 	fd = open(fpath, O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr, "open() failed for '%s' : %s\n", fpath, strerror(errno));
+		fprintf(stderr, "open() failed for '%s' : %s\n", fpath,
+			strerror(errno));
 		return -1;
 	}
 
 	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
 	if (ret == FTW_STOP)
-		fprintf(stderr, "Applying rules failed for '%s'.\n",  fpath);
+		fprintf(stderr, "Applying rules failed for the file '%s'.\n",
+			fpath);
 	close(fd);
 	return ret;
 }
 
-static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+static int apply_cipso_cb(const char *fpath, const struct stat *sb,
+			  int typeflag, struct FTW *ftwbuf)
 {
 	int fd;
 	int ret;
@@ -195,13 +208,15 @@ static int apply_cipso_cb(const char *fpath, const struct stat *sb, int typeflag
 
 	fd = open(fpath, O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr, "open() failed for '%s' : %s\n", fpath, strerror(errno));
+		fprintf(stderr, "open() failed for '%s' : %s\n", fpath,
+			strerror(errno));
 		return -1;
 	}
 
 	ret = apply_cipso_file(fd) ? FTW_STOP : FTW_CONTINUE;
 	if (ret == FTW_STOP)
-		fprintf(stderr, "Applying rules failed for '%s'.\n",  fpath);
+		fprintf(stderr, "Applying CIPSO failed for the file '%s'.\n",
+			fpath);
 	close(fd);
 	return ret;
 }
