@@ -22,6 +22,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AM_CONDITIONAL([ENABLE_DOXYGEN],[test ! -z "$DOXYGEN"], [Build API documentation.])
+AM_COND_IF([ENABLE_DOXYGEN], [AC_CONFIG_FILES([doc/Doxyfile])])
 AC_SUBST([DOXYGEN], [$DOXYGEN])
 
 # systemd
