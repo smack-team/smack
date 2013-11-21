@@ -1,10 +1,1 @@
-doc/smack_have_access.3
-doc/smack_accesses_add.3
-doc/smack_accesses_add_from_file.3
-doc/smack_accesses_apply.3
-doc/smack_accesses_clear.3
-doc/smack_accesses_free.3
-doc/smack_accesses_new.3
-doc/smack_accesses_save.3
-doc/smack_new_label_from_self.3
-doc/smack_new_label_from_socket.3
+doc/man/man3/*.3
