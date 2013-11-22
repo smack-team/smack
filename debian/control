@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Brian McGillion <brian.mcgillion@intel.com>
 Build-Depends: debhelper (>= 8),
  pkg-config, autoconf,
- libtool, dh-autoreconf
+ libtool, dh-autoreconf,
+ doxygen
 Standards-Version: 3.9.3
 Vcs-Git: git://github.com/smack-team/smack.git
 Vcs-Browser: https://github.com/smack-team/smack
