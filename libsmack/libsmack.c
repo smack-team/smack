@@ -358,6 +358,8 @@ void smack_cipso_free(struct smack_cipso *cipso)
 		free(mapping);
 		mapping = next_mapping;
 	}
+
+	free(cipso);
 }
 
 int smack_cipso_apply(struct smack_cipso *cipso)
