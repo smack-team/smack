@@ -58,7 +58,7 @@ int clear(void)
 		return -1;
 	}
 
-	ret = apply_rules_file(fd, 1);
+	ret = apply_rules_file(path, fd, 1);
 	close(fd);
 	return ret;
 }
@@ -85,10 +85,7 @@ int apply_rules(const char *path, int clear)
 		return -1;
 	}
 
-	ret = apply_rules_file(fd, clear);
-	if (ret)
-		fprintf(stderr, "Applying rules failed for the file '%s'.\n",
-			path);
+	ret = apply_rules_file(path, fd, clear);
 	close(fd);
 	return ret;
 }
@@ -115,15 +112,12 @@ int apply_cipso(const char *path)
 		return -1;
 	}
 
-	ret = apply_cipso_file(fd);
-	if (ret)
-		fprintf(stderr, "Applying CIPSO failed for the file '%s'.\n",
-			path);
+	ret = apply_cipso_file(path, fd);
 	close(fd);
 	return ret;
 }
 
-int apply_rules_file(int fd, int clear)
+int apply_rules_file(const char *path, int fd, int clear)
 {
 	struct smack_accesses *rules = NULL;
 	int ret = 0;
@@ -133,20 +127,29 @@ int apply_rules_file(int fd, int clear)
 
 	if (smack_accesses_add_from_file(rules, fd)) {
 		smack_accesses_free(rules);
+		if (path)
+			fprintf(stderr, "Reading rules from '%s' failed.\n",
+				path);
+		else
+			fputs("Reading rules from STDIN failed.\n", stderr);
 		return -1;
 	}
 
-	if (!clear)
-		ret = smack_accesses_apply(rules);
-	else
+	if (clear) {
 		ret = smack_accesses_clear(rules);
+		if (ret)
+			fputs("Clearing rules failed.\n", stderr);
+	} else {
+		ret = smack_accesses_apply(rules);
+		if (ret)
+			fputs("Applying rules failed.\n", stderr);
+	}
 
 	smack_accesses_free(rules);
-
 	return ret;
 }
 
-int apply_cipso_file(int fd)
+int apply_cipso_file(const char *path, int fd)
 {
 	struct smack_cipso *cipso = NULL;
 	int ret;
@@ -157,14 +160,23 @@ int apply_cipso_file(int fd)
 
 	ret = smack_cipso_add_from_file(cipso, fd);
 	if (ret) {
+		if (path)
+			fprintf(stderr, "Reading CIPSO from '%s' failed.\n",
+				path);
+		else
+			fputs("Reading CIPSO from STDIN failed.\n",
+			      stderr);
 		smack_cipso_free(cipso);
 		return -1;
 	}
 
 	ret = smack_cipso_apply(cipso);
 	smack_cipso_free(cipso);
-	if (ret)
+	if (ret) {
+		fprintf(stderr, "Applying CIPSO failed.\n",
+			path);
 		return -1;
+	}
 
 	return 0;
 }
@@ -187,10 +199,7 @@ static int apply_rules_cb(const char *fpath, const struct stat *sb,
 		return -1;
 	}
 
-	ret = apply_rules_file(fd, 0) ? FTW_STOP : FTW_CONTINUE;
-	if (ret == FTW_STOP)
-		fprintf(stderr, "Applying rules failed for the file '%s'.\n",
-			fpath);
+	ret = apply_rules_file(fpath, fd, 0) ? FTW_STOP : FTW_CONTINUE;
 	close(fd);
 	return ret;
 }
@@ -213,10 +222,7 @@ static int apply_cipso_cb(const char *fpath, const struct stat *sb,
 		return -1;
 	}
 
-	ret = apply_cipso_file(fd) ? FTW_STOP : FTW_CONTINUE;
-	if (ret == FTW_STOP)
-		fprintf(stderr, "Applying CIPSO failed for the file '%s'.\n",
-			fpath);
+	ret = apply_cipso_file(fpath, fd) ? FTW_STOP : FTW_CONTINUE;
 	close(fd);
 	return ret;
 }

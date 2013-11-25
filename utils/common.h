@@ -1,7 +1,7 @@
 /*
  * This file is part of libsmack.
  *
- * Copyright (C) 2011 Intel Corporation
+ * Copyright (C) 2011-2013 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -27,7 +27,7 @@
 int clear(void);
 int apply_rules(const char *path, int clear);
 int apply_cipso(const char *path);
-int apply_rules_file(int fd, int clear);
-int apply_cipso_file(int fd);
+int apply_rules_file(const char *path, int fd, int clear);
+int apply_cipso_file(const char *path, int fd);
 
 #endif // COMMON_H
