@@ -52,15 +52,19 @@
 #define SELF_LABEL_FILE "/proc/self/attr/current"
 #define ACC_CLEAR "-----"
 
+#define ACCESS_TYPE_R 0x01
+#define ACCESS_TYPE_W 0x02
+#define ACCESS_TYPE_X 0x04
+#define ACCESS_TYPE_A 0x08
+#define ACCESS_TYPE_T 0x10
+
 extern char *smackfs_mnt;
 
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
 	char object[SMACK_LABEL_LEN + 1];
-	int is_modify;
-	char access_type[ACC_LEN + 1];
-	char allow_access_type[ACC_LEN + 1];
-	char deny_access_type[ACC_LEN + 1];
+	int allow_code;
+	int deny_code;
 	struct smack_rule *next;
 };
 
@@ -83,9 +87,10 @@ struct smack_cipso {
 };
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
-static inline void parse_access_type(const char *in, char out[ACC_LEN + 1]);
 static ssize_t smack_label_length(const char *label) __attribute__((unused));
 static inline ssize_t get_label(char *dest, const char *src);
+static inline int str_to_access_code(const char *str);
+static inline void access_code_to_str(unsigned code, char *str);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -119,6 +124,8 @@ void smack_accesses_free(struct smack_accesses *handle)
 int smack_accesses_save(struct smack_accesses *handle, int fd)
 {
 	struct smack_rule *rule = handle->first;
+	char allow_str[ACC_LEN + 1];
+	char deny_str[ACC_LEN + 1];
 	FILE *file;
 	int ret;
 	int newfd;
@@ -134,15 +141,18 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 	}
 
 	while (rule) {
-		if (rule->is_modify) {
+		access_code_to_str(rule->allow_code, allow_str);
+
+		if (rule->deny_code != -1) /* modify? */ {
+			access_code_to_str(rule->deny_code, deny_str);
+
 			ret = fprintf(file, "%s %s %s %s\n",
 				      rule->subject, rule->object,
-				      rule->allow_access_type,
-				      rule->deny_access_type);
+				      allow_str, deny_str);
 		} else {
 			ret = fprintf(file, "%s %s %s\n",
 				      rule->subject, rule->object,
-				      rule->access_type);
+				      allow_str);
 		}
 
 		if (ret < 0) {
@@ -182,7 +192,12 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		return -1;
 	}
 
-	parse_access_type(access_type, rule->access_type);
+	rule->allow_code = str_to_access_code(access_type);
+	rule->deny_code = -1; /* no modify */
+	if (rule->allow_code == -1) {
+		free(rule);
+		return -1;
+	}
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -212,9 +227,12 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 		return -1;
 	}
 
-	parse_access_type(allow_access_type, rule->allow_access_type);
-	parse_access_type(deny_access_type, rule->deny_access_type);
-	rule->is_modify = 1;
+	rule->allow_code = str_to_access_code(allow_access_type);
+	rule->deny_code = str_to_access_code(deny_access_type);
+	if (rule->allow_code == -1 || rule->deny_code == -1) {
+		free(rule);
+		return -1;
+	}
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -283,7 +301,8 @@ int smack_have_access(const char *subject, const char *object,
 		      const char *access_type)
 {
 	char buf[LOAD_LEN + 1];
-	char access_type_k[ACC_LEN + 1];
+	char str[ACC_LEN + 1];
+	int code;
 	int ret;
 	int fd;
 	int access2 = 1;
@@ -291,28 +310,30 @@ int smack_have_access(const char *subject, const char *object,
 
 	if (!smackfs_mnt)
 		return -1; 
-	
+
 	snprintf(path, sizeof path, "%s/access2", smackfs_mnt);
 	fd = open(path, O_RDWR);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		
-	        snprintf(path, sizeof path, "%s/access", smackfs_mnt);
+		snprintf(path, sizeof path, "%s/access", smackfs_mnt);
 		fd = open(path, O_RDWR);
 		if (fd < 0)
 			return -1;
 		access2 = 0;
 	}
 
-	parse_access_type(access_type, access_type_k);
+	if ((code = str_to_access_code(access_type)) < 0)
+		return -1;
+	access_code_to_str(code, str);
 
 	if (access2)
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-			       subject, object, access_type_k);
+			       subject, object, str);
 	else
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-			       subject, object, access_type_k);
+			       subject, object, str);
 
 	if (ret < 0) {
 		close(fd);
@@ -617,6 +638,8 @@ ssize_t smack_label_length(const char *label)
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	char buf[LOAD_LEN + 1];
+	char allow_str[ACC_LEN + 1];
+	char deny_str[ACC_LEN + 1];
 	struct smack_rule *rule;
 	int ret;
 	int fd;
@@ -626,15 +649,15 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	char path[PATH_MAX];
 
 	if (!smackfs_mnt)
-		return -1; 
-	
+		return -1;
+
 	snprintf(path, sizeof path, "%s/load2", smackfs_mnt);
 	load_fd = open(path, O_WRONLY);
 	if (load_fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 		/* fallback */
-	        snprintf(path, sizeof path, "%s/load", smackfs_mnt);
+		snprintf(path, sizeof path, "%s/load", smackfs_mnt);
 		load_fd = open(path, O_WRONLY);
 		/* Try to continue if the file doesn't exist, we might not need it. */
 		if (load_fd < 0 && errno != ENOENT)
@@ -651,22 +674,36 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		if (rule->is_modify && !clear) {
-			fd = change_fd;
-			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-				       rule->subject, rule->object,
-				       rule->allow_access_type,
-				       rule->deny_access_type);
+		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
+		if (rule->deny_code != -1)
+			access_code_to_str(clear ? 0 : rule->allow_code, deny_str);
+
+		if (load2) {
+			if (rule->deny_code != -1) /* modify? */ {
+				ret = snprintf(buf, LOAD_LEN + 1,
+					       KERNEL_MODIFY_FORMAT,
+					       rule->subject, rule->object,
+					       allow_str, deny_str);
+
+				fd = change_fd;
+			} else {
+				ret = snprintf(buf, LOAD_LEN + 1,
+					       KERNEL_LONG_FORMAT,
+					       rule->subject, rule->object,
+					       allow_str);
+
+				fd = load_fd;
+			}
 		} else {
+			if (rule->deny_code != -1) /* modify? */ {
+				ret = -1;
+				goto err_out;
+			}
+
+			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+				       rule->subject, rule->object, allow_str);
+
 			fd = load_fd;
-			if (load2)
-				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-					       rule->subject, rule->object,
-					       clear ? ACC_CLEAR : rule->access_type);
-			else
-				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-					       rule->subject, rule->object,
-					       clear ? ACC_CLEAR : rule->access_type);
 		}
 
 		if (ret < 0 || fd < 0) {
@@ -680,6 +717,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 			goto err_out;
 		}
 	}
+
 	ret = 0;
 
 err_out:
@@ -688,41 +726,6 @@ err_out:
 	if (change_fd >= 0)
 		close(change_fd);
 	return ret;
-}
-
-static inline void parse_access_type(const char *in, char out[ACC_LEN + 1])
-{
-	int i;
-
-	for (i = 0; i < ACC_LEN; ++i)
-		out[i] = '-';
-	out[ACC_LEN] = '\0';
-
-	for (i = 0; in[i] != '\0'; i++)
-		switch (in[i]) {
-		case 'r':
-		case 'R':
-			out[0] = 'r';
-			break;
-		case 'w':
-		case 'W':
-			out[1] = 'w';
-			break;
-		case 'x':
-		case 'X':
-			out[2] = 'x';
-			break;
-		case 'a':
-		case 'A':
-			out[3] = 'a';
-			break;
-		case 't':
-		case 'T':
-			out[4] = 't';
-			break;
-		default:
-			break;
-		}
 }
 
 static inline ssize_t get_label(char *dest, const char *src)
@@ -752,4 +755,52 @@ static inline ssize_t get_label(char *dest, const char *src)
 		dest[i] = '\0';
 
 	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
+}
+
+
+static inline int str_to_access_code(const char *str)
+{
+	int i;
+	unsigned int code = 0;
+
+	for (i = 0; i < ACC_LEN && str[i] != '\0'; i++) {
+		switch (str[i]) {
+		case 'r':
+		case 'R':
+			code |= ACCESS_TYPE_R;
+			break;
+		case 'w':
+		case 'W':
+			code |= ACCESS_TYPE_W;
+			break;
+		case 'x':
+		case 'X':
+			code |= ACCESS_TYPE_X;
+			break;
+		case 'a':
+		case 'A':
+			code |= ACCESS_TYPE_A;
+			break;
+		case 't':
+		case 'T':
+			code |= ACCESS_TYPE_T;
+			break;
+		case '-':
+			break;
+		default:
+			return -1;
+		}
+	}
+
+	return code;
+}
+
+static inline void access_code_to_str(unsigned int code, char *str)
+{
+	str[0] = ((code & ACCESS_TYPE_R) != 0) ? 'r' : '-';
+	str[1] = ((code & ACCESS_TYPE_W) != 0) ? 'w' : '-';
+	str[2] = ((code & ACCESS_TYPE_X) != 0) ? 'x' : '-';
+	str[3] = ((code & ACCESS_TYPE_A) != 0) ? 'a' : '-';
+	str[4] = ((code & ACCESS_TYPE_T) != 0) ? 't' : '-';
+	str[5] = '\0';
 }
