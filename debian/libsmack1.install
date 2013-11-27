@@ -1,1 +1,1 @@
-usr/lib/libsmack.so.*
+usr/lib/*/libsmack.so.*
