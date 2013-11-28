@@ -58,11 +58,17 @@ int clear(void)
 
 int apply_rules(const char *path, int clear)
 {
+	struct smack_accesses *rules = NULL;
 	DIR *dir;
 	struct dirent *dent;
 	int dfd;
 	int fd;
-	int ret;
+	int ret = 0;
+
+	if (smack_accesses_new(&rules)) {
+		fprintf(stderr, "Out of memory.\n");
+		return -1;
+	}
 
 	dir = opendir(path);
 	if (dir) {
@@ -89,20 +95,32 @@ int apply_rules(const char *path, int clear)
 			if (fd == -1) {
 				fprintf(stderr, "openat() failed for '%s' : %s\n",
 					dent->d_name, strerror(errno));
-				closedir(dir);
-				return -1;
+				ret = -1;
+				break;
 			}
 
-			ret = apply_rules_file(dent->d_name, fd, clear);
+			ret = smack_accesses_add_from_file(rules, fd);
 			close(fd);
 			if (ret < 0) {
-				closedir(dir);
-				return -1;
+				fprintf(stderr, "Reading rules from '%s' failed.\n",
+					path);
+				break;
 			}
 		}
 
+		if (clear) {
+			ret = smack_accesses_clear(rules);
+			if (ret)
+				fputs("Clearing rules failed.\n", stderr);
+		} else {
+			ret = smack_accesses_apply(rules);
+			if (ret)
+				fputs("Applying rules failed.\n", stderr);
+		}
+
+		smack_accesses_free(rules);
 		closedir(dir);
-		return 0;
+		return ret;
 	}
 
 	if (errno != ENOTDIR) {
