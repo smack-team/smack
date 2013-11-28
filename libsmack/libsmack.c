@@ -674,35 +674,25 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
 		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
-		if (rule->deny_code != -1)
-			access_code_to_str(clear ? 0 : rule->allow_code, deny_str);
 
-		if (load2) {
-			if (rule->deny_code != -1) /* modify? */ {
-				ret = snprintf(buf, LOAD_LEN + 1,
-					       KERNEL_MODIFY_FORMAT,
-					       rule->subject, rule->object,
-					       allow_str, deny_str);
+		if (rule->deny_code != -1 && !clear) {
+			access_code_to_str(clear ? 0 : rule->deny_code, deny_str);
 
-				fd = change_fd;
-			} else {
-				ret = snprintf(buf, LOAD_LEN + 1,
-					       KERNEL_LONG_FORMAT,
+			fd = change_fd;
+			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
+				       rule->subject, rule->object,
+				       allow_str,
+				       deny_str);
+		} else {
+			fd = load_fd;
+			if (load2)
+				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 					       rule->subject, rule->object,
 					       allow_str);
-
-				fd = load_fd;
-			}
-		} else {
-			if (rule->deny_code != -1) /* modify? */ {
-				ret = -1;
-				goto err_out;
-			}
-
-			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-				       rule->subject, rule->object, allow_str);
-
-			fd = load_fd;
+			else
+				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+					       rule->subject, rule->object,
+					       allow_str);
 		}
 
 		if (ret < 0 || fd < 0) {
@@ -716,7 +706,6 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 			goto err_out;
 		}
 	}
-
 	ret = 0;
 
 err_out:
