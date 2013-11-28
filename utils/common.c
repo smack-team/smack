@@ -19,23 +19,16 @@
  */
 
 #include "common.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
-#include <sys/vfs.h>
 #include <fcntl.h>
-#include <sys/smack.h>
 #include <ftw.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <limits.h>
+#include <sys/smack.h>
 
 #define SMACK_MAGIC 0x43415d53
 
-static int apply_rules_cb(const char *fpath, const struct stat *sb,
-			  int typeflag, struct FTW *ftwbuf);
 static int apply_cipso_cb(const char *fpath, const struct stat *sb,
 			  int typeflag, struct FTW *ftwbuf);
 
@@ -65,18 +58,44 @@ int clear(void)
 
 int apply_rules(const char *path, int clear)
 {
-	struct stat sbuf;
+	DIR *dir;
+	struct dirent *dent;
+	int dfd;
 	int fd;
 	int ret;
 
-	if (stat(path, &sbuf)) {
-		fprintf(stderr, "stat() failed for '%s' : %s\n", path,
-			strerror(errno));
-		return -1;
+	dir = opendir(path);
+	if (dir) {
+		for (dfd = dirfd(dir), dent = readdir(dir);
+		     dent != NULL; dent = readdir(dir)) {
+			if (dent->d_type != DT_REG)
+				continue;
+
+			fd = openat(dfd, dent->d_name, O_RDONLY);
+			if (fd == -1) {
+				fprintf(stderr, "openat() failed for '%s' : %s\n",
+					dent->d_name, strerror(errno));
+				closedir(dir);
+				return -1;
+			}
+
+			ret = apply_rules_file(dent->d_name, fd, clear);
+			close(fd);
+			if (ret < 0) {
+				closedir(dir);
+				return -1;
+			}
+		}
+
+		closedir(dir);
+		return 0;
 	}
 
-	if (S_ISDIR(sbuf.st_mode))
-		return nftw(path, apply_rules_cb, 1, FTW_PHYS|FTW_ACTIONRETVAL);
+	if (errno != ENOTDIR) {
+		fprintf(stderr, "opendir() failed for '%s' : %s\n",
+			path, strerror(errno));
+		return -1;
+	}
 
 	fd = open(path, O_RDONLY);
 	if (fd < 0) {
@@ -179,29 +198,6 @@ int apply_cipso_file(const char *path, int fd)
 	}
 
 	return 0;
-}
-
-static int apply_rules_cb(const char *fpath, const struct stat *sb,
-			  int typeflag, struct FTW *ftwbuf)
-{
-	int fd;
-	int ret;
-
-	if (typeflag == FTW_D)
-		return ftwbuf->level ? FTW_SKIP_SUBTREE : FTW_CONTINUE;
-	else if (typeflag != FTW_F)
-		return FTW_STOP;
-
-	fd = open(fpath, O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "open() failed for '%s' : %s\n", fpath,
-			strerror(errno));
-		return -1;
-	}
-
-	ret = apply_rules_file(fpath, fd, 0) ? FTW_STOP : FTW_CONTINUE;
-	close(fd);
-	return ret;
 }
 
 static int apply_cipso_cb(const char *fpath, const struct stat *sb,
