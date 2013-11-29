@@ -740,7 +740,7 @@ static inline ssize_t get_label(char *dest, const char *src)
 			dest[i] = src[i];
 	}
 
-	if (i < (SMACK_LABEL_LEN + 1))
+	if (dest && i < (SMACK_LABEL_LEN + 1))
 		dest[i] = '\0';
 
 	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
