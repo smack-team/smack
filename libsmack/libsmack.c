@@ -720,7 +720,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 			goto err_out;
 		}
 
-		ret = write(fd, buf, strlen(buf));
+		ret = write(fd, buf, ret);
 		if (ret < 0) {
 			ret = -1;
 			goto err_out;
