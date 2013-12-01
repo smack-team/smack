@@ -689,7 +689,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
 
 		if (rule->deny_code != -1 && !clear) {
-			access_code_to_str(clear ? 0 : rule->deny_code, deny_str);
+			access_code_to_str(rule->deny_code, deny_str);
 
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
