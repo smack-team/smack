@@ -674,6 +674,13 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
+		/* Fail immediately without doing any further processing
+		   if modify rules are not supported. */
+		if (rule->deny_code >= 0 && change_fd < 0) {
+			ret = -1;
+			goto err_out;
+		}
+
 		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
 
 		if (rule->deny_code != -1 && !clear) {
@@ -696,7 +703,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 					       allow_str);
 		}
 
-		if (ret < 0 || fd < 0) {
+		if (ret < 0) {
 			ret = -1;
 			goto err_out;
 		}
