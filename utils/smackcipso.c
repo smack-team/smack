@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	}
 
 	if (argc == 1) {
-		if (apply_cipso_file(NULL, STDIN_FILENO))
+		if (apply_cipso(NULL))
 			exit(1);
 	} else {
 		if (apply_cipso(argv[1]))
