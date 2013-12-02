@@ -33,6 +33,7 @@
 #include <limits.h>
 #include <sys/xattr.h>
 
+#define SHORT_LABEL_LEN 23
 #define ACC_LEN 5
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
 
@@ -63,6 +64,8 @@ extern char *smackfs_mnt;
 struct smack_rule {
 	char subject[SMACK_LABEL_LEN + 1];
 	char object[SMACK_LABEL_LEN + 1];
+	int subject_len;
+	int object_len;
 	int allow_code;
 	int deny_code;
 	struct smack_rule *next;
@@ -186,8 +189,9 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	if (rule == NULL)
 		return -1;
 
-	if (get_label(rule->subject, subject) < 0 ||
-	    get_label(rule->object, object) < 0) {
+	rule->subject_len = get_label(rule->subject, subject);
+	rule->object_len = get_label(rule->object, object);
+	if (rule->subject_len < 0 || rule->object_len < 0) {
 		free(rule);
 		return -1;
 	}
@@ -221,8 +225,9 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	if (rule == NULL)
 		return -1;
 
-	if (get_label(rule->subject, subject) < 0 ||
-	    get_label(rule->object, object) < 0) {
+	rule->subject_len = get_label(rule->subject, subject);
+	rule->object_len = get_label(rule->object, object);
+	if (rule->subject_len < 0 || rule->object_len < 0) {
 		free(rule);
 		return -1;
 	}
@@ -674,10 +679,17 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	}
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
+		/* Fail immediately without doing any further processing
+		   if modify rules are not supported. */
+		if (rule->deny_code >= 0 && change_fd < 0) {
+			ret = -1;
+			goto err_out;
+		}
+
 		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
 
 		if (rule->deny_code != -1 && !clear) {
-			access_code_to_str(clear ? 0 : rule->deny_code, deny_str);
+			access_code_to_str(rule->deny_code, deny_str);
 
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
@@ -690,18 +702,25 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 					       rule->subject, rule->object,
 					       allow_str);
-			else
+			else {
+				if (rule->subject_len > SHORT_LABEL_LEN ||
+				    rule->object_len > SHORT_LABEL_LEN) {
+					ret = -1;
+					goto err_out;
+				}
+
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
 					       rule->subject, rule->object,
 					       allow_str);
+			}
 		}
 
-		if (ret < 0 || fd < 0) {
+		if (ret < 0) {
 			ret = -1;
 			goto err_out;
 		}
 
-		ret = write(fd, buf, strlen(buf));
+		ret = write(fd, buf, ret);
 		if (ret < 0) {
 			ret = -1;
 			goto err_out;
