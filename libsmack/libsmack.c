@@ -752,7 +752,7 @@ static inline int str_to_access_code(const char *str)
 	int i;
 	unsigned int code = 0;
 
-	for (i = 0; i < ACC_LEN && str[i] != '\0'; i++) {
+	for (i = 0; str[i] != '\0'; i++) {
 		switch (str[i]) {
 		case 'r':
 		case 'R':
