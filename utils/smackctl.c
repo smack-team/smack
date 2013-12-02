@@ -65,8 +65,10 @@ int main(int argc, char **argv)
 		else
 			printf("SmackFS is not mounted.\n");
 		exit(0);
+	} else {
+		fprintf(stderr, "Uknown action: %s\n", argv[1]);
+		exit(1);
 	}
 
-	fprintf(stderr, "Uknown action: %s\n", argv[1]);
-	exit(1);
+	exit(0);
 }
