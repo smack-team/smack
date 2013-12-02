@@ -389,7 +389,7 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int fd;
 	int i;
 	char path[PATH_MAX];
-	int offset=0;
+	int offset;
 
 	if (!smackfs_mnt)
 		return -1;
@@ -402,7 +402,7 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
 		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
-		offset += strlen(buf) + 1;
+		offset = strlen(buf) + 1;
 
 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
 		offset += NUM_LEN;
