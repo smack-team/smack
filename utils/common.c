@@ -68,8 +68,22 @@ int apply_rules(const char *path, int clear)
 	if (dir) {
 		for (dfd = dirfd(dir), dent = readdir(dir);
 		     dent != NULL; dent = readdir(dir)) {
-			if (dent->d_type != DT_REG)
+			if (dent->d_type == DT_DIR)
 				continue;
+
+			if (dent->d_type == DT_UNKNOWN) {
+				fprintf(stderr, "'%s' file type is unknown\n",
+					dent->d_name);
+				closedir(dir);
+				return -1;
+			}
+
+			if (dent->d_type != DT_REG) {
+				fprintf(stderr, "'%s' is a non-regular file\n",
+					dent->d_name);
+				closedir(dir);
+				return -1;
+			}
 
 			fd = openat(dfd, dent->d_name, O_RDONLY);
 			if (fd == -1) {
