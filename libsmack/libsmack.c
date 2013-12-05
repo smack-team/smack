@@ -33,9 +33,14 @@
 #include <limits.h>
 #include <sys/xattr.h>
 
+#define SELF_LABEL_FILE "/proc/self/attr/current"
+
 #define SHORT_LABEL_LEN 23
 #define ACC_LEN 6
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
+#define KERNEL_LONG_FORMAT "%s %s %s"
+#define KERNEL_SHORT_FORMAT "%-23s %-23s %5.5s"
+#define KERNEL_MODIFY_FORMAT "%s %s %s %s"
 
 #define LEVEL_MAX 255
 #define NUM_LEN 4
@@ -45,13 +50,6 @@
 #define CIPSO_POS(i)   (SMACK_LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
 #define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
 #define CIPSO_NUM_LEN_STR "%-4d"
-
-#define KERNEL_LONG_FORMAT "%s %s %s"
-#define KERNEL_SHORT_FORMAT "%-23s %-23s %5.5s"
-#define KERNEL_MODIFY_FORMAT "%s %s %s %s"
-#define READ_BUF_SIZE LOAD_LEN + 1
-#define SELF_LABEL_FILE "/proc/self/attr/current"
-#define ACC_CLEAR "-----"
 
 #define ACCESS_TYPE_R 0x01
 #define ACCESS_TYPE_W 0x02
@@ -91,7 +89,6 @@ struct smack_cipso {
 };
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
-static ssize_t smack_label_length(const char *label) __attribute__((unused));
 static inline ssize_t get_label(char *dest, const char *src);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
@@ -253,7 +250,7 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 {
 	FILE *file = NULL;
-	char buf[READ_BUF_SIZE];
+	char buf[LOAD_LEN + 1];
 	char *ptr;
 	const char *subject, *object, *access, *access2;
 	int newfd;
@@ -269,7 +266,7 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 		return -1;
 	}
 
-	while (fgets(buf, READ_BUF_SIZE, file) != NULL) {
+	while (fgets(buf, LOAD_LEN + 1, file) != NULL) {
 		if (strcmp(buf, "\n") == 0)
 			continue;
 		subject = strtok_r(buf, " \t\n", &ptr);
