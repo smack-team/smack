@@ -224,8 +224,7 @@ int apply_cipso_file(const char *path, int fd)
 	ret = smack_cipso_apply(cipso);
 	smack_cipso_free(cipso);
 	if (ret) {
-		fprintf(stderr, "Applying CIPSO failed.\n",
-			path);
+		fputs("Applying CIPSO failed.\n", stderr);
 		return -1;
 	}
 
