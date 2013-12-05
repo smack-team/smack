@@ -633,11 +633,6 @@ int smack_revoke_subject(const char *subject)
 	return (ret < 0) ? -1 : 0;
 }
 
-ssize_t smack_label_length(const char *label)
-{
-	return get_label(NULL, label);
-}
-
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	char buf[LOAD_LEN + 1];
