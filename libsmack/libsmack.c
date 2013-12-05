@@ -34,7 +34,7 @@
 #include <sys/xattr.h>
 
 #define SHORT_LABEL_LEN 23
-#define ACC_LEN 5
+#define ACC_LEN 6
 #define LOAD_LEN (2 * (SMACK_LABEL_LEN + 1) + 2 * ACC_LEN + 1)
 
 #define LEVEL_MAX 255
@@ -47,7 +47,7 @@
 #define CIPSO_NUM_LEN_STR "%-4d"
 
 #define KERNEL_LONG_FORMAT "%s %s %s"
-#define KERNEL_SHORT_FORMAT "%-23s %-23s %5s"
+#define KERNEL_SHORT_FORMAT "%-23s %-23s %5.5s"
 #define KERNEL_MODIFY_FORMAT "%s %s %s %s"
 #define READ_BUF_SIZE LOAD_LEN + 1
 #define SELF_LABEL_FILE "/proc/self/attr/current"
@@ -58,6 +58,7 @@
 #define ACCESS_TYPE_X 0x04
 #define ACCESS_TYPE_A 0x08
 #define ACCESS_TYPE_T 0x10
+#define ACCESS_TYPE_L 0x20
 
 extern char *smackfs_mnt;
 
@@ -792,6 +793,10 @@ static inline int str_to_access_code(const char *str)
 		case 'T':
 			code |= ACCESS_TYPE_T;
 			break;
+		case 'l':
+		case 'L':
+			code |= ACCESS_TYPE_L;
+			break;
 		case '-':
 			break;
 		default:
@@ -809,5 +814,6 @@ static inline void access_code_to_str(unsigned int code, char *str)
 	str[2] = ((code & ACCESS_TYPE_X) != 0) ? 'x' : '-';
 	str[3] = ((code & ACCESS_TYPE_A) != 0) ? 'a' : '-';
 	str[4] = ((code & ACCESS_TYPE_T) != 0) ? 't' : '-';
-	str[5] = '\0';
+	str[5] = ((code & ACCESS_TYPE_L) != 0) ? 'l' : '-';
+	str[6] = '\0';
 }
