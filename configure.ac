@@ -1,6 +1,6 @@
 AC_PREREQ(2.60)
 AC_INIT([libsmack],
-	[1.0.2],
+	[1.0.3],
 	[jarkko.sakkinen@linux.intel.com],
 	[libsmack],
 	[https://github.com/smack-team/smack])
