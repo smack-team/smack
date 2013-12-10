@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/xattr.h>
+#include <attr/xattr.h>
 #include <linux/xattr.h>
 #include <sys/smack.h>
 #include <unistd.h>
@@ -39,6 +40,7 @@ static const char usage[] =
 	" -e --exec          set/remove "XATTR_NAME_SMACKEXEC"\n"  
 	" -m --mmap          set/remove "XATTR_NAME_SMACKMMAP"\n"  
 	" -t --transmute     set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
+	" -d --remove        tell to remove the attribute\n"
 	" -L --dereference   tell to follow the symbolic links\n"
 ;
 
@@ -94,13 +96,29 @@ static int smack_set_label_for_path(const char *path,
 	return ret;
 }
 
+/*!
+  * Remove the SMACK label in an extended attribute.
+  *
+  * @param path path of the file
+  * @param xattr the extended attribute containing the SMACK label
+  * @param follow whether or not to follow symbolic link
+  * @return Returns 0 on success and negative on failure.
+  */
+static int smack_remove_label_for_path(const char *path,
+				  const char *xattr,
+				  int follow)
+{
+	return follow ? removexattr(path, xattr) : lremovexattr(path, xattr);
+}
+
+/* main */
 int main(int argc, char *argv[])
 {
-	static const char shortoptions[] = "a:e:m:tL";
+	static const char shortoptions[] = "a::e::m::tdL";
 	static struct option options[] = {
-		{"access", required_argument, 0, 'a'},
-		{"exec", required_argument, 0, 'e'},
-		{"mmap", required_argument, 0, 'm'},
+		{"access", optional_argument, 0, 'a'},
+		{"exec", optional_argument, 0, 'e'},
+		{"mmap", optional_argument, 0, 'm'},
 		{"transmute", no_argument, 0, 't'},
 		{"dereference", no_argument, 0, 'L'},
 		{NULL, 0, 0, 0}
@@ -124,6 +142,7 @@ int main(int argc, char *argv[])
 	struct stat st;
 	char *label;
 
+	int delete_flag = 0;
 	int follow_flag = 0;
 	int transmute_flag = 0;
 	int option_flag = 0;
@@ -141,6 +160,11 @@ int main(int argc, char *argv[])
 			case 'a':
 			case 'e':
 			case 'm':
+				/* greedy on optional arguments */
+				if (optarg == NULL && argv[optind] != NULL 
+						&& argv[optind][0] != '-') {
+					optind++;
+				}
 				break;
 			case 't':
 				if (transmute_flag)
@@ -148,6 +172,12 @@ int main(int argc, char *argv[])
 							basename(argv[0]), options[options_map[c]].name);
 				transmute_flag = 1;
 				option_flag = 1;
+				break;
+			case 'd':
+				if (delete_flag)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), options[options_map[c]].name);
+				delete_flag = 1;
 				break;
 			case 'L':
 				if (follow_flag)
@@ -161,7 +191,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* scan options with argument */
+	/* scan options with argument (possibly) */
 	optind = 1;
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
 
@@ -179,7 +209,23 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		if (strnlen(optarg, SMACK_LABEL_LEN + 1) == SMACK_LABEL_LEN + 1) {
+		/* greedy on optional arguments */
+		if (optarg == NULL && argv[optind] != NULL && argv[optind][0] != '-') {
+			optarg = argv[optind++];
+		}
+		if (optarg == NULL) {
+			if (!delete_flag) {
+				fprintf(stderr, "%s: %s: requires a label when setting.\n",
+					basename(argv[0]), options[options_map[c]].name);
+				exit(1);
+			}
+		}
+		else if (delete_flag) {
+			fprintf(stderr, "%s: %s: requires no label when deleting.\n",
+				basename(argv[0]), options[options_map[c]].name);
+			exit(1);
+		}
+		else if (strnlen(optarg, SMACK_LABEL_LEN + 1) == SMACK_LABEL_LEN + 1) {
 			fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
 				basename(argv[0]), options[options_map[c]].name, optarg,
 				 SMACK_LABEL_LEN);
@@ -195,8 +241,47 @@ int main(int argc, char *argv[])
 		option_flag = 1;
 	}
 
+	/* deleting labels */
+	if (delete_flag) {
+		if (!option_flag) {
+			access_set.isset = 1;
+			exec_set.isset = 1;
+			mmap_set.isset = 1;
+			transmute_flag = 1;
+		}
+		for (i = optind; i < argc; i++) {
+			if (access_set.isset) {
+				rc = smack_remove_label_for_path(argv[i],
+							XATTR_NAME_SMACK, follow_flag);
+				if (rc < 0 && (option_flag || errno != ENOATTR))
+					perror(argv[i]);
+			}
+
+			if (exec_set.isset) {
+				rc = smack_remove_label_for_path(argv[i],
+							XATTR_NAME_SMACKEXEC, follow_flag);
+				if (rc < 0 && (option_flag || errno != ENOATTR))
+					perror(argv[i]);
+			}
+
+			if (mmap_set.isset) {
+				rc = smack_remove_label_for_path(argv[i],
+							XATTR_NAME_SMACKMMAP, follow_flag);
+				if (rc < 0 && (option_flag || errno != ENOATTR))
+					perror(argv[i]);
+			}
+
+			if (transmute_flag) {
+				rc = smack_remove_label_for_path(argv[i],
+							XATTR_NAME_SMACKTRANSMUTE, follow_flag);
+				if (rc < 0 && (option_flag || errno != ENOATTR))
+					perror(argv[i]);
+			}
+		}
+	}
+
 	/* setting labels */
-	if (option_flag) {
+	else if (option_flag) {
 		for (i = optind; i < argc; i++) {
 			if (access_set.isset) {
 				rc = smack_set_label_for_path(argv[i],
