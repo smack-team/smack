@@ -40,6 +40,30 @@ static const char usage[] =
 	" -t --transmute     set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
 ;
 
+/*!
+ * Validate a SMACK label and calculate its length.
+ *
+ * @param label label to verify
+ * @return Returns length of the label on success and negative on failure.
+ */
+static ssize_t smack_label_length(const char *label)
+{
+	int i;
+
+	if (!label || !*label || *label=='-')
+		return -1;
+
+	for (i = 0 ; i <= SMACK_LABEL_LEN ; i++) {
+		if (label[i] == '\0')
+				return (ssize_t) i;
+		if (label[i] > '~' || label[i] <= ' ' || label[i] == '/' ||
+		    label[i] == '"' || label[i] == '\\' || label[i] == '\'')
+				return -1;
+	}
+
+	return -1;
+}
+
 int main(int argc, char *argv[])
 {
 	static struct option options[] = {
@@ -69,14 +93,18 @@ int main(int argc, char *argv[])
 
 	while ((c = getopt_long(argc, argv, "a:e:m:t", options,
 				NULL)) != -1) {
-		if ((c == 'a' || c == 'e' || c == 'm')
-		    && strnlen(optarg, SMACK_LABEL_LEN + 1)
-		       == (SMACK_LABEL_LEN + 1)) {
-			fprintf(stderr, "%s: %s: \"%s\" " \
-					"exceeds %d characters.\n",
-				basename(argv[0]), options[options_map[c]].name, optarg,
-					 SMACK_LABEL_LEN);
-			exit(1);
+		if ((c == 'a' || c == 'e' || c == 'm')) {
+			if (strnlen(optarg, SMACK_LABEL_LEN + 1) == (SMACK_LABEL_LEN + 1)) {
+				fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
+						basename(argv[0]), options[options_map[c]].name, 
+						optarg,	SMACK_LABEL_LEN);
+				exit(1);
+			}
+			if (smack_label_length(optarg) < 0) {
+				fprintf(stderr, "%s: %s: \"%s\" is an invalid Smack label.\n",
+					basename(argv[0]), options[options_map[c]].name, optarg);
+				exit(1);
+			}
 		}
 
 		switch (c) {
