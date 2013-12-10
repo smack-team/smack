@@ -39,6 +39,7 @@ static const char usage[] =
 	" -e --exec          set/remove "XATTR_NAME_SMACKEXEC"\n"  
 	" -m --mmap          set/remove "XATTR_NAME_SMACKMMAP"\n"  
 	" -t --transmute     set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
+	" -L --dereference   tell to follow the symbolic links\n"
 ;
 
 /*!
@@ -95,11 +96,13 @@ static int smack_set_label_for_path(const char *path,
 
 int main(int argc, char *argv[])
 {
+	static const char shortoptions[] = "a:e:m:tL";
 	static struct option options[] = {
 		{"access", required_argument, 0, 'a'},
 		{"exec", required_argument, 0, 'e'},
 		{"mmap", required_argument, 0, 'm'},
 		{"transmute", no_argument, 0, 't'},
+		{"dereference", no_argument, 0, 'L'},
 		{NULL, 0, 0, 0}
 	};
 
@@ -112,6 +115,7 @@ int main(int argc, char *argv[])
 	static int options_map[128];
 
 	char *label;
+	int follow_flag = 0;
 	int transmute_flag = 0;
 	int option_flag = 0;
 	int rc;
@@ -121,8 +125,8 @@ int main(int argc, char *argv[])
 	for (i = 0; options[i].name != NULL; i++)
 		options_map[options[i].val] = i;
 
-	while ((c = getopt_long(argc, argv, "a:e:m:t", options,
-				NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
+
 		if ((c == 'a' || c == 'e' || c == 'm')) {
 			if (strnlen(optarg, SMACK_LABEL_LEN + 1) == (SMACK_LABEL_LEN + 1)) {
 				fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
@@ -150,6 +154,12 @@ int main(int argc, char *argv[])
 			case 't':
 				transmute_flag = 1;
 				break;
+			case 'L':
+				if (follow_flag)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), options[options_map[c]].name);
+				follow_flag = 1;
+				break;
 			default:
 				printf(usage, basename(argv[0]));
 				exit(1);
@@ -163,28 +173,28 @@ int main(int argc, char *argv[])
 		for (i = optind; i < argc; i++) {
 			if (strlen(access_buf) > 0) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACK, 0, access_buf);
+							XATTR_NAME_SMACK, follow_flag, access_buf);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(exec_buf) > 0) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKEXEC, 0, exec_buf);
+							XATTR_NAME_SMACKEXEC, follow_flag, exec_buf);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(mmap_buf) > 0) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKMMAP, 0, mmap_buf);
+							XATTR_NAME_SMACKMMAP, follow_flag, mmap_buf);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (transmute_flag) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKTRANSMUTE, 0, "TRUE");
+							XATTR_NAME_SMACKTRANSMUTE, follow_flag, "TRUE");
 				if (rc < 0)
 					perror(argv[i]);
 			}
@@ -199,28 +209,28 @@ int main(int argc, char *argv[])
 			printf("%s", argv[i]);
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACK, 0, &label);
+						XATTR_NAME_SMACK, follow_flag, &label);
 			if (rc > 0) {
 				printf(" access=\"%s\"", label);
 				free(label);
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACKEXEC, 0, &label);
+						XATTR_NAME_SMACKEXEC, follow_flag, &label);
 			if (rc > 0) {
 				printf(" execute=\"%s\"", label);
 				free(label);
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACKMMAP, 0, &label);
+						XATTR_NAME_SMACKMMAP, follow_flag, &label);
 			if (rc > 0) {
 				printf(" mmap=\"%s\"", label);
 				free(label);
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACKTRANSMUTE, 0, &label);
+						XATTR_NAME_SMACKTRANSMUTE, follow_flag, &label);
 			if (rc > 0) {
 				printf(" transmute=\"%s\"", label);
 				free(label);
