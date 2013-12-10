@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <errno.h>
 
 static const char usage[] =
 	"Usage: %s [options] <path>\n"
@@ -62,6 +63,34 @@ static ssize_t smack_label_length(const char *label)
 	}
 
 	return -1;
+}
+
+/*!
+  * Set the SMACK label in an extended attribute.
+  *
+  * @param path path of the file
+  * @param xattr the extended attribute containing the SMACK label
+  * @param follow whether or not to follow symbolic link
+  * @param label output variable for the returned label
+  * @return Returns length of the label on success and negative value
+  * on failure.
+  */
+static int smack_set_label_for_path(const char *path,
+				  const char *xattr,
+				  int follow,
+				  const char *label)
+{
+	int len;
+	int ret;
+
+	len = (int)smack_label_length(label);
+	if (len < 0)
+		return -2;
+
+	ret = follow ?
+		setxattr(path, xattr, label, len, 0) :
+		lsetxattr(path, xattr, label, len, 0);
+	return ret;
 }
 
 int main(int argc, char *argv[])
@@ -132,29 +161,29 @@ int main(int argc, char *argv[])
 	for (i = optind; i < argc; i++) {
 		if (option_flag) {
 			if (strlen(access_buf) > 0) {
-				rc = lsetxattr(argv[i], XATTR_NAME_SMACK,
-					       access_buf, strlen(access_buf), 0);
+				rc = smack_set_label_for_path(argv[i],
+							XATTR_NAME_SMACK, 0, access_buf);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(exec_buf) > 0) {
-				rc = lsetxattr(argv[i], XATTR_NAME_SMACKEXEC,
-					       exec_buf, strlen(exec_buf), 0);
+				rc = smack_set_label_for_path(argv[i],
+							XATTR_NAME_SMACKEXEC, 0, exec_buf);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(mmap_buf) > 0) {
-				rc = lsetxattr(argv[i], XATTR_NAME_SMACKMMAP,
-					       mmap_buf, strlen(mmap_buf), 0);
+				rc = smack_set_label_for_path(argv[i],
+							XATTR_NAME_SMACKMMAP, 0, mmap_buf);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (transmute_flag) {
-				rc = lsetxattr(argv[i], XATTR_NAME_SMACKTRANSMUTE,
-					       "TRUE", 4, 0);
+				rc = smack_set_label_for_path(argv[i],
+							XATTR_NAME_SMACKTRANSMUTE, 0, "TRUE");
 				if (rc < 0)
 					perror(argv[i]);
 			}
