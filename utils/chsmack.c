@@ -120,6 +120,7 @@ int main(int argc, char *argv[])
 	struct labelset exec_set = { 0, NULL }; /* for option "exec" */
 	struct labelset mmap_set = { 0, NULL }; /* for option "mmap" */
 
+	struct labelset *labelset;
 	struct stat st;
 	char *label;
 
@@ -133,37 +134,20 @@ int main(int argc, char *argv[])
 	for (i = 0; options[i].name != NULL; i++)
 		options_map[options[i].val] = i;
 
+	/* scan options without argument */
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
-
-		if ((c == 'a' || c == 'e' || c == 'm')) {
-			if (strnlen(optarg, SMACK_LABEL_LEN + 1) == (SMACK_LABEL_LEN + 1)) {
-				fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
-						basename(argv[0]), options[options_map[c]].name, 
-						optarg,	SMACK_LABEL_LEN);
-				exit(1);
-			}
-			if (smack_label_length(optarg) < 0) {
-				fprintf(stderr, "%s: %s: \"%s\" is an invalid Smack label.\n",
-					basename(argv[0]), options[options_map[c]].name, optarg);
-				exit(1);
-			}
-		}
 
 		switch (c) {
 			case 'a':
-				access_set.isset = 1;
-				access_set.value = optarg;
-				break;
 			case 'e':
-				exec_set.isset = 1;
-				exec_set.value = optarg;
-				break;
 			case 'm':
-				mmap_set.isset = 1;
-				mmap_set.value = optarg;
 				break;
 			case 't':
+				if (transmute_flag)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), options[options_map[c]].name);
 				transmute_flag = 1;
+				option_flag = 1;
 				break;
 			case 'L':
 				if (follow_flag)
@@ -175,7 +159,39 @@ int main(int argc, char *argv[])
 				printf(usage, basename(argv[0]));
 				exit(1);
 		}
+	}
 
+	/* scan options with argument */
+	optind = 1;
+	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
+
+		switch (c) {
+			case 'a':
+				labelset = &access_set;
+				break;
+			case 'e':
+				labelset = &exec_set;
+				break;
+			case 'm':
+				labelset = &mmap_set;
+				break;
+			default:
+				continue;
+		}
+
+		if (strnlen(optarg, SMACK_LABEL_LEN + 1) == SMACK_LABEL_LEN + 1) {
+			fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
+				basename(argv[0]), options[options_map[c]].name, optarg,
+				 SMACK_LABEL_LEN);
+			exit(1);
+		}
+		else if (smack_label_length(optarg) < 0) {
+			fprintf(stderr, "%s: %s: \"%s\" is an invalid Smack label.\n",
+				basename(argv[0]), options[options_map[c]].name, optarg);
+			exit(1);
+		}
+		labelset->isset = 1;
+		labelset->value = optarg;
 		option_flag = 1;
 	}
 
