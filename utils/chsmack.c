@@ -158,8 +158,9 @@ int main(int argc, char *argv[])
 		option_flag = 1;
 	}
 
-	for (i = optind; i < argc; i++) {
-		if (option_flag) {
+	/* setting labels */
+	if (option_flag) {
+		for (i = optind; i < argc; i++) {
 			if (strlen(access_buf) > 0) {
 				rc = smack_set_label_for_path(argv[i],
 							XATTR_NAME_SMACK, 0, access_buf);
@@ -187,7 +188,13 @@ int main(int argc, char *argv[])
 				if (rc < 0)
 					perror(argv[i]);
 			}
-		} else {
+		}
+	} 
+
+	/* listing labels */
+	else {
+		for (i = optind; i < argc; i++) {
+
 			/* Print file path. */
 			printf("%s", argv[i]);
 
