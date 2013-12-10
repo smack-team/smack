@@ -31,6 +31,15 @@
 #include <string.h>
 #include <getopt.h>
 
+static const char usage[] =
+	"Usage: %s [options] <path>\n"
+	"options:\n"  
+	" -a --access        set/remove "XATTR_NAME_SMACK"\n"  
+	" -e --exec          set/remove "XATTR_NAME_SMACKEXEC"\n"  
+	" -m --mmap          set/remove "XATTR_NAME_SMACKMMAP"\n"  
+	" -t --transmute     set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
+;
+
 int main(int argc, char *argv[])
 {
 	static struct option options[] = {
@@ -84,12 +93,7 @@ int main(int argc, char *argv[])
 				transmute_flag = 1;
 				break;
 			default:
-				printf("Usage: %s [options] <path>\n", basename(argv[0]));
-				printf("options:\n");
-				printf(" [--access|-a] set "XATTR_NAME_SMACK"\n");
-				printf(" [--exec|-e] set "XATTR_NAME_SMACKEXEC"\n");
-				printf(" [--mmap|-m] set "XATTR_NAME_SMACKMMAP"\n");
-				printf(" [--transmute|-t] set "XATTR_NAME_SMACKTRANSMUTE"\n");
+				printf(usage, basename(argv[0]));
 				exit(1);
 		}
 
