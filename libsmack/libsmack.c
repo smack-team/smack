@@ -588,7 +588,7 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	}
 
 	*label = result;
-	return 0;
+	return ret;
 }
 
 int smack_set_label_for_self(const char *label)
