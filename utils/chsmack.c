@@ -209,6 +209,11 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
+		if (labelset->isset) {
+			fprintf(stderr, "%s: %s: option set many times.\n",
+				basename(argv[0]), options[options_map[c]].name);
+			exit(1);
+		}
 		/* greedy on optional arguments */
 		if (optarg == NULL && argv[optind] != NULL && argv[optind][0] != '-') {
 			optarg = argv[optind++];
