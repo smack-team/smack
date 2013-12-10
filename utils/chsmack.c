@@ -114,6 +114,8 @@ int main(int argc, char *argv[])
 	static char mmap_buf[SMACK_LABEL_LEN + 1];
 	static int options_map[128];
 
+	struct stat st;
+
 	char *label;
 	int follow_flag = 0;
 	int transmute_flag = 0;
@@ -193,10 +195,19 @@ int main(int argc, char *argv[])
 			}
 
 			if (transmute_flag) {
-				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKTRANSMUTE, follow_flag, "TRUE");
+				rc = follow_flag ?  stat(argv[i], &st) : lstat(argv[i], &st);
 				if (rc < 0)
 					perror(argv[i]);
+				else if (!S_ISDIR(st.st_mode)) {
+					fprintf(stderr, "%s: transmute: not a directory %s\n",
+						basename(argv[0]), argv[i]);
+				}
+				else {
+					rc = smack_set_label_for_path(argv[i],
+								XATTR_NAME_SMACKTRANSMUTE, follow_flag, "TRUE");
+					if (rc < 0)
+						perror(argv[i]);
+				}
 			}
 		}
 	} 
