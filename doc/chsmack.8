@@ -17,57 +17,162 @@
 .\" 02110-1301 USA
 .\"
 .TH "CHSMACK" "8" "03/05/2012" "smack-utils 1\&.0"
+
 .SH NAME
-chsmack \- Change the Smack properties of a filesystem object
+
+chsmack \- Change or list the Smack properties of filesystem objects
+
 .SH SYNOPSIS 
-.B chsmack [\-a|\-\-access=] [-e|--exec=] [-m|--mmap=]
-.I <context>
-.B [-t|--transmute]
+
+.B chsmack [-L|--dereference] [--] files...
+
+.B chsmack [-L|--dereference] props... [--] files...
+
+.B chsmack (-d|--remove) [-L|--dereference] [props]... [--] files...
+
 .SH DESCRIPTION
-.B chsmack
-can be used to query or change the Smack context of a file.  Depending on the state and type of the file the different labels, which are stored as xattrs on the file, have a different effect.  If the file is a process binary then the
-.I exec
-label will take effect when the process is launched and this label will be assigned as the context of the running process. Whereas the
-.I transmute
-flag only affects directories and ensures that all files created beneath it have their label set to the label of the directory on which the transmute bit is set.  This process needs to be launched with CAP_MAC_ADMIN capabilities in order to change any of the contexts.
+
+\fBchsmack\fR can be used to query or change the Smack context of a file.
+
+First form is used to query the Smack properties of the files.
+
+Second form is used to set some Smack properties to the files.
+
+Third form is used to remove all or some of the Smack properties of the
+listed files.
+
+Depending on the state and type of the file the different labels,
+which are stored as extended attributes, have a different effect.
+The \fIaccess\fR property is always significant. 
+It is used to control how process access the file.  
+The \fImmap\fR property is significant on filesystem object that can be mapped.
+It is used to control how process mmap the file.  
+The \fIexec\fR property apply on executable files (binary or scripts).
+It take effect when the process is launched and the property
+will be assigned as the context of the running process.
+Whereas the \fItransmute\fR flag only affects directories and
+ensures that all files created beneath it have their label set to
+the label of the directory on which the transmute bit is set.
+
+This process needs to be launched with \fBCAP_MAC_ADMIN\fR capabilities
+in order to change any of the contexts.
+
 .SH OPTIONS
+
 .TP
-.B \-a\fR, \-\-access=
-Set the access context for this file.  This context is used to confine the access modes, which are defined by the set "rwaxt", which refer to read, write, append, execute and transmute.  The exec here is not to be confused with the
-.B \-e
-option listed below. This access mode "exec" specifies restrictions on who is allowed to launch this process.  A common rule for this might look like
-.B (launcher application rx)
-where the
-.B \-\-access
-label is set to
-.BR "application" .
-This would ensure that the process with context
-.B launcher
-would be able to read and execute the binary from the
-.B application
-context.
-This label is stored in the
-.B security.SMACK64
-extended attribute.
+.B -L, --dereference
+
+Use this option to process the target of the symbolic links instead of the
+symbolic links themselves.
+
 .TP
-.B \-e\fR, \-\-exec=
-If this file is an application binary, this flag defines the context that it will be launched in.  It is accessible from the
-.B security.SMACK64EXEC
-extended attribute.
+.B -d, --remove
+
+Use this option to remove the smack properties of the files.
+You specify the properties to remove using options \fB-a\fR, \fB-e\fR,
+\fB-m\fR or \fB-t\fR (or their long version) without putting their label
+value.
+If no property is specified, it means that all the properties will
+be removed.
+
 .TP
-.B \-m\fR, \-\-mmap=
-A file with the mmap attribute set can only be mapped by processes with access to all of the labels that a process with the mmap label would have access to.  the label is set and retrieved from the
-.B security.SMACK64MMAP
-extended attribute.
+.B -a, --access \fR[label]
+
+If removing properties (option \fB-d\fR), no label must be set.
+Otherwise, when setting, the label must be set and its value must be a valid
+Smack label.
+
+This context is used to confine the access modes, which are defined by the
+set \fBrwaxtl\fR, which refer to read, write, append, execute, transmute 
+and lock.
+The exec here is not to be confused with the \fB\-e\fR option listed below.
+This access mode "exec" specifies restrictions on who is allowed
+to launch this process. 
+A common rule for this might look like \fB(launcher application rx)\fR
+where the \fB\-\-access\fR label is set to \fBapplication\fR.
+This would ensure that the process with context \fBlauncher\fR would be able
+to read and execute the binary from the \fBapplication\fR context.
+
+This label is stored in the \fBsecurity.SMACK64\fR extended attribute.
+
 .TP
-.I context
-The context to assign to label for the file
+
+.B -e, --exec \fR[label]
+
+If removing properties (option \fB-d\fR), no label must be set.
+Otherwise, when setting, the label must be set and its value must be a valid
+Smack label.
+
+If this file is an application binary, this flag defines the context that
+it will be launched in.
+
+This label is stored in the \fBsecurity.SMACK64EXEC\fR extended attribute.
+
 .TP
-.B \-t\fR, \-\-transmute
-When used this will set the transmute flag of a directory to True.  This will mean that all files and directories created under it will have the same label as the directory.  By default all files created by a process are created with the same context label as the process. Transmute provides a very useful feature for sharing access to resources. The common example would be a Docs directory where all documents created by word processors and text editors can be stored.  Each of the text editors can open the files and edit them in a shared fashion, while still ensuring that the config files of the editor remain protected.  The label is stored in the
-.B security.SMACK64TRANSMUTE
-extended attribute.
+
+.B -m, --mmap \fR[label]
+
+If removing properties (option \fB-d\fR), no label must be set.
+Otherwise, when setting, the label must be set and its value must be a valid
+Smack label.
+
+A file with the mmap attribute set can only be mapped by processes with
+access to all of the labels that a process with the mmap label would have
+access to.
+
+This label is stored in the \fBsecurity.SMACK64MMAP\fR extended attribute.
+
+.TP
+
+.B -t, --transmute
+
+When used this will set the transmute flag of a directory to True.
+This will mean that all files and directories created under it will have
+the same label as the directory.
+By default all files created by a process are created with the same context
+label as the process.
+Transmute provides a very useful feature for sharing access to resources.
+The common example would be a Docs directory where all documents created by
+word processors and text editors can be stored.
+Each of the text editors can open the files and edit them in a shared fashion,
+while still ensuring that the config files of the editor remain protected.
+
+This label is stored in the \fBsecurity.SMACK64TRANSMUTE\fR extended attribute.
+
 .SH RETURN VALUE
+
 The current values for the labels will be printed to stdout on success.
+
 .SH EXIT STATUS
-A successful call will return 0, where as a non zero value will be returned on error.
+
+A successful call will return 0, where as a non zero value will be
+returned on error.
+
+.SH "SMACK LABELS"
+
+Smack labels are ASCII character strings, of 1 to 255 characters in
+length. Single character labels using special characters, that being anything
+other than a letter or digit, are reserved for use by the Smack development
+team. Smack labels are unstructured, case sensitive, and the only operation
+ever performed on them is comparison for equality. Smack labels cannot
+contain unprintable characters, the '\fB/\fR' (slash), the '\fB\\\fR'
+(backslash), the "\fB'\fR" (quote) and '\fB"\fR' (double-quote) characters.
+Smack labels cannot begin with a '-'. This is reserved for special options.
+
+There are some predefined labels:
+
+-	\fB_\fR 	Pronounced "floor", a single underscore character.
+
+-	\fB^\fR 	Pronounced "hat", a single circumflex character.
+
+-	\fB*\fR 	Pronounced "star", a single asterisk character.
+
+-	\fB?\fR 	Pronounced "huh", a single question mark character.
+
+-	\fB@\fR 	Pronounced "web", a single at sign character.
+
+
+.SH "SEE ALSO"
+
+smackcipso(8), smackctl(8), smackload(8)
+
