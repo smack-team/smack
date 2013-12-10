@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
 	static char mmap_buf[SMACK_LABEL_LEN + 1];
 	static int options_map[128];
 
+	char *label;
 	int transmute_flag = 0;
 	int option_flag = 0;
 	int rc;
@@ -161,32 +162,32 @@ int main(int argc, char *argv[])
 			/* Print file path. */
 			printf("%s", argv[i]);
 
-			rc = lgetxattr(argv[i], XATTR_NAME_SMACK, access_buf,
-				       SMACK_LABEL_LEN + 1);
+			rc = (int)smack_new_label_from_path(argv[i],
+						XATTR_NAME_SMACK, 0, &label);
 			if (rc > 0) {
-				access_buf[rc] = '\0';
-				printf(" access=\"%s\"", access_buf);
+				printf(" access=\"%s\"", label);
+				free(label);
 			}
 
-			rc = lgetxattr(argv[i], XATTR_NAME_SMACKEXEC, access_buf,
-				       SMACK_LABEL_LEN + 1);
+			rc = (int)smack_new_label_from_path(argv[i],
+						XATTR_NAME_SMACKEXEC, 0, &label);
 			if (rc > 0) {
-				access_buf[rc] = '\0';
-				printf(" execute=\"%s\"", access_buf);
-
-			}
-			rc = lgetxattr(argv[i], XATTR_NAME_SMACKMMAP, access_buf,
-				       SMACK_LABEL_LEN + 1);
-			if (rc > 0) {
-				access_buf[rc] = '\0';
-				printf(" mmap=\"%s\"", access_buf);
+				printf(" execute=\"%s\"", label);
+				free(label);
 			}
 
-			rc = lgetxattr(argv[i], XATTR_NAME_SMACKTRANSMUTE,
-				       access_buf, SMACK_LABEL_LEN + 1);
+			rc = (int)smack_new_label_from_path(argv[i],
+						XATTR_NAME_SMACKMMAP, 0, &label);
 			if (rc > 0) {
-				access_buf[rc] = '\0';
-				printf(" transmute=\"%s\"", access_buf);
+				printf(" mmap=\"%s\"", label);
+				free(label);
+			}
+
+			rc = (int)smack_new_label_from_path(argv[i],
+						XATTR_NAME_SMACKTRANSMUTE, 0, &label);
+			if (rc > 0) {
+				printf(" transmute=\"%s\"", label);
+				free(label);
 			}
 
 			printf("\n");
