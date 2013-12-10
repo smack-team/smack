@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/xattr.h>
+#include <linux/xattr.h>
 #include <sys/smack.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -85,10 +86,10 @@ int main(int argc, char *argv[])
 			default:
 				printf("Usage: %s [options] <path>\n", basename(argv[0]));
 				printf("options:\n");
-				printf(" [--access|-a] set security.SMACK64\n");
-				printf(" [--exec|-e] set security.SMACK64EXEC\n");
-				printf(" [--mmap|-m] set security.SMACK64MMAP\n");
-				printf(" [--transmute|-t] set security.SMACK64TRANSMUTE\n");
+				printf(" [--access|-a] set "XATTR_NAME_SMACK"\n");
+				printf(" [--exec|-e] set "XATTR_NAME_SMACKEXEC"\n");
+				printf(" [--mmap|-m] set "XATTR_NAME_SMACKMMAP"\n");
+				printf(" [--transmute|-t] set "XATTR_NAME_SMACKTRANSMUTE"\n");
 				exit(1);
 		}
 
@@ -98,28 +99,28 @@ int main(int argc, char *argv[])
 	for (i = optind; i < argc; i++) {
 		if (option_flag) {
 			if (strlen(access_buf) > 0) {
-				rc = lsetxattr(argv[i], "security.SMACK64",
+				rc = lsetxattr(argv[i], XATTR_NAME_SMACK,
 					       access_buf, strlen(access_buf), 0);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(exec_buf) > 0) {
-				rc = lsetxattr(argv[i], "security.SMACK64EXEC",
+				rc = lsetxattr(argv[i], XATTR_NAME_SMACKEXEC,
 					       exec_buf, strlen(exec_buf), 0);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (strlen(mmap_buf) > 0) {
-				rc = lsetxattr(argv[i], "security.SMACK64MMAP",
+				rc = lsetxattr(argv[i], XATTR_NAME_SMACKMMAP,
 					       mmap_buf, strlen(mmap_buf), 0);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
 			if (transmute_flag) {
-				rc = lsetxattr(argv[i], "security.SMACK64TRANSMUTE",
+				rc = lsetxattr(argv[i], XATTR_NAME_SMACKTRANSMUTE,
 					       "TRUE", 4, 0);
 				if (rc < 0)
 					perror(argv[i]);
@@ -128,28 +129,28 @@ int main(int argc, char *argv[])
 			/* Print file path. */
 			printf("%s", argv[i]);
 
-			rc = lgetxattr(argv[i], "security.SMACK64", access_buf,
+			rc = lgetxattr(argv[i], XATTR_NAME_SMACK, access_buf,
 				       SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				access_buf[rc] = '\0';
 				printf(" access=\"%s\"", access_buf);
 			}
 
-			rc = lgetxattr(argv[i], "security.SMACK64EXEC", access_buf,
+			rc = lgetxattr(argv[i], XATTR_NAME_SMACKEXEC, access_buf,
 				       SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				access_buf[rc] = '\0';
 				printf(" execute=\"%s\"", access_buf);
 
 			}
-			rc = lgetxattr(argv[i], "security.SMACK64MMAP", access_buf,
+			rc = lgetxattr(argv[i], XATTR_NAME_SMACKMMAP, access_buf,
 				       SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				access_buf[rc] = '\0';
 				printf(" mmap=\"%s\"", access_buf);
 			}
 
-			rc = lgetxattr(argv[i], "security.SMACK64TRANSMUTE",
+			rc = lgetxattr(argv[i], XATTR_NAME_SMACKTRANSMUTE,
 				       access_buf, SMACK_LABEL_LEN + 1);
 			if (rc > 0) {
 				access_buf[rc] = '\0';
