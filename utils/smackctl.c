@@ -25,6 +25,17 @@
 #include <errno.h>
 #include <string.h>
 
+static void usage(const char *bin)
+{
+	printf("Usage: %s [action]\n", bin);
+	printf("actions:\n");
+	printf(" [apply] apply all the rules found in the configuration directory's\n");
+	printf(" [clear] remove all system rules from the kernel\n");
+	printf(" [status] show the status of the Smack system, specifically if "
+	       "/smack is mounted\n");
+	exit(1);
+}
+
 static int apply_all(void)
 {
 	if (!smack_smackfs_path()) {
@@ -48,8 +59,7 @@ int main(int argc, char **argv)
 {
 	const char *tmp = smack_smackfs_path();
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
-		exit(1);
+		usage(argv[0]);
 	}
 
 	if (!strcmp(argv[1], "apply")) {
@@ -66,8 +76,7 @@ int main(int argc, char **argv)
 			printf("SmackFS is not mounted.\n");
 		exit(0);
 	} else {
-		fprintf(stderr, "Uknown action: %s\n", argv[1]);
-		exit(1);
+		usage(argv[0]);
 	}
 
 	exit(0);
