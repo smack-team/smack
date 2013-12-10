@@ -109,14 +109,20 @@ int main(int argc, char *argv[])
 	/*  Buffers are zeroed automatically by keeping them static variables.
 	 *  No separate memset is needed this way.
 	 */
-	static char access_buf[SMACK_LABEL_LEN + 1];
-	static char exec_buf[SMACK_LABEL_LEN + 1];
-	static char mmap_buf[SMACK_LABEL_LEN + 1];
 	static int options_map[128];
 
-	struct stat st;
+	/* structure for recording options of label and their init */
+	struct labelset {
+		int isset; /* 0 if option not set, 1 if option set */
+		const char *value; /* value of the option set if any or NULL else */
+	};
+	struct labelset access_set = { 0, NULL }; /* for option "access" */
+	struct labelset exec_set = { 0, NULL }; /* for option "exec" */
+	struct labelset mmap_set = { 0, NULL }; /* for option "mmap" */
 
+	struct stat st;
 	char *label;
+
 	int follow_flag = 0;
 	int transmute_flag = 0;
 	int option_flag = 0;
@@ -145,13 +151,16 @@ int main(int argc, char *argv[])
 
 		switch (c) {
 			case 'a':
-				strncpy(access_buf, optarg, SMACK_LABEL_LEN + 1);
+				access_set.isset = 1;
+				access_set.value = optarg;
 				break;
 			case 'e':
-				strncpy(exec_buf, optarg, SMACK_LABEL_LEN + 1);
+				exec_set.isset = 1;
+				exec_set.value = optarg;
 				break;
 			case 'm':
-				strncpy(mmap_buf, optarg, SMACK_LABEL_LEN + 1);
+				mmap_set.isset = 1;
+				mmap_set.value = optarg;
 				break;
 			case 't':
 				transmute_flag = 1;
@@ -173,23 +182,23 @@ int main(int argc, char *argv[])
 	/* setting labels */
 	if (option_flag) {
 		for (i = optind; i < argc; i++) {
-			if (strlen(access_buf) > 0) {
+			if (access_set.isset) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACK, follow_flag, access_buf);
+							XATTR_NAME_SMACK, follow_flag, access_set.value);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
-			if (strlen(exec_buf) > 0) {
+			if (exec_set.isset) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKEXEC, follow_flag, exec_buf);
+							XATTR_NAME_SMACKEXEC, follow_flag, exec_set.value);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
-			if (strlen(mmap_buf) > 0) {
+			if (mmap_set.isset) {
 				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKMMAP, follow_flag, mmap_buf);
+							XATTR_NAME_SMACKMMAP, follow_flag, mmap_set.value);
 				if (rc < 0)
 					perror(argv[i]);
 			}
@@ -210,7 +219,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-	} 
+	}
 
 	/* listing labels */
 	else {
