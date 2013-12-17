@@ -737,8 +737,9 @@ static inline ssize_t get_label(char *dest, const char *src)
 		return -1;
 
 	for (i = 0; i < (SMACK_LABEL_LEN + 1) && src[i]; i++) {
+		if (src[i] <= ' ' || src[i] > '~')
+			return -1;
 		switch (src[i]) {
-		case ' ':
 		case '/':
 		case '"':
 		case '\\':
