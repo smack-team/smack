@@ -22,7 +22,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/xattr.h>
-#include <attr/xattr.h>
 #include <linux/xattr.h>
 #include <sys/smack.h>
 #include <unistd.h>
@@ -258,28 +257,28 @@ int main(int argc, char *argv[])
 			if (access_set.isset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACK, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENOATTR))
+				if (rc < 0 && (option_flag || errno != ENODATA))
 					perror(argv[i]);
 			}
 
 			if (exec_set.isset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKEXEC, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENOATTR))
+				if (rc < 0 && (option_flag || errno != ENODATA))
 					perror(argv[i]);
 			}
 
 			if (mmap_set.isset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKMMAP, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENOATTR))
+				if (rc < 0 && (option_flag || errno != ENODATA))
 					perror(argv[i]);
 			}
 
 			if (transmute_flag) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKTRANSMUTE, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENOATTR))
+				if (rc < 0 && (option_flag || errno != ENODATA))
 					perror(argv[i]);
 			}
 		}
