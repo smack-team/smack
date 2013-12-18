@@ -581,22 +581,21 @@ ssize_t smack_new_label_from_socket(int fd, char **label)
 ssize_t smack_new_label_from_path(const char *path, const char *xattr, 
 				  int follow, char **label)
 {
+	char buf[SMACK_LABEL_LEN + 1];
 	char *result;
 	ssize_t ret = 0;
 
 	ret = follow ?
-		getxattr(path, xattr, NULL, 0) :
-		lgetxattr(path, xattr, NULL, 0);
-	if (ret < 0 && errno != ERANGE)
+		getxattr(path, xattr, buf, SMACK_LABEL_LEN + 1) :
+		lgetxattr(path, xattr, buf, SMACK_LABEL_LEN + 1);
+	if (ret < 0)
 		return -1;
 
 	result = calloc(ret + 1, 1);
 	if (result == NULL)
 		return -1;
 
-	ret = follow ?
-		getxattr(path, xattr, result, ret) :
-		lgetxattr(path, xattr, result, ret);
+	ret = get_label(result, buf);
 	if (ret < 0) {
 		free(result);
 		return -1;
