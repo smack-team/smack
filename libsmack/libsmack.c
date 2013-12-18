@@ -36,6 +36,8 @@
 #include <sys/xattr.h>
 
 #define SELF_LABEL_FILE "/proc/self/attr/current"
+#define PROC_DIR "/proc"
+#define ATTR_CURRENT_FILE "/attr/current"
 
 #define SHORT_LABEL_LEN 23
 #define ACC_LEN 6
@@ -531,9 +533,10 @@ const char *smack_smackfs_path(void)
 	return smackfs_mnt;
 }
 
-ssize_t smack_new_label_from_self(char **label)
+ssize_t smack_new_label_from_pid(pid_t pid, char **label)
 {
 	char *result;
+	char path[PATH_MAX];
 	int fd;
 	int ret;
 
@@ -541,7 +544,9 @@ ssize_t smack_new_label_from_self(char **label)
 	if (result == NULL)
 		return -1;
 
-	fd = open(SELF_LABEL_FILE, O_RDONLY);
+	snprintf(path, sizeof path, "%s/%d/%s", PROC_DIR, pid, ATTR_CURRENT_FILE);
+
+	fd = open(path, O_RDONLY);
 	if (fd < 0) {
 		free(result);
 		return -1;
@@ -556,6 +561,15 @@ ssize_t smack_new_label_from_self(char **label)
 
 	*label = result;
 	return ret;
+}
+
+ssize_t smack_new_label_from_self(char **label)
+{
+	pid_t pid;
+
+	pid = getpid();
+	return smack_new_label_from_pid(pid, label);
+
 }
 
 ssize_t smack_new_label_from_socket(int fd, char **label)

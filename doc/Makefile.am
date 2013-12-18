@@ -45,6 +45,7 @@ EXTRA_MANS = \
 	man/man3/smack_label_length.3 \
 	man/man3/smack_new_label_from_path.3 \
 	man/man3/smack_new_label_from_self.3 \
+	man/man3/smack_new_label_from_pid.3 \
 	man/man3/smack_new_label_from_socket.3 \
 	man/man3/smack_revoke_subject.3 \
 	man/man3/smack_set_label_for_self.3 \
