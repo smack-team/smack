@@ -38,14 +38,20 @@
 #define OLDSMACKFSMNT	"/smack"
 
 char *smackfs_mnt = NULL;
+int smackfs_mnt_dirfd = -1;
 
 static int verify_smackfs_mnt(const char *mnt)
 {
 	struct statfs sfbuf;
 	int rc;
+	int fd;
+
+	fd = open(mnt, O_RDONLY, 0);
+	if (fd < 0)
+		return -1;
 
 	do {
-		rc = statfs(mnt, &sfbuf);
+		rc = fstatfs(fd, &sfbuf);
 	} while (rc < 0 && errno == EINTR);
 
 	if (rc == 0) {
@@ -53,13 +59,16 @@ static int verify_smackfs_mnt(const char *mnt)
 			struct statvfs vfsbuf;
 			rc = statvfs(mnt, &vfsbuf);
 			if (rc == 0) {
-				if (!(vfsbuf.f_flag & ST_RDONLY))
+				if (!(vfsbuf.f_flag & ST_RDONLY)) {
 					smackfs_mnt = strdup(mnt);
-				return 0;
+					smackfs_mnt_dirfd = fd;
+					return 0;
+				}
 			}
 		}
 	}
 
+	close(fd);
 	return -1;
 }
 
