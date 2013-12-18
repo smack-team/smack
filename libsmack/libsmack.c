@@ -20,6 +20,8 @@
  * 02110-1301 USA
  */
 
+#define __GNU_SOURCE
+#include <search.h>
 #include "sys/smack.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -58,11 +60,19 @@
 #define ACCESS_TYPE_T 0x10
 #define ACCESS_TYPE_L 0x20
 
+#define DICT_HASH_SIZE 4096
+
 extern char *smackfs_mnt;
 
+struct label_dict {
+	char **labels;
+	int nof_labels;
+	struct hsearch_data *htab;
+};
+
 struct smack_rule {
-	char subject[SMACK_LABEL_LEN + 1];
-	char object[SMACK_LABEL_LEN + 1];
+	int subject_id;
+	int object_id;
 	int subject_len;
 	int object_len;
 	int allow_code;
@@ -73,6 +83,7 @@ struct smack_rule {
 struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
+	struct label_dict *dict;
 };
 
 struct cipso_mapping {
@@ -92,6 +103,10 @@ static int accesses_apply(struct smack_accesses *handle, int clear);
 static inline ssize_t get_label(char *dest, const char *src);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
+static int dict_create(struct label_dict **dict);
+static int dict_free(struct label_dict *dict);
+static const char *dict_get_label(const struct label_dict *dict, int id);
+static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *src);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -101,6 +116,8 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	if (result == NULL)
 		return -1;
 
+	if (dict_create(&(result->dict)))
+		return -1;
 	*accesses = result;
 	return 0;
 }
@@ -119,6 +136,7 @@ void smack_accesses_free(struct smack_accesses *handle)
 		rule = next_rule;
 	}
 
+	dict_free(handle->dict);
 	free(handle);
 }
 
@@ -148,11 +166,13 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 			access_code_to_str(rule->deny_code, deny_str);
 
 			ret = fprintf(file, "%s %s %s %s\n",
-				      rule->subject, rule->object,
+				      dict_get_label(handle->dict, rule->subject_id),
+				      dict_get_label(handle->dict, rule->object_id),
 				      allow_str, deny_str);
 		} else {
 			ret = fprintf(file, "%s %s %s\n",
-				      rule->subject, rule->object,
+				      dict_get_label(handle->dict, rule->subject_id),
+				      dict_get_label(handle->dict, rule->object_id),
 				      allow_str);
 		}
 
@@ -187,8 +207,8 @@ int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 	if (rule == NULL)
 		return -1;
 
-	rule->subject_len = get_label(rule->subject, subject);
-	rule->object_len = get_label(rule->object, object);
+	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
+	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
 	if (rule->subject_len < 0 || rule->object_len < 0) {
 		free(rule);
 		return -1;
@@ -223,8 +243,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	if (rule == NULL)
 		return -1;
 
-	rule->subject_len = get_label(rule->subject, subject);
-	rule->object_len = get_label(rule->object, object);
+	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
+	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
 	if (rule->subject_len < 0 || rule->object_len < 0) {
 		free(rule);
 		return -1;
@@ -691,14 +711,16 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-				       rule->subject, rule->object,
+				       dict_get_label(handle->dict, rule->subject_id),
+				       dict_get_label(handle->dict, rule->object_id),
 				       allow_str,
 				       deny_str);
 		} else {
 			fd = load_fd;
 			if (load2)
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-					       rule->subject, rule->object,
+					       dict_get_label(handle->dict, rule->subject_id),
+					       dict_get_label(handle->dict, rule->object_id),
 					       allow_str);
 			else {
 				if (rule->subject_len > SHORT_LABEL_LEN ||
@@ -708,7 +730,8 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 				}
 
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-					       rule->subject, rule->object,
+					       dict_get_label(handle->dict, rule->subject_id),
+					       dict_get_label(handle->dict, rule->object_id),
 					       allow_str);
 			}
 		}
@@ -742,8 +765,9 @@ static inline ssize_t get_label(char *dest, const char *src)
 		return -1;
 
 	for (i = 0; i < (SMACK_LABEL_LEN + 1) && src[i]; i++) {
+		if (src[i] <= ' ' || src[i] > '~')
+			return -1;
 		switch (src[i]) {
-		case ' ':
 		case '/':
 		case '"':
 		case '\\':
@@ -814,4 +838,81 @@ static inline void access_code_to_str(unsigned int code, char *str)
 	str[4] = ((code & ACCESS_TYPE_T) != 0) ? 't' : '-';
 	str[5] = ((code & ACCESS_TYPE_L) != 0) ? 'l' : '-';
 	str[6] = '\0';
+}
+
+static int dict_create(struct label_dict **dict)
+{
+	*dict = calloc(1, sizeof(struct label_dict));
+	if (!*dict)
+		goto err;
+	(*dict)->htab = calloc(1, sizeof(struct hsearch_data));
+	if (!(*dict)->htab)
+		goto free_dict;
+	(*dict)->labels = calloc(DICT_HASH_SIZE, sizeof(char *));
+	if (!(*dict)->labels)
+		goto free_htab;
+	if (hcreate_r(DICT_HASH_SIZE, (*dict)->htab) == 0)
+		goto free_labels;
+	return 0;
+
+free_labels:
+	free((*dict)->labels);
+free_htab:
+	free((*dict)->htab);
+free_dict:
+	free(*dict);
+err:
+	return -1;
+}
+
+static int dict_free(struct label_dict *dict)
+{
+	int i;
+	for (i = 0; i < (dict->nof_labels); i++)
+		free((dict->labels)[i]);
+	free(dict->labels);
+	hdestroy_r(dict->htab);
+	free(dict->htab);
+	free(dict);
+	return 0;
+}
+
+static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *label)
+{
+	ENTRY e, *ep;
+	int ret, search;
+
+	ret = get_label(NULL, label);
+
+	if (dict->nof_labels == DICT_HASH_SIZE)
+		return -2;
+	if (ret == -1)
+		return -1;
+
+	e.key =  (char *)label;
+	e.data = (void *)(&(dict->labels[dict->nof_labels]));
+
+	search = hsearch_r(e, ENTER, &ep, dict->htab);
+	if (search == 0)
+		return -2;
+	if (e.data != ep->data) {/*found an existing entry*/
+		*id = (int)((char **)(ep->data) - dict->labels);
+	} else {/*new entry added*/
+		ep->key = malloc(ret + 1);
+		if (!ep->key)
+			return -3;
+		ep->key[ret] = '\0';
+		memcpy(ep->key, label, ret);
+		dict->labels[dict->nof_labels] = ep->key;
+		*id = dict->nof_labels++;
+	}
+	return ret;
+}
+
+static const char *dict_get_label(const struct label_dict *dict, int id)
+{
+	if (id < dict->nof_labels)
+		return dict->labels[id];
+	else
+		return NULL;
 }
