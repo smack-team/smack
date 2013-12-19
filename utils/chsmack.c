@@ -45,30 +45,6 @@ static const char usage[] =
 ;
 
 /*!
- * Validate a SMACK label and calculate its length.
- *
- * @param label label to verify
- * @return Returns length of the label on success and negative on failure.
- */
-static ssize_t smack_label_length(const char *label)
-{
-	int i;
-
-	if (!label || !*label || *label=='-')
-		return -1;
-
-	for (i = 0 ; i <= SMACK_LABEL_LEN ; i++) {
-		if (label[i] == '\0')
-				return (ssize_t) i;
-		if (label[i] > '~' || label[i] <= ' ' || label[i] == '/' ||
-		    label[i] == '"' || label[i] == '\\' || label[i] == '\'')
-				return -1;
-	}
-
-	return -1;
-}
-
-/*!
   * Set the SMACK label in an extended attribute.
   *
   * @param path path of the file
