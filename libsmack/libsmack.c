@@ -59,20 +59,12 @@
 #define ACCESS_TYPE_T 0x10
 #define ACCESS_TYPE_L 0x20
 
-#define DICT_HASH_SIZE 4096
-
 extern char *smackfs_mnt;
 extern int smackfs_mnt_dirfd;
 
-struct label_dict {
-	char **labels;
-	int nof_labels;
-	struct hsearch_data *htab;
-};
-
 struct smack_rule {
-	int subject_id;
-	int object_id;
+	const char *subject;
+	const char *object;
 	int subject_len;
 	int object_len;
 	int allow_code;
@@ -83,7 +75,7 @@ struct smack_rule {
 struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
-	struct label_dict *dict;
+	void *tree;
 };
 
 struct cipso_mapping {
@@ -103,10 +95,14 @@ static int accesses_apply(struct smack_accesses *handle, int clear);
 static inline ssize_t get_label(char *dest, const char *src);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
-static int dict_create(struct label_dict **dict);
-static int dict_free(struct label_dict *dict);
-static const char *dict_get_label(const struct label_dict *dict, int id);
-static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *src);
+static int compare_rules(const struct smack_rule *first, const struct smack_rule *second);
+static void merge_rules(struct smack_rule *out, const struct smack_rule *in);
+static int add_rule(struct smack_accesses *handle,
+			      int modify,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -116,8 +112,6 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	if (result == NULL)
 		return -1;
 
-	if (dict_create(&(result->dict)))
-		return -1;
 	*accesses = result;
 	return 0;
 }
@@ -127,16 +121,7 @@ void smack_accesses_free(struct smack_accesses *handle)
 	if (handle == NULL)
 		return;
 
-	struct smack_rule *rule = handle->first;
-	struct smack_rule *next_rule = NULL;
-
-	while (rule != NULL) {
-		next_rule = rule->next;
-		free(rule);
-		rule = next_rule;
-	}
-
-	dict_free(handle->dict);
+	tdestroy(handle->tree, free);
 	free(handle);
 }
 
@@ -166,13 +151,13 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 			access_code_to_str(rule->deny_code, deny_str);
 
 			ret = fprintf(file, "%s %s %s %s\n",
-				      dict_get_label(handle->dict, rule->subject_id),
-				      dict_get_label(handle->dict, rule->object_id),
+				      rule->subject,
+				      rule->object,
 				      allow_str, deny_str);
 		} else {
 			ret = fprintf(file, "%s %s %s\n",
-				      dict_get_label(handle->dict, rule->subject_id),
-				      dict_get_label(handle->dict, rule->object_id),
+				      rule->subject,
+				      rule->object,
 				      allow_str);
 		}
 
@@ -201,34 +186,7 @@ int smack_accesses_clear(struct smack_accesses *handle)
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
 		       const char *object, const char *access_type)
 {
-	struct smack_rule *rule = NULL;
-
-	rule = calloc(sizeof(struct smack_rule), 1);
-	if (rule == NULL)
-		return -1;
-
-	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
-	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
-	if (rule->subject_len < 0 || rule->object_len < 0) {
-		free(rule);
-		return -1;
-	}
-
-	rule->allow_code = str_to_access_code(access_type);
-	rule->deny_code = -1; /* no modify */
-	if (rule->allow_code == -1) {
-		free(rule);
-		return -1;
-	}
-
-	if (handle->first == NULL) {
-		handle->first = handle->last = rule;
-	} else {
-		handle->last->next = rule;
-		handle->last = rule;
-	}
-
-	return 0;
+	return add_rule(handle, 0, subject, object, access_type, NULL);
 }
 
 int smack_accesses_add_modify(struct smack_accesses *handle,
@@ -237,34 +195,7 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 			      const char *allow_access_type,
 			      const char *deny_access_type)
 {
-	struct smack_rule *rule = NULL;
-
-	rule = calloc(sizeof(struct smack_rule), 1);
-	if (rule == NULL)
-		return -1;
-
-	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
-	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
-	if (rule->subject_len < 0 || rule->object_len < 0) {
-		free(rule);
-		return -1;
-	}
-
-	rule->allow_code = str_to_access_code(allow_access_type);
-	rule->deny_code = str_to_access_code(deny_access_type);
-	if (rule->allow_code == -1 || rule->deny_code == -1) {
-		free(rule);
-		return -1;
-	}
-
-	if (handle->first == NULL) {
-		handle->first = handle->last = rule;
-	} else {
-		handle->last->next = rule;
-		handle->last = rule;
-	}
-
-	return 0;
+	return add_rule(handle, 1, subject, object, allow_access_type, deny_access_type);
 }
 
 int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
@@ -702,16 +633,16 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 
 			fd = change_fd;
 			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-				       dict_get_label(handle->dict, rule->subject_id),
-				       dict_get_label(handle->dict, rule->object_id),
+				       rule->subject,
+				       rule->object,
 				       allow_str,
 				       deny_str);
 		} else {
 			fd = load_fd;
 			if (load2)
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-					       dict_get_label(handle->dict, rule->subject_id),
-					       dict_get_label(handle->dict, rule->object_id),
+					       rule->subject,
+					       rule->object,
 					       allow_str);
 			else {
 				if (rule->subject_len > SHORT_LABEL_LEN ||
@@ -721,8 +652,8 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 				}
 
 				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-					       dict_get_label(handle->dict, rule->subject_id),
-					       dict_get_label(handle->dict, rule->object_id),
+					       rule->subject,
+					       rule->object,
 					       allow_str);
 			}
 		}
@@ -831,79 +762,129 @@ static inline void access_code_to_str(unsigned int code, char *str)
 	str[6] = '\0';
 }
 
-static int dict_create(struct label_dict **dict)
+static void merge_rules(struct smack_rule *out, const struct smack_rule *in)
 {
-	*dict = calloc(1, sizeof(struct label_dict));
-	if (!*dict)
-		goto err;
-	(*dict)->htab = calloc(1, sizeof(struct hsearch_data));
-	if (!(*dict)->htab)
-		goto free_dict;
-	(*dict)->labels = calloc(DICT_HASH_SIZE, sizeof(char *));
-	if (!(*dict)->labels)
-		goto free_htab;
-	if (hcreate_r(DICT_HASH_SIZE, (*dict)->htab) == 0)
-		goto free_labels;
-	return 0;
+	if (in->deny_code == -1) {
+		/* "in" is a "set rule" */
+		out->allow_code = in->allow_code;
+		out->deny_code = -1;
+	}
 
-free_labels:
-	free((*dict)->labels);
-free_htab:
-	free((*dict)->htab);
-free_dict:
-	free(*dict);
-err:
-	return -1;
+	else if (out->deny_code == -1) {
+		/* "out" is a "set rule" */
+		out->allow_code = (out->allow_code | in->allow_code) & ~in->deny_code;
+	}
+
+	else {
+		/* both are "modify rule" */
+		out->allow_code = (out->allow_code | in->allow_code) & ~in->deny_code;
+		out->deny_code = (out->deny_code & ~in->allow_code) | in->deny_code;
+	}
 }
 
-static int dict_free(struct label_dict *dict)
+static int compare_rules(const struct smack_rule *first, const struct smack_rule *second)
 {
-	int i;
-	for (i = 0; i < (dict->nof_labels); i++)
-		free((dict->labels)[i]);
-	free(dict->labels);
-	hdestroy_r(dict->htab);
-	free(dict->htab);
-	free(dict);
-	return 0;
+	int result;
+#if 0
+	/*
+	 Possible implementation with current code where the strings
+     object and subject are allocated in one time, the one after the
+     other in a contin=guous memory
+	*/
+
+	int l1 = first->subject_len + first->object_len;
+	int l2 = second->subject_len + second->object_len;
+
+	result = l2 - l1; /* safe because length are limited in length far below the integer size */
+	if (result == 0)
+		result = memcmp(first->subject, second->subject, l1+1);
+#else
+	/* standard implementation */
+
+	result = strcmp(first->object, second->object);
+	if (result == 0)
+		result = strcmp(first->subject, second->subject);
+#endif
+	return result;
 }
 
-static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *label)
+static int add_rule(struct smack_accesses *handle,
+			      int modify,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type)
 {
-	ENTRY e, *ep;
-	int ret, search;
+	int subject_len, object_len;
+	int allow_code, deny_code;
+	struct smack_rule *rule, **tnode;
+	char *text;
 
-	ret = get_label(NULL, label);
-
-	if (dict->nof_labels == DICT_HASH_SIZE)
-		return -2;
-	if (ret == -1)
+	/* validation of the subject */
+	subject_len = get_label(NULL, subject);
+	if (subject_len < 0) 
 		return -1;
 
-	e.key =  (char *)label;
-	e.data = (void *)(&(dict->labels[dict->nof_labels]));
+	/* validation of the object */
+	object_len = get_label(NULL, object);
+	if (object_len < 0) 
+		return -1;
 
-	search = hsearch_r(e, ENTER, &ep, dict->htab);
-	if (search == 0)
-		return -2;
-	if (e.data != ep->data) {/*found an existing entry*/
-		*id = (int)((char **)(ep->data) - dict->labels);
-	} else {/*new entry added*/
-		ep->key = malloc(ret + 1);
-		if (!ep->key)
-			return -3;
-		ep->key[ret] = '\0';
-		memcpy(ep->key, label, ret);
-		dict->labels[dict->nof_labels] = ep->key;
-		*id = dict->nof_labels++;
+	/* validation of the allow code */
+	allow_code = str_to_access_code(allow_access_type);
+	if (allow_code == -1)
+		return -1;
+
+	/* validation of the deny code */
+	if (!modify)
+		deny_code = -1;
+	else {
+		deny_code = str_to_access_code(deny_access_type);
+		if (deny_code == -1) 
+			return -1;
 	}
-	return ret;
+
+	/* create the rule, allocate all in one bloc */
+	rule = calloc(sizeof(struct smack_rule) + subject_len + object_len + 2, 1);
+	if (rule == NULL)
+		return -1;
+
+	/* init the rule */
+	rule->subject_len = subject_len;
+	rule->object_len = object_len;
+	rule->allow_code = allow_code;
+	rule->deny_code = deny_code;
+	rule->next = NULL;
+
+	text = (char*)(rule+1);
+	rule->subject = text;
+	memcpy(text, subject, subject_len);
+	text += subject_len+1;
+	rule->object = text;
+	memcpy(text, object, object_len);
+
+
+	/* search/insert the rule */
+	tnode = tsearch(rule, &handle->tree, (int(*)(const void*,const void*)) compare_rules);
+	if (tnode == NULL) {
+		/* not found but allocation error */
+		free(rule);
+		return -1;
+	}
+	if (*tnode != rule) {
+		/* found then merge and free */
+		merge_rules(*tnode, rule);
+		free(rule);
+		return 0;
+	}
+
+	/* chain the new rule */
+	if (handle->last == NULL) 
+		handle->first = rule;
+	else 
+		handle->last->next = rule;
+	handle->last = rule;
+
+	return 0;
 }
 
-static const char *dict_get_label(const struct label_dict *dict, int id)
-{
-	if (id < dict->nof_labels)
-		return dict->labels[id];
-	else
-		return NULL;
-}
