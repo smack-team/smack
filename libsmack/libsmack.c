@@ -108,6 +108,8 @@ static const char *dict_get_label(const struct label_dict *dict, int id);
 static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *src);
 static int accesses_print(struct smack_accesses *handle, int clear,
 			  int load_fd, int change_fd, int use_long, int add_lf);
+static void merge_rules(struct smack_rule *out, const struct smack_rule *in);
+static int accesses_merge(struct smack_accesses *handle);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -651,6 +653,10 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	int i;
 	int cnt;
 
+	/* ignoring the result below:
+	 * if merge fails due to lack of memory, try to save without merging*/
+	(void) accesses_merge(handle);
+
 	if (!use_long && handle->long_labels)
 		return -1;
 
@@ -863,4 +869,51 @@ static const char *dict_get_label(const struct label_dict *dict, int id)
 		return dict->labels[id];
 	else
 		return NULL;
+}
+
+static void merge_rules(struct smack_rule *out, const struct smack_rule *in)
+{
+	if (in->deny_code == -1) {/*"in" is a "set rule"*/
+		out->allow_code = in->allow_code;
+		out->deny_code = -1;
+	} else {
+		if (out->deny_code != -1) {/*"out" is a "modify rule"*/
+			out->deny_code &= ~in->allow_code;
+			out->allow_code &= ~in->deny_code;
+			out->deny_code |= in->deny_code;
+			out->allow_code |= in->allow_code;
+		} else {/*"out" is a "set rule"*/
+			out->allow_code |= in->allow_code;
+			out->allow_code &= ~in->deny_code;
+		}
+	}
+}
+
+static int accesses_merge(struct smack_accesses *handle)
+{
+	struct smack_rule *rule;
+	struct smack_rule *previous = handle->first;
+	int nof_labels = handle->dict->nof_labels;
+	int nof_rules = nof_labels * nof_labels;
+	struct smack_rule **tab = calloc(nof_rules, sizeof(struct smack_rule *));
+	if (tab == NULL)
+		return -1;
+	for (rule = handle->first; rule != NULL; rule = rule->next) {
+
+		int i = rule->subject_id * nof_labels + rule->object_id;
+		if (tab[i] != NULL) {
+			merge_rules(tab[i], rule);
+			previous->next = rule->next;
+			free(rule);
+			rule = previous;
+			if (rule->next == NULL) {
+				handle->last = previous;
+				break;
+			}
+		} else
+			tab[i] = rule;
+		previous = rule;
+	}
+	free(tab);
+	return 0;
 }
