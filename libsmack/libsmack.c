@@ -58,6 +58,7 @@
 #define ACCESS_TYPE_A 0x08
 #define ACCESS_TYPE_T 0x10
 #define ACCESS_TYPE_L 0x20
+#define ACCESS_ALL    0x3f /* binary OR of all accesses */
 
 extern char *smackfs_mnt;
 extern int smackfs_mnt_dirfd;
@@ -779,6 +780,8 @@ static void merge_rules(struct smack_rule *out, const struct smack_rule *in)
 		/* both are "modify rule" */
 		out->allow_code = (out->allow_code | in->allow_code) & ~in->deny_code;
 		out->deny_code = (out->deny_code & ~in->allow_code) | in->deny_code;
+		if ((out->allow_code | out->deny_code) == ACCESS_ALL)
+			out->deny_code = -1;
 	}
 }
 
@@ -842,6 +845,10 @@ static int add_rule(struct smack_accesses *handle,
 		deny_code = str_to_access_code(deny_access_type);
 		if (deny_code == -1) 
 			return -1;
+		/* TODO should we send an error when allow and deny are conflicting? */
+		allow_code = allow_code & ~deny_code;
+		if ((allow_code | deny_code) == ACCESS_ALL)
+			deny_code = -1;
 	}
 
 	/* create the rule, allocate all in one bloc */
