@@ -198,44 +198,9 @@ int smack_accesses_clear(struct smack_accesses *handle)
 	return accesses_apply(handle, 1);
 }
 
-int smack_accesses_add(struct smack_accesses *handle, const char *subject,
-		       const char *object, const char *access_type)
-{
-	struct smack_rule *rule = NULL;
-
-	rule = calloc(sizeof(struct smack_rule), 1);
-	if (rule == NULL)
-		return -1;
-
-	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
-	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
-	if (rule->subject_len < 0 || rule->object_len < 0) {
-		free(rule);
-		return -1;
-	}
-
-	rule->allow_code = str_to_access_code(access_type);
-	rule->deny_code = -1; /* no modify */
-	if (rule->allow_code == -1) {
-		free(rule);
-		return -1;
-	}
-
-	if (handle->first == NULL) {
-		handle->first = handle->last = rule;
-	} else {
-		handle->last->next = rule;
-		handle->last = rule;
-	}
-
-	return 0;
-}
-
-int smack_accesses_add_modify(struct smack_accesses *handle,
-			      const char *subject,
-			      const char *object,
-			      const char *allow_access_type,
-			      const char *deny_access_type)
+int accesses_add(struct smack_accesses *handle, const char *subject,
+		 const char *object, const char *allow_access_type,
+		 const char *deny_access_type)
 {
 	struct smack_rule *rule = NULL;
 
@@ -251,11 +216,19 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	}
 
 	rule->allow_code = str_to_access_code(allow_access_type);
-	rule->deny_code = str_to_access_code(deny_access_type);
-	if (rule->allow_code == -1 || rule->deny_code == -1) {
+	if (rule->allow_code == -1) {
 		free(rule);
 		return -1;
 	}
+
+	if (deny_access_type != NULL) {
+		rule->deny_code = str_to_access_code(deny_access_type);
+		if (rule->deny_code == -1) {
+			free(rule);
+			return -1;
+		}
+	} else
+		rule->deny_code = -1; /* no modify */
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -265,6 +238,22 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	}
 
 	return 0;
+}
+
+int smack_accesses_add(struct smack_accesses *handle, const char *subject,
+		       const char *object, const char *access_type)
+{
+	return accesses_add(handle, subject, object, access_type, NULL);
+}
+
+int smack_accesses_add_modify(struct smack_accesses *handle,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type)
+{
+	return accesses_add(handle, subject, object,
+		allow_access_type, deny_access_type);
 }
 
 int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
