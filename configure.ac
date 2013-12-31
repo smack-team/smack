@@ -13,6 +13,7 @@ AM_SILENT_RULES([yes])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT([disable-static])
 AC_PREFIX_DEFAULT([/usr])
+AC_PROG_CC_C99
 
 AC_CHECK_PROG([DOXYGEN], [doxygen], [doxygen], [])
 AC_MSG_CHECKING([for doxygen])
