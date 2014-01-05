@@ -107,6 +107,8 @@ static int dict_create(struct label_dict **dict);
 static int dict_free(struct label_dict *dict);
 static const char *dict_get_label(const struct label_dict *dict, int id);
 static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *src);
+static int accesses_print(struct smack_accesses *handle, int clear,
+			  int load_fd, int change_fd, int use_long, int add_lf);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
@@ -142,50 +144,7 @@ void smack_accesses_free(struct smack_accesses *handle)
 
 int smack_accesses_save(struct smack_accesses *handle, int fd)
 {
-	struct smack_rule *rule = handle->first;
-	char allow_str[ACC_LEN + 1];
-	char deny_str[ACC_LEN + 1];
-	FILE *file;
-	int ret;
-	int newfd;
-
-	newfd = dup(fd);
-	if (newfd == -1)
-		return -1;
-
-	file = fdopen(newfd, "w");
-	if (file == NULL) {
-		close(newfd);
-		return -1;
-	}
-
-	while (rule) {
-		access_code_to_str(rule->allow_code, allow_str);
-
-		if (rule->deny_code != -1) /* modify? */ {
-			access_code_to_str(rule->deny_code, deny_str);
-
-			ret = fprintf(file, "%s %s %s %s\n",
-				      dict_get_label(handle->dict, rule->subject_id),
-				      dict_get_label(handle->dict, rule->object_id),
-				      allow_str, deny_str);
-		} else {
-			ret = fprintf(file, "%s %s %s\n",
-				      dict_get_label(handle->dict, rule->subject_id),
-				      dict_get_label(handle->dict, rule->object_id),
-				      allow_str);
-		}
-
-		if (ret < 0) {
-			fclose(file);
-			return -1;
-		}
-
-		rule = rule->next;
-	}
-
-	fclose(file);
-	return 0;
+	return accesses_print(handle, 0, fd, fd, 1, 1);
 }
 
 int smack_accesses_apply(struct smack_accesses *handle)
@@ -198,44 +157,9 @@ int smack_accesses_clear(struct smack_accesses *handle)
 	return accesses_apply(handle, 1);
 }
 
-int smack_accesses_add(struct smack_accesses *handle, const char *subject,
-		       const char *object, const char *access_type)
-{
-	struct smack_rule *rule = NULL;
-
-	rule = calloc(sizeof(struct smack_rule), 1);
-	if (rule == NULL)
-		return -1;
-
-	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
-	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
-	if (rule->subject_len < 0 || rule->object_len < 0) {
-		free(rule);
-		return -1;
-	}
-
-	rule->allow_code = str_to_access_code(access_type);
-	rule->deny_code = -1; /* no modify */
-	if (rule->allow_code == -1) {
-		free(rule);
-		return -1;
-	}
-
-	if (handle->first == NULL) {
-		handle->first = handle->last = rule;
-	} else {
-		handle->last->next = rule;
-		handle->last = rule;
-	}
-
-	return 0;
-}
-
-int smack_accesses_add_modify(struct smack_accesses *handle,
-			      const char *subject,
-			      const char *object,
-			      const char *allow_access_type,
-			      const char *deny_access_type)
+int accesses_add(struct smack_accesses *handle, const char *subject,
+		 const char *object, const char *allow_access_type,
+		 const char *deny_access_type)
 {
 	struct smack_rule *rule = NULL;
 
@@ -251,11 +175,19 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	}
 
 	rule->allow_code = str_to_access_code(allow_access_type);
-	rule->deny_code = str_to_access_code(deny_access_type);
-	if (rule->allow_code == -1 || rule->deny_code == -1) {
+	if (rule->allow_code == -1) {
 		free(rule);
 		return -1;
 	}
+
+	if (deny_access_type != NULL) {
+		rule->deny_code = str_to_access_code(deny_access_type);
+		if (rule->deny_code == -1) {
+			free(rule);
+			return -1;
+		}
+	} else
+		rule->deny_code = -1; /* no modify */
 
 	if (handle->first == NULL) {
 		handle->first = handle->last = rule;
@@ -265,6 +197,22 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 	}
 
 	return 0;
+}
+
+int smack_accesses_add(struct smack_accesses *handle, const char *subject,
+		       const char *object, const char *access_type)
+{
+	return accesses_add(handle, subject, object, access_type, NULL);
+}
+
+int smack_accesses_add_modify(struct smack_accesses *handle,
+			      const char *subject,
+			      const char *object,
+			      const char *allow_access_type,
+			      const char *deny_access_type)
+{
+	return accesses_add(handle, subject, object,
+		allow_access_type, deny_access_type);
 }
 
 int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
@@ -655,12 +603,7 @@ ssize_t smack_label_length(const char *label)
 
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
-	char buf[LOAD_LEN + 1];
-	char allow_str[ACC_LEN + 1];
-	char deny_str[ACC_LEN + 1];
-	struct smack_rule *rule;
 	int ret;
-	int fd;
 	int load_fd;
 	int change_fd;
 	int load2 = 1;
@@ -687,58 +630,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 		goto err_out;
 	}
 
-	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		/* Fail immediately without doing any further processing
-		   if modify rules are not supported. */
-		if (rule->deny_code >= 0 && change_fd < 0) {
-			ret = -1;
-			goto err_out;
-		}
-
-		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
-
-		if (rule->deny_code != -1 && !clear) {
-			access_code_to_str(rule->deny_code, deny_str);
-
-			fd = change_fd;
-			ret = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-				       dict_get_label(handle->dict, rule->subject_id),
-				       dict_get_label(handle->dict, rule->object_id),
-				       allow_str,
-				       deny_str);
-		} else {
-			fd = load_fd;
-			if (load2)
-				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-					       dict_get_label(handle->dict, rule->subject_id),
-					       dict_get_label(handle->dict, rule->object_id),
-					       allow_str);
-			else {
-				if (rule->subject_len > SHORT_LABEL_LEN ||
-				    rule->object_len > SHORT_LABEL_LEN) {
-					ret = -1;
-					goto err_out;
-				}
-
-				ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-					       dict_get_label(handle->dict, rule->subject_id),
-					       dict_get_label(handle->dict, rule->object_id),
-					       allow_str);
-			}
-		}
-
-		if (ret < 0) {
-			ret = -1;
-			goto err_out;
-		}
-
-		ret = write(fd, buf, ret);
-		if (ret < 0) {
-			ret = -1;
-			goto err_out;
-		}
-	}
-	ret = 0;
+	ret = accesses_print(handle, clear, load_fd, change_fd, load2, 0);
 
 err_out:
 	if (load_fd >= 0)
@@ -746,6 +638,73 @@ err_out:
 	if (change_fd >= 0)
 		close(change_fd);
 	return ret;
+}
+
+static int accesses_print(struct smack_accesses *handle, int clear,
+			  int load_fd, int change_fd, int use_long, int add_lf)
+{
+	char buf[LOAD_LEN + 1];
+	char allow_str[ACC_LEN + 1];
+	char deny_str[ACC_LEN + 1];
+	struct smack_rule *rule;
+	int ret;
+	int fd;
+	int i;
+	int cnt;
+
+	for (rule = handle->first; rule != NULL; rule = rule->next) {
+		/* Fail immediately without doing any further processing
+		   if modify rules are not supported. */
+		if (rule->deny_code >= 0 && change_fd < 0)
+			return -1;
+
+		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
+
+		if (rule->deny_code != -1 && !clear) {
+			access_code_to_str(rule->deny_code, deny_str);
+
+			fd = change_fd;
+			cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
+				       dict_get_label(handle->dict, rule->subject_id),
+				       dict_get_label(handle->dict, rule->object_id),
+				       allow_str,
+				       deny_str);
+		} else {
+			fd = load_fd;
+			if (use_long)
+				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+					       dict_get_label(handle->dict, rule->subject_id),
+					       dict_get_label(handle->dict, rule->object_id),
+					       allow_str);
+			else {
+				if (rule->subject_len > SHORT_LABEL_LEN ||
+				    rule->object_len > SHORT_LABEL_LEN)
+					return -1;
+
+				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+					       dict_get_label(handle->dict, rule->subject_id),
+					       dict_get_label(handle->dict, rule->object_id),
+					       allow_str);
+			}
+		}
+
+		if (cnt < 0)
+			return -1;
+		if (add_lf)
+			buf[cnt++] = '\n';
+
+		for (i = 0; i < cnt; ) {
+			ret = write(fd, buf + i, cnt - i);
+			if (ret == -1) {
+				if (errno == EINTR)
+					continue;
+				return -1;
+			}
+			i += ret;
+		}
+	}
+
+	return 0;
 }
 
 static inline ssize_t get_label(char *dest, const char *src)

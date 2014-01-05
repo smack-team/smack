@@ -27,7 +27,5 @@
 int clear(void);
 int apply_rules(const char *path, int clear);
 int apply_cipso(const char *path);
-int apply_rules_file(const char *path, int fd, int clear);
-int apply_cipso_file(const char *path, int fd);
 
 #endif // COMMON_H
