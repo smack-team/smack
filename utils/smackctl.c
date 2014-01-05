@@ -59,9 +59,8 @@ int main(int argc, char **argv)
 		if (clear())
 			exit(1);
 	} else if (!strcmp(argv[1], "status")) {
-		if (smack_smackfs_path())
-			printf("SmackFS is mounted to %s.\n",
-			       smack_smackfs_path());
+		if (tmp)
+			printf("SmackFS is mounted to %s.\n", tmp);
 		else
 			printf("SmackFS is not mounted.\n");
 		exit(0);

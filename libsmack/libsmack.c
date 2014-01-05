@@ -20,7 +20,6 @@
  * 02110-1301 USA
  */
 
-#define __GNU_SOURCE
 #include <search.h>
 #include "sys/smack.h"
 #include <errno.h>
