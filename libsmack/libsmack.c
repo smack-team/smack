@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -70,12 +71,10 @@ struct label_dict {
 };
 
 struct smack_rule {
+	int8_t allow_code;
+	int8_t deny_code;
 	int subject_id;
 	int object_id;
-	int subject_len;
-	int object_len;
-	int allow_code;
-	int deny_code;
 	struct smack_rule *next;
 };
 
@@ -83,6 +82,7 @@ struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
 	struct label_dict *dict;
+	int long_labels;
 };
 
 struct cipso_mapping {
@@ -161,30 +161,32 @@ int accesses_add(struct smack_accesses *handle, const char *subject,
 		 const char *deny_access_type)
 {
 	struct smack_rule *rule = NULL;
+	int ret;
 
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	rule->subject_len = dict_add_label(handle->dict, &(rule->subject_id), subject);
-	rule->object_len = dict_add_label(handle->dict, &(rule->object_id), object);
-	if (rule->subject_len < 0 || rule->object_len < 0) {
-		free(rule);
-		return -1;
-	}
+	ret = dict_add_label(handle->dict, &(rule->subject_id), subject);
+	if (ret < 0)
+		goto err_out;
+	if (ret > SHORT_LABEL_LEN)
+		handle->long_labels = 1;
+
+	ret = dict_add_label(handle->dict, &(rule->object_id), object);
+	if (ret < 0)
+		goto err_out;
+	if (ret > SHORT_LABEL_LEN)
+		handle->long_labels = 1;
 
 	rule->allow_code = str_to_access_code(allow_access_type);
-	if (rule->allow_code == -1) {
-		free(rule);
-		return -1;
-	}
+	if (rule->allow_code == -1)
+		goto err_out;
 
 	if (deny_access_type != NULL) {
 		rule->deny_code = str_to_access_code(deny_access_type);
-		if (rule->deny_code == -1) {
-			free(rule);
-			return -1;
-		}
+		if (rule->deny_code == -1)
+			goto err_out;
 	} else
 		rule->deny_code = -1; /* no modify */
 
@@ -196,6 +198,9 @@ int accesses_add(struct smack_accesses *handle, const char *subject,
 	}
 
 	return 0;
+err_out:
+	free(rule);
+	return -1;
 }
 
 int smack_accesses_add(struct smack_accesses *handle, const char *subject,
@@ -646,6 +651,9 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	int i;
 	int cnt;
 
+	if (!use_long && handle->long_labels)
+		return -1;
+
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
 		/* Fail immediately without doing any further processing
 		   if modify rules are not supported. */
@@ -671,10 +679,6 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 					       dict_get_label(handle->dict, rule->object_id),
 					       allow_str);
 			else {
-				if (rule->subject_len > SHORT_LABEL_LEN ||
-				    rule->object_len > SHORT_LABEL_LEN)
-					return -1;
-
 				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
 					       dict_get_label(handle->dict, rule->subject_id),
 					       dict_get_label(handle->dict, rule->object_id),
