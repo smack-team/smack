@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -70,10 +71,10 @@ struct label_dict {
 };
 
 struct smack_rule {
+	int8_t allow_code;
+	int8_t deny_code;
 	int subject_id;
 	int object_id;
-	int allow_code;
-	int deny_code;
 	struct smack_rule *next;
 };
 
