@@ -280,27 +280,41 @@ int smack_have_access(const char *subject, const char *object,
 	int code;
 	int ret;
 	int fd;
-	int access2 = 1;
+	int use_long = 1;
+	ssize_t slen;
+	ssize_t olen;
 
 	if (smackfs_mnt_dirfd < 0)
+		return -1;
+
+	slen = get_label(NULL, subject);
+	olen = get_label(NULL, object);
+
+	if (slen < 0 || olen < 0)
 		return -1;
 
 	fd = openat(smackfs_mnt_dirfd, "access2", O_RDWR);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
-		
+
 		fd = openat(smackfs_mnt_dirfd, "access", O_RDWR);
 		if (fd < 0)
 			return -1;
-		access2 = 0;
+
+		use_long = 0;
+	}
+
+	if (!use_long && (slen > SHORT_LABEL_LEN || olen > SHORT_LABEL_LEN))  {
+		close(fd);
+		return -1;
 	}
 
 	if ((code = str_to_access_code(access_type)) < 0)
 		return -1;
 	access_code_to_str(code, str);
 
-	if (access2)
+	if (use_long)
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 			       subject, object, str);
 	else
