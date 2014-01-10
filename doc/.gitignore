@@ -1,3 +1,5 @@
+Doxyfile
 doxygen.stamp
 html/
-libsmack-doxygen*.tar.gz
+man/
+libsmack-*.tar.gz

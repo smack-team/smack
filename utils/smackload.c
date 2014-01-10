@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/smack.h>
 
 static void usage(const char *bin)
 {
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
 	}
 
 	if (optind == argc) {
-		if (apply_rules_file(NULL, STDIN_FILENO, clear))
+		if (apply_rules(NULL, clear))
 			exit(1);
 	} else {
 		if (apply_rules(argv[optind], clear))
