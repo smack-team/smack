@@ -99,6 +99,8 @@ struct smack_cipso {
 };
 
 static int accesses_apply(struct smack_accesses *handle, int clear);
+static int accesses_print(struct smack_accesses *handle, int clear,
+			  int load_fd, int change_fd, int use_long, int add_lf);
 static inline ssize_t get_label(char *dest, const char *src);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
@@ -106,8 +108,6 @@ static int dict_create(struct label_dict **dict);
 static int dict_free(struct label_dict *dict);
 static const char *dict_get_label(const struct label_dict *dict, int id);
 static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *src);
-static int accesses_print(struct smack_accesses *handle, int clear,
-			  int load_fd, int change_fd, int use_long, int add_lf);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
