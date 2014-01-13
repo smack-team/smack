@@ -98,6 +98,8 @@ struct smack_cipso {
 	struct cipso_mapping *last;
 };
 
+static int open_smackfs_file(const char *long_name, const char *short_name,
+			     int *use_long);
 static int accesses_apply(struct smack_accesses *handle, int clear);
 static int accesses_print(struct smack_accesses *handle, int clear,
 			  int load_fd, int change_fd, int use_long, int add_lf);
@@ -280,27 +282,20 @@ int smack_have_access(const char *subject, const char *object,
 	int code;
 	int ret;
 	int fd;
-	int access2 = 1;
+	int use_long = 1;
 
 	if (smackfs_mnt_dirfd < 0)
 		return -1;
 
-	fd = openat(smackfs_mnt_dirfd, "access2", O_RDWR);
-	if (fd < 0) {
-		if (errno != ENOENT)
-			return -1;
-		
-		fd = openat(smackfs_mnt_dirfd, "access", O_RDWR);
-		if (fd < 0)
-			return -1;
-		access2 = 0;
-	}
+	fd = open_smackfs_file("access2", "access", &use_long);
+	if (fd < 0)
+		return -1;
 
 	if ((code = str_to_access_code(access_type)) < 0)
 		return -1;
 	access_code_to_str(code, str);
 
-	if (access2)
+	if (use_long)
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 			       subject, object, str);
 	else
@@ -600,26 +595,41 @@ int smack_revoke_subject(const char *subject)
 	return (ret < 0) ? -1 : 0;
 }
 
+static int open_smackfs_file(const char *long_name, const char *short_name,
+			     int *use_long)
+{
+	int fd;
+
+	fd = openat(smackfs_mnt_dirfd, long_name, O_WRONLY);
+	if (fd < 0) {
+		if (errno != ENOENT)
+			return -1;
+
+		fd = openat(smackfs_mnt_dirfd, short_name, O_WRONLY);
+		if (fd < 0)
+			return -1;
+
+		*use_long = 0;
+		return fd;
+	}
+
+	*use_long = 1;
+	return fd;
+}
+
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	int ret;
 	int load_fd;
 	int change_fd;
-	int load2 = 1;
+	int use_long = 1;
 
 	if (smackfs_mnt_dirfd < 0)
 		return -1;
 
-	load_fd = openat(smackfs_mnt_dirfd, "load2", O_WRONLY);
-	if (load_fd < 0) {
-		if (errno != ENOENT)
-			return -1;
-		/* fallback */
-		load_fd = openat(smackfs_mnt_dirfd, "load", O_WRONLY);
-		if (load_fd < 0)
-			return -1;
-		load2 = 0;
-	}
+	load_fd = open_smackfs_file("load2", "load", &use_long);
+	if (load_fd < 0)
+		return -1;
 
 	change_fd = openat(smackfs_mnt_dirfd, "change-rule", O_WRONLY);
 	/* Try to continue if the file doesn't exist, we might not need it. */
@@ -628,7 +638,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 		goto err_out;
 	}
 
-	ret = accesses_print(handle, clear, load_fd, change_fd, load2, 0);
+	ret = accesses_print(handle, clear, load_fd, change_fd, use_long, 0);
 
 err_out:
 	if (load_fd >= 0)
