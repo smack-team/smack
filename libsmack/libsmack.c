@@ -616,8 +616,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 			return -1;
 		/* fallback */
 		load_fd = openat(smackfs_mnt_dirfd, "load", O_WRONLY);
-		/* Try to continue if the file doesn't exist, we might not need it. */
-		if (load_fd < 0 && errno != ENOENT)
+		if (load_fd < 0)
 			return -1;
 		load2 = 0;
 	}
