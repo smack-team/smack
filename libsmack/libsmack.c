@@ -79,10 +79,10 @@ struct smack_rule {
 };
 
 struct smack_accesses {
+	int has_long;
 	struct smack_rule *first;
 	struct smack_rule *last;
 	struct label_dict *dict;
-	int long_labels;
 };
 
 struct cipso_mapping {
@@ -94,6 +94,7 @@ struct cipso_mapping {
 };
 
 struct smack_cipso {
+	int has_long;
 	struct cipso_mapping *first;
 	struct cipso_mapping *last;
 };
@@ -173,13 +174,13 @@ int accesses_add(struct smack_accesses *handle, const char *subject,
 	if (ret < 0)
 		goto err_out;
 	if (ret > SHORT_LABEL_LEN)
-		handle->long_labels = 1;
+		handle->has_long = 1;
 
 	ret = dict_add_label(handle->dict, &(rule->object_id), object);
 	if (ret < 0)
 		goto err_out;
 	if (ret > SHORT_LABEL_LEN)
-		handle->long_labels = 1;
+		handle->has_long = 1;
 
 	rule->allow_code = str_to_access_code(allow_access_type);
 	if (rule->allow_code == -1)
@@ -357,17 +358,22 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int fd;
 	int i;
 	int offset;
+	int use_long;
 
 	if (smackfs_mnt_dirfd < 0)
 		return -1;
 
-	fd = openat(smackfs_mnt_dirfd, "cipso2", O_WRONLY);
+	fd = open_smackfs_file("cipso2", "cipso", &use_long);
 	if (fd < 0)
+		return -1;
+
+	if (!use_long && cipso->has_long)
 		return -1;
 
 	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
-		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
+		snprintf(buf, SMACK_LABEL_LEN + 1, use_long ? "%s" : "%-23s",
+			 m->label);
 		offset = strlen(buf) + 1;
 
 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
@@ -420,8 +426,14 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
 
-		if (level == NULL || get_label(mapping->label, label) < 0)
+		if (level == NULL)
 			goto err_out;
+
+		val  = get_label(mapping->label, label);
+		if (val < 0)
+			goto err_out;
+		if (val > SHORT_LABEL_LEN)
+			cipso->has_long = 1;
 
 		errno = 0;
 		val = strtol(level, NULL, 10);
@@ -660,7 +672,7 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	int i;
 	int cnt;
 
-	if (!use_long && handle->long_labels)
+	if (!use_long && handle->has_long)
 		return -1;
 
 	for (rule = handle->first; rule != NULL; rule = rule->next) {
