@@ -284,13 +284,26 @@ int smack_have_access(const char *subject, const char *object,
 	int ret;
 	int fd;
 	int use_long = 1;
+	ssize_t slen;
+	ssize_t olen;
 
 	if (smackfs_mnt_dirfd < 0)
+		return -1;
+
+	slen = get_label(NULL, subject);
+	olen = get_label(NULL, object);
+
+	if (slen < 0 || olen < 0)
 		return -1;
 
 	fd = open_smackfs_file("access2", "access", &use_long);
 	if (fd < 0)
 		return -1;
+
+	if (!use_long && (slen > SHORT_LABEL_LEN || olen > SHORT_LABEL_LEN))  {
+		close(fd);
+		return -1;
+	}
 
 	if ((code = str_to_access_code(access_type)) < 0)
 		return -1;

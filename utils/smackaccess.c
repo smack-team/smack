@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
 	ret = smack_have_access(argv[1], argv[2], argv[3]);
 	if (ret < 0) {
-		perror("smack_have_access");
+		fprintf(stderr,"%s: input values are invalid.\n", basename(argv[0]));
 		return EXIT_FAILURE;
 	}
 
