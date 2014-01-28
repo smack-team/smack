@@ -154,12 +154,6 @@ out:
 	return;
 }
 
-void fini_smackmnt(void)
-{
-	free(smackfs_mnt);
-	smackfs_mnt = NULL;
-}
-
 static void init_lib(void) __attribute__ ((constructor));
 static void init_lib(void)
 {
@@ -169,5 +163,8 @@ static void init_lib(void)
 static void fini_lib(void) __attribute__ ((destructor));
 static void fini_lib(void)
 {
-	fini_smackmnt();
+	if (smackfs_mnt_dirfd >= 0)
+		close(smackfs_mnt_dirfd);
+	free(smackfs_mnt);
+	smackfs_mnt = NULL;
 }
