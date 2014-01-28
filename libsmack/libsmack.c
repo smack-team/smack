@@ -90,6 +90,7 @@ struct smack_accesses {
 	int labels_cnt;
 	struct smack_rule *first;
 	struct smack_rule *last;
+	int labels_alloc;
 	struct smack_label **labels;
 	struct smack_hash_entry *label_hash;
 };
@@ -125,7 +126,8 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	result = calloc(1, sizeof(struct smack_accesses));
 	if (result == NULL)
 		return -1;
-	result->labels = malloc(DICT_HASH_SIZE * sizeof(struct smack_label *));
+	result->labels_alloc = 128;
+	result->labels = malloc(128 * sizeof(struct smack_label *));
 	if (result->labels == NULL)
 		goto err_out;
 	result->label_hash = calloc(DICT_HASH_SIZE, sizeof(struct smack_hash_entry));
@@ -875,15 +877,23 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 	struct smack_label *new_label;
 	int len;
 
-	if (handle->labels_cnt == DICT_HASH_SIZE)
-		return NULL;
-
 	len = get_label(NULL, label, &hash_value);
 	if (len == -1)
 		return NULL;
 
 	new_label = is_label_known(handle, label, hash_value);
 	if (new_label == NULL) {/*no entry added yet*/
+		if (handle->labels_cnt == handle->labels_alloc) {
+			struct smack_label **new_labels;
+			int size = handle->labels_alloc * 2 * sizeof(struct smack_label *);
+			new_labels = realloc(handle->labels, size);
+			if (new_labels != NULL) {
+				handle->labels = new_labels;
+				handle->labels_alloc *= 2;
+			} else
+				return NULL;
+		}
+
 		new_label = malloc(sizeof(struct smack_label));
 		if (new_label == NULL)
 			return NULL;
