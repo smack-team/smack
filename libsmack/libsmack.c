@@ -64,6 +64,8 @@
 extern char *smackfs_mnt;
 extern int smackfs_mnt_dirfd;
 
+extern int init_smackfs_mnt(void);
+
 struct label_dict {
 	char **labels;
 	int nof_labels;
@@ -287,7 +289,7 @@ int smack_have_access(const char *subject, const char *object,
 	ssize_t slen;
 	ssize_t olen;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
 	slen = get_label(NULL, subject);
@@ -373,7 +375,7 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int offset;
 	int use_long;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
 	fd = open_smackfs_file("cipso2", "cipso", &use_long);
@@ -495,6 +497,7 @@ err_out:
 
 const char *smack_smackfs_path(void)
 {
+	init_smackfs_mnt();
 	return smackfs_mnt;
 }
 
@@ -603,7 +606,7 @@ int smack_revoke_subject(const char *subject)
 	int fd;
 	int len;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
 	len = get_label(NULL, subject);
@@ -649,7 +652,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	int change_fd;
 	int use_long = 1;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
 	load_fd = open_smackfs_file("load2", "load", &use_long);

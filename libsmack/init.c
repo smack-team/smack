@@ -31,6 +31,7 @@
 #include <sys/vfs.h>
 #include <stdint.h>
 #include <limits.h>
+#include <pthread.h>
 
 #define SMACK_MAGIC	0x43415d53 /* "SMAC" */
 #define SMACKFS		"smackfs"
@@ -39,6 +40,60 @@
 
 char *smackfs_mnt = NULL;
 int smackfs_mnt_dirfd = -1;
+
+static pthread_mutex_t smackfs_mnt_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static int verify_smackfs_mnt(const char *mnt);
+static int smackfs_exists(void);
+
+int init_smackfs_mnt(void)
+{
+	char *buf = NULL;
+	char *startp;
+	char *endp;
+	FILE *fp = NULL;
+	size_t len;
+	ssize_t num;
+	int ret = 0;
+
+	if (smackfs_mnt ||
+	    verify_smackfs_mnt(SMACKFSMNT) == 0 ||
+	    verify_smackfs_mnt(OLDSMACKFSMNT) == 0)
+		return 0;
+
+	if (!smackfs_exists())
+		return -1;
+
+	fp = fopen("/proc/mounts", "r");
+	if (!fp)
+		return -1;
+
+	__fsetlocking(fp, FSETLOCKING_BYCALLER);
+	while ((num = getline(&buf, &len, fp)) != -1) {
+		startp = strchr(buf, ' ');
+		if (!startp) {
+			ret = -1;
+			break;
+		}
+		startp++;
+
+		endp = strchr(startp, ' ');
+		if (!endp) {
+			ret = -1;
+			break;
+		}
+
+		if (!strncmp(endp + 1, SMACKFS" ", strlen(SMACKFS) + 1)) {
+			*endp = '\0';
+			ret = verify_smackfs_mnt(startp);
+			break;
+		}
+	}
+
+	free(buf);
+	fclose(fp);
+	return ret;
+}
 
 static int verify_smackfs_mnt(const char *mnt)
 {
@@ -55,13 +110,20 @@ static int verify_smackfs_mnt(const char *mnt)
 	} while (rc < 0 && errno == EINTR);
 
 	if (rc == 0) {
-		if ((uint32_t)sfbuf.f_type == (uint32_t)SMACK_MAGIC) {
+		if ((uint32_t) sfbuf.f_type == (uint32_t) SMACK_MAGIC) {
 			struct statvfs vfsbuf;
 			rc = statvfs(mnt, &vfsbuf);
 			if (rc == 0) {
 				if (!(vfsbuf.f_flag & ST_RDONLY)) {
-					smackfs_mnt = strdup(mnt);
-					smackfs_mnt_dirfd = fd;
+					pthread_mutex_lock(&smackfs_mnt_lock);
+					if (smackfs_mnt_dirfd == -1) {
+						smackfs_mnt = strdup(mnt);
+						smackfs_mnt_dirfd = fd;
+					} else {
+						/* Some other thread won the race. */
+						close(fd);
+					}
+					pthread_mutex_unlock(&smackfs_mnt_lock);
 					return 0;
 				}
 			}
@@ -101,63 +163,6 @@ static int smackfs_exists(void)
 	free(buf);
 	fclose(fp);
 	return exists;
-}
-
-static void init_smackmnt(void)
-{
-	char *buf=NULL, *p;
-	FILE *fp=NULL;
-	size_t len;
-	ssize_t num;
-
-	if (smackfs_mnt)
-		return;
-
-	if (verify_smackfs_mnt(SMACKFSMNT) == 0) 
-		return;
-
-	if (verify_smackfs_mnt(OLDSMACKFSMNT) == 0) 
-		return;
-
-	if (!smackfs_exists())
-		goto out;
-
-	fp = fopen("/proc/mounts", "r");
-	if (!fp)
-		goto out;
-
-	__fsetlocking(fp, FSETLOCKING_BYCALLER);
-	while ((num = getline(&buf, &len, fp)) != -1) {
-		char *tmp;
-		p = strchr(buf, ' ');
-		if (!p)
-			goto out;
-		p++;
-
-		tmp = strchr(p, ' ');
-		if (!tmp)
-			goto out;
-
-		if (!strncmp(tmp + 1, SMACKFS" ", strlen(SMACKFS)+1)) {
-			*tmp = '\0';
-			break;
-		}
-	}
-
-	if (num > 0)
-		verify_smackfs_mnt(p);
-
-out:
-	free(buf);
-	if (fp)
-		fclose(fp);
-	return;
-}
-
-static void init_lib(void) __attribute__ ((constructor));
-static void init_lib(void)
-{
-	init_smackmnt();
 }
 
 static void fini_lib(void) __attribute__ ((destructor));
