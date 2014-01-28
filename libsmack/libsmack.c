@@ -20,7 +20,6 @@
  * 02110-1301 USA
  */
 
-#include <search.h>
 #include "sys/smack.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -78,6 +77,12 @@ struct smack_label {
 	int len;
 	int id;
 	char *label;
+	struct smack_label *next;
+};
+
+struct smack_hash_entry {
+	struct smack_label *first;
+	struct smack_label *last;
 };
 
 struct smack_accesses {
@@ -86,7 +91,7 @@ struct smack_accesses {
 	struct smack_rule *first;
 	struct smack_rule *last;
 	struct smack_label **labels;
-	struct hsearch_data *htab;
+	struct smack_hash_entry *label_hash;
 };
 
 struct cipso_mapping {
@@ -108,7 +113,7 @@ static int open_smackfs_file(const char *long_name, const char *short_name,
 static int accesses_apply(struct smack_accesses *handle, int clear);
 static int accesses_print(struct smack_accesses *handle, int clear,
 			  int load_fd, int change_fd, int use_long, int add_lf);
-static inline ssize_t get_label(char *dest, const char *src);
+static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
 static struct smack_label *label_add(struct smack_accesses *handle, const char *src);
@@ -123,16 +128,13 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	result->labels = malloc(DICT_HASH_SIZE * sizeof(struct smack_label *));
 	if (result->labels == NULL)
 		goto err_out;
-	result->htab = calloc(1, sizeof(struct hsearch_data));
-	if (result->htab == NULL)
-		goto err_out;
-	if (hcreate_r(DICT_HASH_SIZE, result->htab) == 0)
+	result->label_hash = calloc(DICT_HASH_SIZE, sizeof(struct smack_hash_entry));
+	if (result->label_hash == NULL)
 		goto err_out;
 	*accesses = result;
 	return 0;
 
 err_out:
-	free(result->htab);
 	free(result->labels);
 	free(result);
 	return -1;
@@ -158,8 +160,7 @@ void smack_accesses_free(struct smack_accesses *handle)
 		rule = next_rule;
 	}
 
-	hdestroy_r(handle->htab);
-	free(handle->htab);
+	free(handle->label_hash);
 	free(handle->labels);
 	free(handle);
 }
@@ -313,8 +314,8 @@ int smack_have_access(const char *subject, const char *object,
 	if (init_smackfs_mnt())
 		return -1;
 
-	slen = get_label(NULL, subject);
-	olen = get_label(NULL, object);
+	slen = get_label(NULL, subject, NULL);
+	olen = get_label(NULL, object, NULL);
 
 	if (slen < 0 || olen < 0)
 		return -1;
@@ -465,7 +466,7 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		if (level == NULL)
 			goto err_out;
 
-		val  = get_label(mapping->label, label);
+		val  = get_label(mapping->label, label, NULL);
 		if (val < 0)
 			goto err_out;
 		if (val > SHORT_LABEL_LEN)
@@ -591,7 +592,7 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	if (result == NULL)
 		return -1;
 
-	ret = get_label(result, buf);
+	ret = get_label(result, buf, NULL);
 	if (ret < 0) {
 		free(result);
 		return -1;
@@ -607,7 +608,7 @@ int smack_set_label_for_self(const char *label)
 	int fd;
 	int ret;
 
-	len = get_label(NULL, label);
+	len = get_label(NULL, label, NULL);
 	if (len < 0)
 		return -1;
 
@@ -630,7 +631,7 @@ int smack_revoke_subject(const char *subject)
 	if (init_smackfs_mnt())
 		return -1;
 
-	len = get_label(NULL, subject);
+	len = get_label(NULL, subject, NULL);
 	if (len < 0)
 		return -1;
 
@@ -767,9 +768,10 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	return 0;
 }
 
-static inline ssize_t get_label(char *dest, const char *src)
+static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash)
 {
 	int i;
+	unsigned int h = 5381;/*DJB2 hashing function magic number*/;
 
 	if (!src || src[0] == '\0' || src[0] == '-')
 		return -1;
@@ -789,10 +791,17 @@ static inline ssize_t get_label(char *dest, const char *src)
 
 		if (dest)
 			dest[i] = src[i];
+		if (hash)
+			/* This efficient hash function,
+			 * created by Daniel J. Bernstein,
+			 * is known as DJB2 algorithm */
+			h = (h << 5) + h + src[i];
 	}
 
 	if (dest && i < (SMACK_LABEL_LEN + 1))
 		dest[i] = '\0';
+	if (hash)
+		*hash = h % DICT_HASH_SIZE;
 
 	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
 }
@@ -850,27 +859,31 @@ static inline void access_code_to_str(unsigned int code, char *str)
 	str[6] = '\0';
 }
 
+static inline struct smack_label *
+is_label_known(struct smack_accesses *handle, const char *label, int hash)
+{
+	struct smack_label *lab = handle->label_hash[hash].first;
+	while (lab != NULL && strcmp(label, lab->label) != 0)
+		lab = lab->next;
+	return lab;
+}
+
 static struct smack_label *label_add(struct smack_accesses *handle, const char *label)
 {
-	ENTRY e, *ep;
+	struct smack_hash_entry *hash_entry;
+	unsigned int hash_value = 0;
 	struct smack_label *new_label;
 	int len;
-	int search;
 
 	if (handle->labels_cnt == DICT_HASH_SIZE)
 		return NULL;
 
-	len = get_label(NULL, label);
+	len = get_label(NULL, label, &hash_value);
 	if (len == -1)
 		return NULL;
 
-	e.key =  (char *)label;
-	e.data = NULL;
-
-	search = hsearch_r(e, ENTER, &ep, handle->htab);
-	if (search == 0)
-		return NULL;
-	if (ep->data == NULL) {/*new entry added*/
+	new_label = is_label_known(handle, label, hash_value);
+	if (new_label == NULL) {/*no entry added yet*/
 		new_label = malloc(sizeof(struct smack_label));
 		if (new_label == NULL)
 			return NULL;
@@ -881,10 +894,17 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 		memcpy(new_label->label, label, len + 1);
 		new_label->id = handle->labels_cnt;
 		new_label->len = len;
+		new_label->next = NULL;
+		hash_entry = &(handle->label_hash[hash_value]);
+		if (hash_entry->first == NULL) {
+			hash_entry->first = new_label;
+			hash_entry->last = new_label;
+		} else {
+			hash_entry->last->next = new_label;
+			hash_entry->last = new_label;
+		}
 		handle->labels[handle->labels_cnt++] = new_label;
-		ep->key = new_label->label;
-		ep->data = new_label;
 	}
 
-	return ep->data;
+	return new_label;
 }
