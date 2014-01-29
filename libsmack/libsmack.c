@@ -385,9 +385,8 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 
 	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
-		snprintf(buf, SMACK_LABEL_LEN + 1, use_long ? "%s" : "%-23s",
-			 m->label);
-		offset = strlen(buf) + 1;
+		offset = (int)snprintf(buf, SMACK_LABEL_LEN + 1, 
+		     use_long ? "%s " : "%-23s ", m->label);
 
 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
 		offset += NUM_LEN;
