@@ -3,16 +3,31 @@
 #include <string.h>
 
 struct label {
-	char *label;
-	int counter;
-	char *rules;
+	char *label;	/* the label */
+	int counter;	/* count of emitted occurences of the label within rules */
+	char *rules;	/* indicator of the object referenced by this subject label in emitted rules */
 };
 
+/*
+ * Returns a new random number from 0 to 'count'-1.
+ * 
+ * Examples:
+ * 	alea(5) -> 2
+ * 	alea(5) -> 0
+ */
 int alea(int count)
 {
 	return random() % count;
 }
 
+/*
+ * Returns the count of bits set to one in
+ * the number 'n'.
+ * 
+ * Examples:
+ * 	count_set_bits(30) -> 4
+ * 	count_set_bits(5) -> 1
+ */
 int count_set_bits(int n)
 {
 	int result = 0;
@@ -23,6 +38,18 @@ int count_set_bits(int n)
 	return result;
 }
 
+/*
+ * Gets a random access code such that
+ * result & 'ref' == 0.
+ * 
+ * This coulded be coded as: return alea(1<<6) & ~ref;
+ * but using the algorithm below may improves
+ * the randomness (perhaps).
+ * 
+ * Examples:
+ * 	random_code(0) -> 17 == 021
+ * 	random_code(17) -> 44 == 054
+ */
 int random_code(int ref)
 {
 	int nb = 6 - count_set_bits(ref);
@@ -41,6 +68,14 @@ int random_code(int ref)
 	return result;
 }
 
+/*
+ * Anti NULL pointer barrier.
+ * 
+ * Returns the given pointer except if that pointer is NULL
+ * in which case a message is prompted to stderr stating
+ * the memory depletion and the program is exited with
+ * a return code of 1.
+ */
 void *check_ptr(void *ptr)
 {
 	if (!ptr) {
@@ -50,14 +85,23 @@ void *check_ptr(void *ptr)
 	return ptr;
 }
 
+/*
+ * Generates an array of 'count' labels randomly generated.
+ * The generated labels have from 'lenmin' to 'lenmax' characters.
+ * They are only alphabetics then valid for Smack.
+ * 
+ * Returns: the generated array. For each label, the structure
+ * is initialised such that .count==0 and .rules[0..'count'-1]==0.
+ */
 struct label *gen_labels(int count, int lenmin, int lenmax)
 {
 	struct label *result;
 	int i;
+
 	result = check_ptr(calloc(count, sizeof(struct label)));
 	for (i = 0; i < count; i++) {
 		int len = lenmin + (lenmin == lenmax ? 0 : alea(lenmax-lenmin));
-		result[i].label = check_ptr(calloc(1+len, 1));
+		result[i].label = check_ptr(calloc(1 + len, 1));
 		while (len)
 			result[i].label[--len] = 'A' + (char)(alea(26));
 		result[i].rules = check_ptr(calloc(count, sizeof(char)));
@@ -66,6 +110,14 @@ struct label *gen_labels(int count, int lenmin, int lenmax)
 	return result;
 }
 
+/*
+ * Reads the array of 'count' labels from stdin.
+ * No check is performed on labels then there is no
+ * guaranty of validity for Smack.
+ * 
+ * Returns: the read array. For each label, the structure
+ * is initialised such that .count==0 and .rules[0..'count'-1]==0.
+ */
 struct label *read_labels(int count)
 {
 	struct label *result;
@@ -75,13 +127,26 @@ struct label *read_labels(int count)
 	result = check_ptr(calloc(count, sizeof(struct label)));
 	for (i = 0; i < count; i++) {
 		tmp = getline(&(result[i].label), &tmp, stdin);
-		result[i].label[tmp-1] = 0;
+		result[i].label[tmp - 1] = 0;
 		result[i].rules = check_ptr(calloc(count, sizeof(char)));
 	}
 
 	return result;
 }
 
+/*
+ * Computes into 'buffer' the string corresponding to the
+ * given access 'code'. No null character is appended at
+ * the end of the generated string.
+ * 
+ * The 'buffer' MUST have at least 6 characters.
+ * 
+ * Returns the length of the string generated.
+ * 
+ * Examples:
+ * 	code_to_string(5) -> 2, "rx"
+ * 	code_to_string(19) -> 3, "rwt"
+ */
 int code_to_string(int code, char *buffer)
 {
 	static char *flags = "rwxatl";
@@ -98,6 +163,14 @@ int code_to_string(int code, char *buffer)
 	return len;
 }
 
+/*
+ * Generates an array of 'count' access rights randomly generated.
+ * 
+ * Statistically 1/3 of the generated rights are modification rights
+ * and 2/3 are setting rights.
+ * 
+ * Returns: the generated array.
+ */
 char **genrights(int count)
 {
 	char buffer[20];
@@ -116,6 +189,19 @@ char **genrights(int count)
 	return result;
 }
 
+/*
+ * Chooses randomly a subject label within the array of 'labels' that have
+ * 'nlab' elements with the constraint that a label cant be choosen
+ * more than 'max_reoccurance' times.
+ * 
+ * If the constraint can't be ensured, a message is prompted to stderr
+ * and the program exited with the status 1.
+ * 
+ * The field .counter is read to know the count of previous occurence
+ * for the labels.
+ * 
+ * Returns: the index of the selected label within 'labels'.
+ */
 int pick_subj_label(struct label *labels, int nlab, int max_reoccurance)
 {
 	int startidx = alea(nlab);
@@ -133,7 +219,32 @@ int pick_subj_label(struct label *labels, int nlab, int max_reoccurance)
 	return idx;
 }
 
-
+/*
+ * Chooses randomly an object label associated to the nominal subject
+ * label of index *'subj' within the array of 'labels' that have
+ * 'nlab' elements with the constraints that:
+ *  - a label can't be choosen more than 'max_reoccurance' times
+ *  - the subject index is nominaly *'subj'
+ * 
+ * The subject is nominaly of index *'subj' what means that is the
+ * constraint of occurences can't be achieved with that nominal
+ * subject, an other subject is tried for use.
+ * 
+ * If the constraint can't be ensured, a message is prompted to stderr
+ * and the program exited with the status 1.
+ * 
+ * The field .counter is read to know the count of previous occurence
+ * for the labels (object or subject).
+ * 
+ * The array labels[idxsub].rules[idxobj] is read to check is the
+ * rule was already given.
+ * 
+ * When the pair (subject, object) is found, the related occurence
+ * data of 'labels' are updated as a side effect.
+ * 
+ * Returns: the index of the selected object label within 'labels' and
+ * the index of the finally selected subject label in *'subj'.
+ */
 int pick_obj_label(struct label *labels, int nlab, int max_reoccurance, int *subj)
 {
 	int startidx = alea(nlab);
@@ -163,6 +274,7 @@ int pick_obj_label(struct label *labels, int nlab, int max_reoccurance, int *sub
 	return idx;
 }
 
+/* main */
 int main(int argc, char **argv)
 {
 	int lab_cnt = 500;
@@ -173,6 +285,8 @@ int main(int argc, char **argv)
 	int lab_stdin = 0;
 	struct label *labels;
 	char **rights;
+
+	/* read options */
 	while (*++argv) {
 		char c;
 		int n;
@@ -200,11 +314,15 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 	}
+
+	/* create data: labels and rights */
 	if (lab_stdin)
 		labels = read_labels(lab_cnt);
 	else
 		labels = gen_labels(lab_cnt, 4, 24);
 	rights = genrights(rig_cnt);
+
+	/* generate the rules */
 	while (rul_cnt--) {
 		int sub = pick_subj_label(labels, lab_cnt, lab_max);
 		int obj = pick_obj_label(labels, lab_cnt, lab_max, &sub);
