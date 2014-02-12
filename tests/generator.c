@@ -127,7 +127,7 @@ int pick_subj_label(struct label *labels, int nlab, int max_reoccurance)
 		idx %= nlab;
 		if (repeat > nlab) {
 			fprintf(stderr, "Wrong parameters");
-			exit(-1);
+			exit(1);
 		}
 	}
 	return idx;
@@ -151,7 +151,7 @@ int pick_obj_label(struct label *labels, int nlab, int max_reoccurance, int *sub
 			repeat_subj++;
 			if (repeat_subj > nlab) {
 				fprintf(stderr, "Wrong parameters");
-				exit(-1);
+				exit(1);
 			} else
 				repeat = 0;
 		}
