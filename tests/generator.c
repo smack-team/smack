@@ -8,7 +8,7 @@ struct label {
 	char *rules;
 };
 
-int r(int count)
+int alea(int count)
 {
 	return random() % count;
 }
@@ -26,7 +26,7 @@ int count_set_bits(int n)
 int random_code(int ref)
 {
 	int nb = 6 - count_set_bits(ref);
-	int b = r(1 << nb);
+	int b = alea(1 << nb);
 	int iter = 1;
 	int result = 0;
 	while (nb) {
@@ -56,10 +56,10 @@ struct label *gen_labels(int count, int lenmin, int lenmax)
 	int i;
 	result = check_ptr(calloc(count, sizeof(struct label)));
 	for (i = 0; i < count; i++) {
-		int len = lenmin + (lenmin == lenmax ? 0 : r(lenmax-lenmin));
+		int len = lenmin + (lenmin == lenmax ? 0 : alea(lenmax-lenmin));
 		result[i].label = check_ptr(calloc(1+len, 1));
 		while (len)
-			result[i].label[--len] = 'A' + (char)(r(26));
+			result[i].label[--len] = 'A' + (char)(alea(26));
 		result[i].rules = check_ptr(calloc(count, sizeof(char)));
 	}
 
@@ -107,7 +107,7 @@ char **genrights(int count)
 	for (i = 0; i < count; i++) {
 		int allow = random_code(0);
 		int len = code_to_string(allow, buffer);
-		if (!r(3)) {
+		if (!alea(3)) {
 			buffer[len++] = ' ';
 			len += code_to_string(random_code(allow), buffer + len);
 		}
@@ -118,7 +118,7 @@ char **genrights(int count)
 
 int pick_subj_label(struct label *labels, int nlab, int max_reoccurance)
 {
-	int startidx = r(nlab);
+	int startidx = alea(nlab);
 	int repeat = 0;
 	int idx = startidx;
 	while (labels[idx].counter >= max_reoccurance) {
@@ -136,7 +136,7 @@ int pick_subj_label(struct label *labels, int nlab, int max_reoccurance)
 
 int pick_obj_label(struct label *labels, int nlab, int max_reoccurance, int *subj)
 {
-	int startidx = r(nlab);
+	int startidx = alea(nlab);
 	int repeat = 0;
 	int repeat_subj = 0;
 	int idx = startidx;
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 		int obj = pick_obj_label(labels, lab_cnt, lab_max, &sub);
 		int i;
 		for (i = 0; i <= mer_cnt; i++)
-			printf("%s %s %s\n", labels[sub].label, labels[obj].label, rights[r(rig_cnt)]);
+			printf("%s %s %s\n", labels[sub].label, labels[obj].label, rights[alea(rig_cnt)]);
 	}
 	return 0;
 }
