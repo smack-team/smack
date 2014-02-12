@@ -3,8 +3,8 @@ all: policies
 clean:
 	rm -rf ./out ./generator
 
-generator: gen.c
-	gcc gen.c -o ./generator
+generator: generator.c
+	gcc generator.c -o ./generator
 
 policies: ./generator ./make_policies.bash
 	./make_policies.bash ./generator
