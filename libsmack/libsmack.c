@@ -59,6 +59,7 @@
 #define ACCESS_TYPE_L 0x20
 
 #define DICT_HASH_SIZE 4096
+#define MAX_LABELS_CNT (UINT16_MAX + 1)
 
 extern char *smackfs_mnt;
 extern int smackfs_mnt_dirfd;
@@ -68,14 +69,14 @@ extern int init_smackfs_mnt(void);
 struct smack_rule {
 	int8_t allow_code;
 	int8_t deny_code;
-	int subject_id;
-	int object_id;
+	uint16_t subject_id;
+	uint16_t object_id;
 	struct smack_rule *next;
 };
 
 struct smack_label {
-	int len;
-	int id;
+	uint8_t len;
+	uint16_t id;
 	char *label;
 	struct smack_label *next;
 };
@@ -876,6 +877,9 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 	unsigned int hash_value = 0;
 	struct smack_label *new_label;
 	int len;
+
+	if (handle->labels_cnt == MAX_LABELS_CNT)
+		return NULL;
 
 	len = get_label(NULL, label, &hash_value);
 	if (len == -1)
