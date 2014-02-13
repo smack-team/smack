@@ -48,7 +48,11 @@ do
 			"$generator" l=$l u=$u L=$L m=$m $I < $in | shuf > $outfile
 
 			#for merged policy make additionally sorted policy
-			test $m -eq 1 && cat $outfile | sort > "$outdir""$type""$l""sorted" || true
+			if [ $m -eq 0 ]
+			then
+				echo generating "$outdir""$type""$l""sorted"
+				cat $outfile | sort > "$outdir""$type""$l""sorted"
+			fi
 			done;
 		fi
 	done
