@@ -161,7 +161,7 @@ int smack_accesses_clear(struct smack_accesses *handle)
 	return accesses_apply(handle, 1);
 }
 
-int accesses_add(struct smack_accesses *handle, const char *subject,
+static int accesses_add(struct smack_accesses *handle, const char *subject,
 		 const char *object, const char *allow_access_type,
 		 const char *deny_access_type)
 {
