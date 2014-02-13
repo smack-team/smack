@@ -274,6 +274,20 @@ int pick_obj_label(struct label *labels, int nlab, int max_reoccurance, int *sub
 	return idx;
 }
 
+/* displays the usage */
+void usage()
+{
+	fprintf(stderr,
+		"usage: gen [[lLrumi]=VALUE]... (where VALUE is a number >= 0)\n"
+		"      l: number of labels in policy, l>0\n"
+		"      L: maximal number of each label reoccurance in policy, L>0\n"
+		"      u: number of unique rules (rules with different subject,object pair), u>0\n"
+		"      m: number of merges per each unique rule, m>=0\n"
+		"      r: number of different rights generated randomly, r>0\n"
+		"      i: i=0: generate labels, i>0: read labels from stdio, 0 by default\n"
+	);
+}
+
 /* main */
 int main(int argc, char **argv)
 {
@@ -303,14 +317,7 @@ int main(int argc, char **argv)
 			case 'i': lab_stdin = n; break;
 			}
 		} else {
-			fprintf(stderr, "usage: gen [[lLrumi]=VALUE]... (where VALUE is a number >= 0)\n");
-			fprintf(stderr, "      l: number of labels in policy, l>0\n");
-			fprintf(stderr, "      L: maximal number of each label reoccurance in policy, L>0\n");
-			fprintf(stderr, "      u: number of unique rules (rules with different subject,object pair), u>0\n");
-			fprintf(stderr, "      m: number of merges per each unique rule, m>=0\n");
-			fprintf(stderr, "      r: number of different rights generated randomly, r>0\n");
-			fprintf(stderr, "      i: i=0: generate labels, i>0: read labels from stdio, 0 by default\n");
-
+			usage();
 			exit(1);
 		}
 	}
