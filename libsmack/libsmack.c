@@ -58,6 +58,8 @@
 #define ACCESS_TYPE_T 0x10
 #define ACCESS_TYPE_L 0x20
 
+#define ACCESS_TYPE_ALL ((1 << ACC_LEN) - 1)
+
 #define DICT_HASH_SIZE 4096
 #define MAX_LABELS_CNT (UINT16_MAX + 1)
 
@@ -216,7 +218,7 @@ static int accesses_add(struct smack_accesses *handle, const char *subject,
 		if (rule->deny_code == -1)
 			goto err_out;
 	} else
-		rule->deny_code = -1; /* no modify */
+		rule->deny_code = ACCESS_TYPE_ALL & ~rule->allow_code;
 
 	if (subject_label->first_rule == NULL) {
 		subject_label->first_rule = subject_label->last_rule = rule;
@@ -720,15 +722,15 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	for (x = 0; x < handle->labels_cnt; ++x) {
 		subject_label = handle->labels[x];
 		for (rule = subject_label->first_rule; rule != NULL; rule = rule->next_rule) {
-			/* Fail immediately without doing any further processing
-			   if modify rules are not supported. */
-			if (rule->deny_code >= 0 && change_fd < 0)
-				return -1;
-
 			object_label = handle->labels[rule->object_id];
 			access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
 
-			if (rule->deny_code != -1 && !clear) {
+			if ((rule->allow_code | rule->deny_code) != ACCESS_TYPE_ALL && !clear) {
+				/* Fail immediately without doing any further processing
+				   if modify rules are not supported. */
+				if (change_fd < 0)
+					return -1;
+
 				access_code_to_str(rule->deny_code, deny_str);
 
 				fd = change_fd;
