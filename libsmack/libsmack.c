@@ -69,16 +69,17 @@ extern int init_smackfs_mnt(void);
 struct smack_rule {
 	int8_t allow_code;
 	int8_t deny_code;
-	uint16_t subject_id;
 	uint16_t object_id;
-	struct smack_rule *next;
+	struct smack_rule *next_rule;
 };
 
 struct smack_label {
 	uint8_t len;
 	uint16_t id;
 	char *label;
-	struct smack_label *next;
+	struct smack_rule *first_rule;
+	struct smack_rule *last_rule;
+	struct smack_label *next_label;
 };
 
 struct smack_hash_entry {
@@ -89,8 +90,6 @@ struct smack_hash_entry {
 struct smack_accesses {
 	int has_long;
 	int labels_cnt;
-	struct smack_rule *first;
-	struct smack_rule *last;
 	int labels_alloc;
 	struct smack_label **labels;
 	struct smack_hash_entry *label_hash;
@@ -145,22 +144,22 @@ err_out:
 
 void smack_accesses_free(struct smack_accesses *handle)
 {
-	struct smack_rule *rule = handle->first;
-	struct smack_rule *next_rule = NULL;
+	struct smack_rule *rule;
+	struct smack_rule *next_rule;
 	int i;
 
 	if (handle == NULL)
 		return;
 
 	for (i = 0; i < handle->labels_cnt; ++i) {
+		rule = handle->labels[i]->first_rule;
+		while (rule != NULL) {
+			next_rule = rule->next_rule;
+			free(rule);
+			rule = next_rule;
+		}
 		free(handle->labels[i]->label);
 		free(handle->labels[i]);
-	}
-
-	while (rule != NULL) {
-		next_rule = rule->next;
-		free(rule);
-		rule = next_rule;
 	}
 
 	free(handle->label_hash);
@@ -207,7 +206,6 @@ static int accesses_add(struct smack_accesses *handle, const char *subject,
 		handle->has_long = 1;
 
 	rule->object_id = object_label->id;
-	rule->subject_id = subject_label->id;
 
 	rule->allow_code = str_to_access_code(allow_access_type);
 	if (rule->allow_code == -1)
@@ -220,11 +218,11 @@ static int accesses_add(struct smack_accesses *handle, const char *subject,
 	} else
 		rule->deny_code = -1; /* no modify */
 
-	if (handle->first == NULL) {
-		handle->first = handle->last = rule;
+	if (subject_label->first_rule == NULL) {
+		subject_label->first_rule = subject_label->last_rule = rule;
 	} else {
-		handle->last->next = rule;
-		handle->last = rule;
+		subject_label->last_rule->next_rule = rule;
+		subject_label->last_rule = rule;
 	}
 
 	return 0;
@@ -713,58 +711,56 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	int ret;
 	int fd;
 	int i;
+	int x;
 	int cnt;
 
 	if (!use_long && handle->has_long)
 		return -1;
 
-	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		/* Fail immediately without doing any further processing
-		   if modify rules are not supported. */
-		if (rule->deny_code >= 0 && change_fd < 0)
-			return -1;
-
-		subject_label = handle->labels[rule->subject_id];
-		object_label = handle->labels[rule->object_id];
-		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
-
-		if (rule->deny_code != -1 && !clear) {
-			access_code_to_str(rule->deny_code, deny_str);
-
-			fd = change_fd;
-			cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-				       subject_label->label,
-				       object_label->label,
-				       allow_str,
-				       deny_str);
-		} else {
-			fd = load_fd;
-			if (use_long)
-				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-					       subject_label->label,
-					       object_label->label,
-					       allow_str);
-			else {
-				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-					       subject_label->label,
-					       object_label->label,
-					       allow_str);
-			}
-		}
-
-		if (cnt < 0)
-			return -1;
-		if (add_lf)
-			buf[cnt++] = '\n';
-
-		for (i = 0; i < cnt; ) {
-			ret = write(fd, buf + i, cnt - i);
-			if (ret == -1) {
-				if (errno == EINTR)
-					continue;
+	for (x = 0; x < handle->labels_cnt; ++x) {
+		subject_label = handle->labels[x];
+		for (rule = subject_label->first_rule; rule != NULL; rule = rule->next_rule) {
+			/* Fail immediately without doing any further processing
+			   if modify rules are not supported. */
+			if (rule->deny_code >= 0 && change_fd < 0)
 				return -1;
+
+			object_label = handle->labels[rule->object_id];
+			access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
+
+			if (rule->deny_code != -1 && !clear) {
+				access_code_to_str(rule->deny_code, deny_str);
+
+				fd = change_fd;
+				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
+					subject_label->label, object_label->label,
+					allow_str, deny_str);
+			} else {
+				fd = load_fd;
+				if (use_long)
+					cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
+						subject_label->label, object_label->label,
+						allow_str);
+				else
+					cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+						subject_label->label, object_label->label,
+						allow_str);
 			}
-			i += ret;
+
+			if (cnt < 0)
+				return -1;
+			if (add_lf)
+				buf[cnt++] = '\n';
+
+			for (i = 0; i < cnt; ) {
+				ret = write(fd, buf + i, cnt - i);
+				if (ret == -1) {
+					if (errno == EINTR)
+						continue;
+					return -1;
+				}
+				i += ret;
+			}
 		}
 	}
 
@@ -867,7 +863,7 @@ is_label_known(struct smack_accesses *handle, const char *label, int hash)
 {
 	struct smack_label *lab = handle->label_hash[hash].first;
 	while (lab != NULL && strcmp(label, lab->label) != 0)
-		lab = lab->next;
+		lab = lab->next_label;
 	return lab;
 }
 
@@ -908,13 +904,15 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 		memcpy(new_label->label, label, len + 1);
 		new_label->id = handle->labels_cnt;
 		new_label->len = len;
-		new_label->next = NULL;
+		new_label->first_rule = NULL;
+		new_label->last_rule = NULL;
+		new_label->next_label = NULL;
 		hash_entry = &(handle->label_hash[hash_value]);
 		if (hash_entry->first == NULL) {
 			hash_entry->first = new_label;
 			hash_entry->last = new_label;
 		} else {
-			hash_entry->last->next = new_label;
+			hash_entry->last->next_label = new_label;
 			hash_entry->last = new_label;
 		}
 		handle->labels[handle->labels_cnt++] = new_label;
