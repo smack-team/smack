@@ -68,9 +68,16 @@ extern int smackfs_mnt_dirfd;
 
 extern int init_smackfs_mnt(void);
 
+union smack_perm {
+	struct {
+		int8_t allow_code;
+		int8_t deny_code;
+	};
+	uint16_t allow_deny_code;
+};
+
 struct smack_rule {
-	int8_t allow_code;
-	int8_t deny_code;
+	union smack_perm perm;
 	uint16_t object_id;
 	struct smack_rule *next_rule;
 };
@@ -209,16 +216,16 @@ static int accesses_add(struct smack_accesses *handle, const char *subject,
 
 	rule->object_id = object_label->id;
 
-	rule->allow_code = str_to_access_code(allow_access_type);
-	if (rule->allow_code == -1)
+	rule->perm.allow_code = str_to_access_code(allow_access_type);
+	if (rule->perm.allow_code == -1)
 		goto err_out;
 
 	if (deny_access_type != NULL) {
-		rule->deny_code = str_to_access_code(deny_access_type);
-		if (rule->deny_code == -1)
+		rule->perm.deny_code = str_to_access_code(deny_access_type);
+		if (rule->perm.deny_code == -1)
 			goto err_out;
 	} else
-		rule->deny_code = ACCESS_TYPE_ALL & ~rule->allow_code;
+		rule->perm.deny_code = ACCESS_TYPE_ALL & ~rule->perm.allow_code;
 
 	if (subject_label->first_rule == NULL) {
 		subject_label->first_rule = subject_label->last_rule = rule;
@@ -710,30 +717,66 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	struct smack_label *subject_label;
 	struct smack_label *object_label;
 	struct smack_rule *rule;
+	union smack_perm *perm;
+	union smack_perm *merge_perms = NULL;
+	uint16_t *merge_object_ids = NULL;
+	int merge_cnt;
 	int ret;
 	int fd;
 	int i;
 	int x;
+	int y;
 	int cnt;
 
 	if (!use_long && handle->has_long)
 		return -1;
 
+	merge_perms = calloc(handle->labels_cnt, sizeof(*merge_perms));
+	if (merge_perms == NULL) {
+		ret = -1;
+		goto out;
+	}
+
+	merge_object_ids = malloc(handle->labels_cnt * sizeof(*merge_object_ids));
+	if (merge_object_ids == NULL) {
+		ret = -1;
+		goto out;
+	}
+
 	for (x = 0; x < handle->labels_cnt; ++x) {
 		subject_label = handle->labels[x];
+		merge_cnt = 0;
 		for (rule = subject_label->first_rule; rule != NULL; rule = rule->next_rule) {
-			object_label = handle->labels[rule->object_id];
-			access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
+			perm = &merge_perms[rule->object_id];
+			if (perm->allow_deny_code == 0)
+				merge_object_ids[merge_cnt++] = rule->object_id;
 
-			if ((rule->allow_code | rule->deny_code) != ACCESS_TYPE_ALL && !clear) {
+			if (clear) {
+				perm->allow_code = 0;
+				perm->deny_code  = ACCESS_TYPE_ALL;
+			} else {
+				perm->allow_code |=  rule->perm.allow_code;
+				perm->allow_code &= ~rule->perm.deny_code;
+				perm->deny_code  &= ~rule->perm.allow_code;
+				perm->deny_code  |=  rule->perm.deny_code;
+			}
+		}
+
+		for (y = 0; y < merge_cnt; ++y) {
+			object_label = handle->labels[merge_object_ids[y]];
+			perm = &merge_perms[object_label->id];
+			access_code_to_str(perm->allow_code, allow_str);
+
+			if ((perm->allow_code | perm->deny_code) != ACCESS_TYPE_ALL) {
 				/* Fail immediately without doing any further processing
 				   if modify rules are not supported. */
-				if (change_fd < 0)
-					return -1;
-
-				access_code_to_str(rule->deny_code, deny_str);
+				if (change_fd < 0) {
+					ret = -1;
+					goto out;
+				}
 
 				fd = change_fd;
+				access_code_to_str(perm->deny_code, deny_str);
 				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
 					subject_label->label, object_label->label,
 					allow_str, deny_str);
@@ -748,9 +791,12 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 						subject_label->label, object_label->label,
 						allow_str);
 			}
+			perm->allow_deny_code = 0;
 
-			if (cnt < 0)
-				return -1;
+			if (cnt < 0) {
+				ret = -1;
+				goto out;
+			}
 			if (add_lf)
 				buf[cnt++] = '\n';
 
@@ -759,14 +805,18 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 				if (ret == -1) {
 					if (errno == EINTR)
 						continue;
-					return -1;
+					goto out;
 				}
 				i += ret;
 			}
 		}
 	}
+	ret = 0;
 
-	return 0;
+out:
+	free(merge_perms);
+	free(merge_object_ids);
+	return ret;
 }
 
 static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash)
