@@ -1,12 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-struct label {
-	char *label;	/* the label */
-	int counter;	/* count of emitted occurences of the label within rules */
-	char *rules;	/* indicator of the object referenced by this subject label in emitted rules */
-};
+#include <limits.h>
 
 /*
  * Returns a new random number from 0 to 'count'-1.
@@ -88,27 +83,34 @@ void *check_ptr(void *ptr)
 }
 
 /*
+ * auxilliary function to sort arrays of strings with qsort
+ */
+int qsort_aux_strings(const void *a, const void *b)
+{
+	return strcmp(*(const char const * const *)a, *(const char const * const *)b);
+}
+
+/*
  * Generates an array of 'count' labels randomly generated.
  * The generated labels have from 'lenmin' to 'lenmax' characters.
  * They are only alphabetics then valid for Smack.
  * 
- * Returns: the generated array. For each label, the structure
- * is initialised such that .count==0 and .rules[0..'count'-1]==0.
+ * Returns: the generated array.
  */
-struct label *gen_labels(int count, int lenmin, int lenmax)
+char **gen_labels(int count, int lenmin, int lenmax)
 {
-	struct label *result;
+	char **result;
 	int i, len;
 
-	result = check_ptr(calloc(count, sizeof(struct label)));
+	result = check_ptr(calloc(count, sizeof*result));
 	for (i = 0; i < count; i++) {
 		len = lenmin + (lenmin == lenmax ? 0 : alea(lenmax-lenmin));
-		result[i].label = check_ptr(calloc(1 + len, 1));
+		result[i] = check_ptr(calloc(1 + len, 1));
 		while (len)
-			result[i].label[--len] = 'A' + (char)(alea(26));
-		result[i].rules = check_ptr(calloc(count, sizeof(char)));
+			result[i][--len] = 'A' + (char)(alea(26));
 	}
 
+	qsort(result, count, sizeof * result, qsort_aux_strings);
 	return result;
 }
 
@@ -117,20 +119,18 @@ struct label *gen_labels(int count, int lenmin, int lenmax)
  * No check is performed on labels then there is no
  * guaranty of validity for Smack.
  * 
- * Returns: the read array. For each label, the structure
- * is initialised such that .count==0 and .rules[0..'count'-1]==0.
+ * Returns: the read array.
  */
-struct label *read_labels(int count)
+char **read_labels(int count)
 {
-	struct label *result;
+	char **result;
 	int i;
 	size_t tmp;
 
-	result = check_ptr(calloc(count, sizeof(struct label)));
+	result = check_ptr(calloc(count, sizeof*result));
 	for (i = 0; i < count; i++) {
-		tmp = getline(&(result[i].label), &tmp, stdin);
-		result[i].label[tmp - 1] = 0;
-		result[i].rules = check_ptr(calloc(count, sizeof(char)));
+		tmp = getline(&(result[i]), &tmp, stdin);
+		result[i][tmp - 1] = 0;
 	}
 
 	return result;
@@ -169,13 +169,12 @@ int code_to_string(int code, char *buffer)
 
 /*
  * Generates an array of 'count' access rights randomly generated.
- * 
- * Statistically 1/3 of the generated rights are modification rights
- * and 2/3 are setting rights.
+ * 'permodif' indicates what percentage of the rights should be
+ * modification rights.
  * 
  * Returns: the generated array.
  */
-char **genrights(int count)
+char **genrights(int count, int permodif)
 {
 	char buffer[20];
 	char **result;
@@ -185,7 +184,7 @@ char **genrights(int count)
 	for (i = 0; i < count; i++) {
 		allow = random_code(0);
 		len = code_to_string(allow, buffer);
-		if (!alea(3)) {
+		if (permodif > alea(100)) {
 			buffer[len++] = ' ';
 			len += code_to_string(random_code(allow), buffer + len);
 		}
@@ -196,92 +195,105 @@ char **genrights(int count)
 }
 
 /*
- * Chooses randomly a subject label within the array of 'labels' that have
- * 'nlab' elements with the constraint that a label cant be choosen
- * more than 'max_reoccurance' times.
- * 
- * If the constraint can't be ensured, a message is prompted to stderr
- * and the program exited with the status 1.
- * 
- * The field .counter is read to know the count of previous occurence
- * for the labels.
- * 
- * Returns: the index of the selected label within 'labels'.
+ * Generate the set of 'nrules' rules for 'nlab' labels with
+ * the constraint that each label is used a maximum count of
+ * 'maxoccur' times (either as subject or as label). The result
+ * is sorted unless 'shuffle' is set to a non zero value.
+ *
+ * The rules are generated as integers for the rule of value
+ * R, the index of the subject is R/'nlab' and the object index
+ * is R%'nlab'. (note: subject and object are exchangeable).
+ *
+ * Returns: An array of 'nrules' integers encoding the generated
+ * rules encoded as explained above.
  */
-int pick_subj_label(struct label *labels, int nlab, int max_reoccurance)
+int *make_the_rules(int nlab, int maxoccur, int nrules, int shuffle)
 {
-	int startidx = alea(nlab);
-	int repeat = 0;
-	int idx = startidx;
+	int i, j, v, n, isubj, iobj, halfoccur, restoccur, offset;
+	int *result, *permut;
 
-	while (labels[idx].counter >= max_reoccurance) {
-		idx++;
-		repeat++;
-		idx %= nlab;
-		if (repeat > nlab) {
-			fprintf(stderr, "Wrong parameters");
-			exit(1);
-		}
+	/* check the ability to process such count of labels */
+	if (INT_MAX / nlab < nlab) {
+		fprintf(stderr, "Too many labels!!!! Sorry, I can't.\n");
+		exit(1);
 	}
 
-	return idx;
-}
-
-/*
- * Chooses randomly an object label associated to the nominal subject
- * label of index *'subj' within the array of 'labels' that have
- * 'nlab' elements with the constraints that:
- *  - a label can't be choosen more than 'max_reoccurance' times
- *  - the subject index is nominaly *'subj'
- * 
- * The subject is nominaly of index *'subj' what means that is the
- * constraint of occurences can't be achieved with that nominal
- * subject, an other subject is tried for use.
- * 
- * If the constraint can't be ensured, a message is prompted to stderr
- * and the program exited with the status 1.
- * 
- * The field .counter is read to know the count of previous occurence
- * for the labels (object or subject).
- * 
- * The array labels[idxsub].rules[idxobj] is read to check is the
- * rule was already given.
- * 
- * When the pair (subject, object) is found, the related occurence
- * data of 'labels' are updated as a side effect.
- * 
- * Returns: the index of the selected object label within 'labels' and
- * the index of the finally selected subject label in *'subj'.
- */
-int pick_obj_label(struct label *labels, int nlab, int max_reoccurance, int *subj)
-{
-	int startidx = alea(nlab);
-	int repeat = 0;
-	int repeat_subj = 0;
-	int idx = startidx;
-
-	while (labels[idx].counter >= ((*subj == idx) ? max_reoccurance - 1 : max_reoccurance) ||
-			labels[*subj].rules[idx] != 0) {
-		idx++;
-		repeat++;
-		idx %= nlab;
-		if (idx == startidx && repeat != 0) {
-			(*subj)++;
-			(*subj) %= nlab;
-			repeat_subj++;
-			if (repeat_subj > nlab) {
-				fprintf(stderr, "Wrong parameters");
-				exit(1);
-			} else
-				repeat = 0;
-		}
+	/* check the constraint */
+	if (maxoccur * nlab < 2 * nrules) {
+		fprintf(stderr, "The constraint can't be satisfied by nature.\n");
+		exit(1);
 	}
 
-	labels[*subj].counter++;
-	labels[idx].counter++;
-	labels[*subj].rules[idx] = 1;
+	/* allocate the result */
+	result = check_ptr(calloc(sizeof * result, (nlab * maxoccur) / 2));
 
-	return idx;
+	/* a permutation for shuffling */
+	if (shuffle) {
+		permut = check_ptr(calloc(sizeof * result, nlab));
+		for (i = 0 ; i < nlab ; i++)
+			permut[i] = i;
+		while(i) {
+			j = alea(i--);
+			v = permut[i];
+			permut[i] = permut[j];
+			permut[j] = v;
+		}
+	} else 
+		permut = NULL;
+
+	/* init the algo */
+	halfoccur = maxoccur / 2;
+	restoccur = maxoccur & 1;
+	if (halfoccur + restoccur == nlab) {
+		offset = 0;
+	} else {
+		offset = 1;
+	}
+
+	/* compute the raw result */
+	i = 0;
+	for (isubj = 0 ; isubj < nlab ; isubj++) {
+		iobj = (isubj + offset) % nlab;
+		n = halfoccur + (restoccur & isubj);
+		v = iobj + n - nlab;
+		if (v <= 0)
+			v = 0;
+		for (j = 0 ; j < n ; j++) {
+			result[i + v] = shuffle ? (permut[isubj] * nlab + permut[iobj])
+							: (isubj * nlab + iobj);
+			iobj = (iobj + 1) % nlab;
+			v = (v + 1) % n;
+		}
+		i += n;
+	}
+
+	/* frightened that algo is wrong */
+	if (i != (nlab * maxoccur) / 2) {
+		fprintf(stderr, "Internal error.\n");
+		exit(1);
+	}
+
+	if (shuffle) {
+		/* handle shuffling of the rules */
+		free(permut);
+		for (n = 3 ; n ; n--) {
+			i = (nlab * maxoccur) / 2;
+			while(i) {
+				j = alea(i--);
+				v = result[i];
+				result[i] = result[j];
+				result[j] = v;
+			}
+		}
+	} else if (nrules < i) {
+		/* reduce the count of rules while keeping it ordered */
+		for (n = 0, j = 0 ; j < i ; j++)
+			if (alea(i - j) < nrules - n)
+				result[n++] = result[j];
+	}
+
+
+	return result;
 }
 
 /* displays the usage */
@@ -295,22 +307,27 @@ void usage()
 		"      m: number of merges per each unique rule, m>=0\n"
 		"      r: number of different rights generated randomly, r>0\n"
 		"      i: i=0: generate labels, i>0: read labels from stdio, 0 by default\n"
+		"      s: shuffles or sort the result. s=0, default, sorts. s>0, shuffles.\n" 
+		"      p: percentage of modification rules, from 0 to 100, default: 33\n"
 	);
 }
 
 /* main */
 int main(int argc, char **argv)
 {
+	int shuffle = 0;
 	int lab_cnt = 500;
 	int rig_cnt = 100;
 	int rul_cnt = 500;
 	int lab_max = rul_cnt * 2;
 	int mer_cnt = 0;
 	int lab_stdin = 0;
+	int permodif = 33;
 
-	struct label *labels;
+	char **labels;
 	char **rights, c;
-	int n, i, sub, obj;
+	int n, r, m, sub, obj;
+	int *rules;
 
 	/* read options */
 	while (*++argv) {
@@ -321,10 +338,12 @@ int main(int argc, char **argv)
 			case 'u': rul_cnt = n; break;
 			case 'L': lab_max = n; break;
 			}
-		} else if (sscanf(*argv, "%1[mi]=%d", &c, &n) == 2 && n >= 0) {
+		} else if (sscanf(*argv, "%1[misp]=%d", &c, &n) == 2 && n >= 0) {
 			switch (c) {
 			case 'm': mer_cnt = n; break;
 			case 'i': lab_stdin = n; break;
+			case 's': shuffle = !!n; break;
+			case 'p': permodif = n; break;
 			}
 		} else {
 			usage();
@@ -337,14 +356,17 @@ int main(int argc, char **argv)
 		labels = read_labels(lab_cnt);
 	else
 		labels = gen_labels(lab_cnt, 4, 24);
-	rights = genrights(rig_cnt);
+	rights = genrights(rig_cnt, permodif);
 
 	/* generate the rules */
-	while (rul_cnt--) {
-		sub = pick_subj_label(labels, lab_cnt, lab_max);
-		obj = pick_obj_label(labels, lab_cnt, lab_max, &sub);
-		for (i = 0; i <= mer_cnt; i++)
-			printf("%s %s %s\n", labels[sub].label, labels[obj].label, rights[alea(rig_cnt)]);
+	rules = make_the_rules(lab_cnt, lab_max, rul_cnt, shuffle);
+	for (r = 0 ; r < rul_cnt ; r++) {
+		n = rules[r];
+		sub = n / lab_cnt;
+		obj = n % lab_cnt;
+		for (m = 0; m <= mer_cnt; m++)
+			printf("%s %s %s\n", labels[sub], labels[obj], rights[alea(rig_cnt)]);
 	}
+
 	return 0;
 }

@@ -4,7 +4,7 @@ clean:
 	rm -rf ./out ./generator
 
 generator: generator.c
-	gcc generator.c -o ./generator
+	gcc -Wall -O3 generator.c -o ./generator
 
 policies: ./generator ./make_policies.bash
 	./make_policies.bash ./generator

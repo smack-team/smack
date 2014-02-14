@@ -5,7 +5,7 @@ if [ $# -eq 2 ]
 then
 	test ! -f "$2" && echo "no such file: $2" && exit 1;
 	labs_cnt=`cat "$2" | wc -l`
-	I=i=1
+	I="i=1"
 	in="$2"
 
 elif [ $# -eq 1 ]
@@ -37,10 +37,10 @@ do
 			for type in min 2min log max
 			do
 			case $type in
-			min)  u=$((l/2)); L=1;;#minimal policy (each label occurs only once in policy)
-			2min) u=$l; L=2;;#another minimal policy (each label occurs twice in policy)
-			log) u=$((l*power)); L=$((power*2));;#medium sized policy (each label occurs 2log2(l) times in policy)
-			max) u=$((l*l));L=$((l*2));; #maximally dense policy (each label occurs l*2 times in policy)
+			min)  u=$((l/2)); L=1;; #minimal policy (each label occurs only once in policy)
+			2min) u=$l; L=2;; #another minimal policy (each label occurs twice in policy)
+			log) u=$((l*power)); L=$((power*2));; #medium sized policy (each label occurs 2log2(l) times in policy)
+			max) u=$((l*l)); L=$((l*2));; #maximally dense policy (each label occurs l*2 times in policy)
 			esac
 
 			outfile="$outdir""$type""$l""m$m"
@@ -51,7 +51,7 @@ do
 			if [ $m -eq 0 ]
 			then
 				echo generating "$outdir""$type""$l""sorted"
-				cat $outfile | sort > "$outdir""$type""$l""sorted"
+				sort  $outfile > "$outdir""$type""$l""sorted"
 			fi
 			done;
 		fi
