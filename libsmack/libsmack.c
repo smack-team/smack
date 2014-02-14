@@ -61,7 +61,6 @@
 #define ACCESS_TYPE_ALL ((1 << ACC_LEN) - 1)
 
 #define DICT_HASH_SIZE 4096
-#define MAX_LABELS_CNT (UINT16_MAX + 1)
 
 extern char *smackfs_mnt;
 extern int smackfs_mnt_dirfd;
@@ -78,13 +77,13 @@ union smack_perm {
 
 struct smack_rule {
 	union smack_perm perm;
-	uint16_t object_id;
+	int object_id;
 	struct smack_rule *next_rule;
 };
 
 struct smack_label {
 	uint8_t len;
-	uint16_t id;
+	int id;
 	char *label;
 	struct smack_rule *first_rule;
 	struct smack_rule *last_rule;
@@ -719,7 +718,7 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	struct smack_rule *rule;
 	union smack_perm *perm;
 	union smack_perm *merge_perms = NULL;
-	uint16_t *merge_object_ids = NULL;
+	int *merge_object_ids = NULL;
 	int merge_cnt;
 	int ret;
 	int fd;
@@ -925,9 +924,6 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 	unsigned int hash_value = 0;
 	struct smack_label *new_label;
 	int len;
-
-	if (handle->labels_cnt == MAX_LABELS_CNT)
-		return NULL;
 
 	len = get_label(NULL, label, &hash_value);
 	if (len == -1)
