@@ -101,6 +101,8 @@ struct smack_accesses {
 	int labels_alloc;
 	struct smack_label **labels;
 	struct smack_hash_entry *label_hash;
+	union smack_perm *merge_perms;
+	int *merge_object_ids;
 };
 
 struct cipso_mapping {
@@ -134,10 +136,18 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	result = calloc(1, sizeof(struct smack_accesses));
 	if (result == NULL)
 		return -1;
+
 	result->labels_alloc = 128;
-	result->labels = malloc(128 * sizeof(struct smack_label *));
+	result->labels = malloc(result->labels_alloc * sizeof(struct smack_label *));
 	if (result->labels == NULL)
 		goto err_out;
+	result->merge_perms = malloc(result->labels_alloc * sizeof(union smack_perm));
+	if (result->merge_perms == NULL)
+		goto err_out;
+	result->merge_object_ids = malloc(result->labels_alloc * sizeof(int));
+	if (result->merge_object_ids == NULL)
+		goto err_out;
+
 	result->label_hash = calloc(DICT_HASH_SIZE, sizeof(struct smack_hash_entry));
 	if (result->label_hash == NULL)
 		goto err_out;
@@ -145,6 +155,8 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	return 0;
 
 err_out:
+	free(result->merge_object_ids);
+	free(result->merge_perms);
 	free(result->labels);
 	free(result);
 	return -1;
@@ -171,6 +183,8 @@ void smack_accesses_free(struct smack_accesses *handle)
 	}
 
 	free(handle->label_hash);
+	free(handle->merge_object_ids);
+	free(handle->merge_perms);
 	free(handle->labels);
 	free(handle);
 }
@@ -717,8 +731,6 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	struct smack_label *object_label;
 	struct smack_rule *rule;
 	union smack_perm *perm;
-	union smack_perm *merge_perms = NULL;
-	int *merge_object_ids = NULL;
 	int merge_cnt;
 	int ret;
 	int fd;
@@ -730,25 +742,14 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	if (!use_long && handle->has_long)
 		return -1;
 
-	merge_perms = calloc(handle->labels_cnt, sizeof(*merge_perms));
-	if (merge_perms == NULL) {
-		ret = -1;
-		goto out;
-	}
-
-	merge_object_ids = malloc(handle->labels_cnt * sizeof(*merge_object_ids));
-	if (merge_object_ids == NULL) {
-		ret = -1;
-		goto out;
-	}
-
+	bzero(handle->merge_perms, handle->labels_cnt * sizeof(union smack_perm));
 	for (x = 0; x < handle->labels_cnt; ++x) {
 		subject_label = handle->labels[x];
 		merge_cnt = 0;
 		for (rule = subject_label->first_rule; rule != NULL; rule = rule->next_rule) {
-			perm = &merge_perms[rule->object_id];
+			perm = &(handle->merge_perms[rule->object_id]);
 			if (perm->allow_deny_code == 0)
-				merge_object_ids[merge_cnt++] = rule->object_id;
+				handle->merge_object_ids[merge_cnt++] = rule->object_id;
 
 			if (clear) {
 				perm->allow_code = 0;
@@ -762,17 +763,15 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 		}
 
 		for (y = 0; y < merge_cnt; ++y) {
-			object_label = handle->labels[merge_object_ids[y]];
-			perm = &merge_perms[object_label->id];
+			object_label = handle->labels[handle->merge_object_ids[y]];
+			perm = &(handle->merge_perms[object_label->id]);
 			access_code_to_str(perm->allow_code, allow_str);
 
 			if ((perm->allow_code | perm->deny_code) != ACCESS_TYPE_ALL) {
 				/* Fail immediately without doing any further processing
 				   if modify rules are not supported. */
-				if (change_fd < 0) {
-					ret = -1;
-					goto out;
-				}
+				if (change_fd < 0)
+					return -1;
 
 				fd = change_fd;
 				access_code_to_str(perm->deny_code, deny_str);
@@ -792,10 +791,9 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 			}
 			perm->allow_deny_code = 0;
 
-			if (cnt < 0) {
-				ret = -1;
-				goto out;
-			}
+			if (cnt < 0)
+				return -1;
+
 			if (add_lf)
 				buf[cnt++] = '\n';
 
@@ -804,18 +802,14 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 				if (ret == -1) {
 					if (errno == EINTR)
 						continue;
-					goto out;
+					return -1;
 				}
 				i += ret;
 			}
 		}
 	}
-	ret = 0;
 
-out:
-	free(merge_perms);
-	free(merge_object_ids);
-	return ret;
+	return 0;
 }
 
 static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash)
@@ -918,6 +912,32 @@ is_label_known(struct smack_accesses *handle, const char *label, int hash)
 	return lab;
 }
 
+static inline int accesses_resize(struct smack_accesses *handle)
+{
+	struct smack_label **labels;
+	union smack_perm *merge_perms;
+	int *merge_object_ids;
+	int alloc = handle->labels_alloc << 1;
+
+	labels = realloc(handle->labels, alloc * sizeof(struct smack_label *));
+	if (labels == NULL)
+		return -1;
+	handle->labels = labels;
+
+	merge_perms = realloc(handle->merge_perms, alloc * sizeof(union smack_perm));
+	if (merge_perms == NULL)
+		return -1;
+	handle->merge_perms = merge_perms;
+
+	merge_object_ids = realloc(handle->merge_object_ids, alloc * sizeof(int));
+	if (merge_object_ids == NULL)
+		return -1;
+	handle->merge_object_ids = merge_object_ids;
+
+	handle->labels_alloc = alloc;
+	return 0;
+}
+
 static struct smack_label *label_add(struct smack_accesses *handle, const char *label)
 {
 	struct smack_hash_entry *hash_entry;
@@ -931,16 +951,9 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 
 	new_label = is_label_known(handle, label, hash_value);
 	if (new_label == NULL) {/*no entry added yet*/
-		if (handle->labels_cnt == handle->labels_alloc) {
-			struct smack_label **new_labels;
-			int size = handle->labels_alloc * 2 * sizeof(struct smack_label *);
-			new_labels = realloc(handle->labels, size);
-			if (new_labels != NULL) {
-				handle->labels = new_labels;
-				handle->labels_alloc *= 2;
-			} else
+		if (handle->labels_cnt == handle->labels_alloc)
+			if (accesses_resize(handle))
 				return NULL;
-		}
 
 		new_label = malloc(sizeof(struct smack_label));
 		if (new_label == NULL)
