@@ -801,6 +801,25 @@ static int buffer_flush(struct smack_file_buffer *buf)
 	return 0;
 }
 
+static inline void rule_print_long(char *buf, int *pos,
+	struct smack_label *subject_label, struct smack_label *object_label,
+	const char *allow_str, const char *deny_str)
+{
+	memcpy(buf + *pos, subject_label->label, subject_label->len);
+	*pos += subject_label->len;
+	buf[(*pos)++] = ' ';
+	memcpy(buf + *pos, object_label->label, object_label->len);
+	*pos += object_label->len;
+	buf[(*pos)++] = ' ';
+	memcpy(buf + *pos, allow_str, ACC_LEN);
+	*pos += ACC_LEN;
+	if (deny_str != NULL) {
+		buf[(*pos)++] = ' ';
+		memcpy(buf + *pos, deny_str, ACC_LEN);
+		*pos += ACC_LEN;
+	}
+}
+
 static int accesses_print(struct smack_accesses *handle, int clear,
 			  int use_long, int multiline,
 			  struct smack_file_buffer *load_buffer,
@@ -856,18 +875,14 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 				buffer = change_buffer;
 				buffer->flush_pos = buffer->pos;
 				access_code_to_str(perm->deny_code, deny_str);
-				buffer->pos += sprintf(buffer->buf + buffer->pos,
-					KERNEL_MODIFY_FORMAT,
-					subject_label->label, object_label->label,
-					allow_str, deny_str);
+				rule_print_long(buffer->buf, &(buffer->pos),
+					subject_label, object_label, allow_str, deny_str);
 			} else {
 				buffer = load_buffer;
 				buffer->flush_pos = buffer->pos;
 				if (use_long)
-					buffer->pos += sprintf(buffer->buf + buffer->pos,
-						KERNEL_LONG_FORMAT,
-						subject_label->label, object_label->label,
-						allow_str);
+					rule_print_long(buffer->buf, &(buffer->pos),
+						subject_label, object_label, allow_str, NULL);
 				else
 					buffer->pos += sprintf(buffer->buf + buffer->pos,
 						KERNEL_SHORT_FORMAT,
