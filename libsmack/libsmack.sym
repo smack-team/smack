@@ -26,6 +26,8 @@ local:
 LIBSMACK_1.1 {
 global:
 	smack_label_length;
+	smack_set_label_for_path;
+	smack_remove_label_for_path;
 local:
 	*;
 } LIBSMACK_1.0;

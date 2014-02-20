@@ -646,6 +646,31 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	return ret;
 }
 
+int smack_set_label_for_path(const char *path,
+				  const char *xattr,
+				  int follow,
+				  const char *label)
+{
+	int len;
+	int ret;
+
+	len = (int)smack_label_length(label);
+	if (len < 0)
+		return -2;
+
+	ret = follow ?
+		setxattr(path, xattr, label, len, 0) :
+		lsetxattr(path, xattr, label, len, 0);
+	return ret;
+}
+
+int smack_remove_label_for_path(const char *path,
+				  const char *xattr,
+				  int follow)
+{
+	return follow ? removexattr(path, xattr) : lremovexattr(path, xattr);
+}
+
 int smack_set_label_for_self(const char *label)
 {
 	int len;
