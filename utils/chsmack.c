@@ -43,49 +43,6 @@ static const char usage[] =
 	" -L --dereference   tell to follow the symbolic links\n"
 ;
 
-/*!
-  * Set the SMACK label in an extended attribute.
-  *
-  * @param path path of the file
-  * @param xattr the extended attribute containing the SMACK label
-  * @param follow whether or not to follow symbolic link
-  * @param label output variable for the returned label
-  * @return Returns length of the label on success and negative value
-  * on failure.
-  */
-static int smack_set_label_for_path(const char *path,
-				  const char *xattr,
-				  int follow,
-				  const char *label)
-{
-	int len;
-	int ret;
-
-	len = (int)smack_label_length(label);
-	if (len < 0)
-		return -2;
-
-	ret = follow ?
-		setxattr(path, xattr, label, len, 0) :
-		lsetxattr(path, xattr, label, len, 0);
-	return ret;
-}
-
-/*!
-  * Remove the SMACK label in an extended attribute.
-  *
-  * @param path path of the file
-  * @param xattr the extended attribute containing the SMACK label
-  * @param follow whether or not to follow symbolic link
-  * @return Returns 0 on success and negative on failure.
-  */
-static int smack_remove_label_for_path(const char *path,
-				  const char *xattr,
-				  int follow)
-{
-	return follow ? removexattr(path, xattr) : lremovexattr(path, xattr);
-}
-
 /* main */
 int main(int argc, char *argv[])
 {
