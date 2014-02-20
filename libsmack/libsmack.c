@@ -99,6 +99,7 @@ struct smack_accesses {
 	int has_long;
 	int labels_cnt;
 	int labels_alloc;
+	int page_size;
 	struct smack_label **labels;
 	struct smack_hash_entry *label_hash;
 	union smack_perm *merge_perms;
@@ -119,11 +120,20 @@ struct smack_cipso {
 	struct cipso_mapping *last;
 };
 
+struct smack_file_buffer {
+	int fd;
+	int pos;
+	int flush_pos;
+	char *buf;
+};
+
 static int open_smackfs_file(const char *long_name, const char *short_name,
 			     int *use_long);
 static int accesses_apply(struct smack_accesses *handle, int clear);
-static int accesses_print(struct smack_accesses *handle, int clear,
-			  int load_fd, int change_fd, int use_long, int add_lf);
+static int accesses_print(struct smack_accesses *handle,
+			  int clear, int use_long, int multiline,
+			  struct smack_file_buffer *load_buffer,
+			  struct smack_file_buffer *change_buffer);
 static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
@@ -151,6 +161,8 @@ int smack_accesses_new(struct smack_accesses **accesses)
 	result->label_hash = calloc(DICT_HASH_SIZE, sizeof(struct smack_hash_entry));
 	if (result->label_hash == NULL)
 		goto err_out;
+
+	result->page_size = sysconf(_SC_PAGESIZE);
 	*accesses = result;
 	return 0;
 
@@ -191,7 +203,17 @@ void smack_accesses_free(struct smack_accesses *handle)
 
 int smack_accesses_save(struct smack_accesses *handle, int fd)
 {
-	return accesses_print(handle, 0, fd, fd, 1, 1);
+	struct smack_file_buffer buffer;
+	int ret;
+
+	buffer.fd = fd;
+	buffer.buf = malloc(handle->page_size + LOAD_LEN);
+	if (buffer.buf == NULL)
+		return -1;
+
+	ret = accesses_print(handle, 0, 1, 1, &buffer, &buffer);
+	free(buffer.buf);
+	return ret;
 }
 
 int smack_accesses_apply(struct smack_accesses *handle)
@@ -689,41 +711,120 @@ static int open_smackfs_file(const char *long_name, const char *short_name,
 	return fd;
 }
 
+static inline int check_multiline(int change_fd)
+{
+	/* This string will be written to kernel Smack "change-rule" interface
+	 * to check if it can handle multiple rules in one write.
+	 * It consists of two rules, separated by '\n': first that does nothing
+	 * and second that has invalid format. If kernel parses only the first
+	 * line (pre-3.12 behavior), it won't see the invalid rule and succeed.
+	 * If it parses both lines, an error will be returned.
+	 */
+	static const char test_str[] = "^ ^ - -\n-";
+	int ret;
+
+	ret = write(change_fd, test_str, sizeof(test_str) - 1);
+	if (ret == -1 && errno == EINVAL)
+		return 1;
+	return 0;
+}
+
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	int ret;
-	int load_fd;
-	int change_fd;
 	int use_long = 1;
+	int multiline = 0;
+	struct smack_file_buffer load_buffer = {.fd = -1, .buf = NULL};
+	struct smack_file_buffer change_buffer = {.fd = -1, .buf = NULL};
 
 	if (init_smackfs_mnt())
 		return -1;
 
-	load_fd = open_smackfs_file("load2", "load", &use_long);
-	if (load_fd < 0)
+	load_buffer.fd = open_smackfs_file("load2", "load", &use_long);
+	if (load_buffer.fd < 0)
 		return -1;
-
-	change_fd = openat(smackfs_mnt_dirfd, "change-rule", O_WRONLY);
-	/* Try to continue if the file doesn't exist, we might not need it. */
-	if (change_fd < 0 && errno != ENOENT) {
-		ret = -1;
+	load_buffer.buf = malloc(handle->page_size + LOAD_LEN);
+	if (load_buffer.buf == NULL)
 		goto err_out;
+
+	change_buffer.fd = openat(smackfs_mnt_dirfd, "change-rule", O_WRONLY);
+	if (change_buffer.fd >= 0) {
+		change_buffer.buf = malloc(handle->page_size + LOAD_LEN);
+		if (change_buffer.buf == NULL)
+			goto err_out;
+
+		multiline = check_multiline(change_buffer.fd);
+	} else {
+		/* Try to continue if "change-rule" doesn't exist, we might
+		 * not need it. */
+		if (errno != ENOENT)
+			goto err_out;
 	}
 
-	ret = accesses_print(handle, clear, load_fd, change_fd, use_long, 0);
+	ret = accesses_print(handle, clear, use_long, multiline,
+		&load_buffer, &change_buffer);
+	goto out;
 
 err_out:
-	if (load_fd >= 0)
-		close(load_fd);
-	if (change_fd >= 0)
-		close(change_fd);
+	ret = -1;
+out:
+	if (load_buffer.fd >= 0)
+		close(load_buffer.fd);
+	if (change_buffer.fd >= 0)
+		close(change_buffer.fd);
+	free(load_buffer.buf);
+	free(change_buffer.buf);
 	return ret;
 }
 
-static int accesses_print(struct smack_accesses *handle, int clear,
-			  int load_fd, int change_fd, int use_long, int add_lf)
+static int buffer_flush(struct smack_file_buffer *buf)
 {
-	char buf[LOAD_LEN + 1];
+	int pos;
+	int ret;
+
+	/* Write buffered bytes to kernel, up to flush_pos */
+	for (pos = 0; pos < buf->flush_pos; ) {
+		ret = write(buf->fd, buf->buf + pos, buf->flush_pos - pos);
+		if (ret == -1) {
+			if (errno != EINTR)
+				return -1;
+		} else
+			pos += ret;
+	}
+
+	/* Move remaining, not flushed bytes to the buffer start */
+	memcpy(buf->buf, buf->buf + pos, buf->pos - pos);
+	buf->pos -= pos;
+	buf->flush_pos = 0;
+
+	return 0;
+}
+
+static inline void rule_print_long(char *buf, int *pos,
+	struct smack_label *subject_label, struct smack_label *object_label,
+	const char *allow_str, const char *deny_str)
+{
+	memcpy(buf + *pos, subject_label->label, subject_label->len);
+	*pos += subject_label->len;
+	buf[(*pos)++] = ' ';
+	memcpy(buf + *pos, object_label->label, object_label->len);
+	*pos += object_label->len;
+	buf[(*pos)++] = ' ';
+	memcpy(buf + *pos, allow_str, ACC_LEN);
+	*pos += ACC_LEN;
+	if (deny_str != NULL) {
+		buf[(*pos)++] = ' ';
+		memcpy(buf + *pos, deny_str, ACC_LEN);
+		*pos += ACC_LEN;
+	}
+}
+
+static int accesses_print(struct smack_accesses *handle, int clear,
+			  int use_long, int multiline,
+			  struct smack_file_buffer *load_buffer,
+			  struct smack_file_buffer *change_buffer)
+{
+	struct smack_file_buffer *buffer;
 	char allow_str[ACC_LEN + 1];
 	char deny_str[ACC_LEN + 1];
 	struct smack_label *subject_label;
@@ -731,16 +832,14 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 	struct smack_rule *rule;
 	union smack_perm *perm;
 	int merge_cnt;
-	int ret;
-	int fd;
-	int i;
 	int x;
 	int y;
-	int cnt;
 
 	if (!use_long && handle->has_long)
 		return -1;
 
+	load_buffer->pos = 0;
+	change_buffer->pos = 0;
 	bzero(handle->merge_perms, handle->labels_cnt * sizeof(union smack_perm));
 	for (x = 0; x < handle->labels_cnt; ++x) {
 		subject_label = handle->labels[x];
@@ -769,43 +868,52 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 			if ((perm->allow_code | perm->deny_code) != ACCESS_TYPE_ALL) {
 				/* Fail immediately without doing any further processing
 				   if modify rules are not supported. */
-				if (change_fd < 0)
+				if (change_buffer->fd < 0)
 					return -1;
 
-				fd = change_fd;
+				buffer = change_buffer;
+				buffer->flush_pos = buffer->pos;
 				access_code_to_str(perm->deny_code, deny_str);
-				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-					subject_label->label, object_label->label,
-					allow_str, deny_str);
+				rule_print_long(buffer->buf, &(buffer->pos),
+					subject_label, object_label, allow_str, deny_str);
 			} else {
-				fd = load_fd;
+				buffer = load_buffer;
+				buffer->flush_pos = buffer->pos;
 				if (use_long)
-					cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-						subject_label->label, object_label->label,
-						allow_str);
+					rule_print_long(buffer->buf, &(buffer->pos),
+						subject_label, object_label, allow_str, NULL);
 				else
-					cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
+					buffer->pos += sprintf(buffer->buf + buffer->pos,
+						KERNEL_SHORT_FORMAT,
 						subject_label->label, object_label->label,
 						allow_str);
 			}
 			perm->allow_deny_code = 0;
 
-			if (cnt < 0)
-				return -1;
-
-			if (add_lf)
-				buf[cnt++] = '\n';
-
-			for (i = 0; i < cnt; ) {
-				ret = write(fd, buf + i, cnt - i);
-				if (ret == -1) {
-					if (errno == EINTR)
-						continue;
+			if (multiline) {
+				buffer->buf[buffer->pos++] = '\n';
+				if (buffer->pos >= handle->page_size)
+					if (buffer_flush(buffer))
+						return -1;
+			} else {
+				/* When no multi-line is supported, just flush
+				 * the rule that was just generated */
+				buffer->flush_pos = buffer->pos;
+				if (buffer_flush(buffer))
 					return -1;
-				}
-				i += ret;
 			}
 		}
+	}
+
+	if (load_buffer->pos > 0) {
+		load_buffer->flush_pos = load_buffer->pos;
+		if (buffer_flush(load_buffer))
+			return -1;
+	}
+	if (change_buffer->pos > 0) {
+		change_buffer->flush_pos = change_buffer->pos;
+		if (buffer_flush(change_buffer))
+			return -1;
 	}
 
 	return 0;
