@@ -20,7 +20,6 @@
  * 02110-1301 USA
  */
 
-#include <search.h>
 #include "sys/smack.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -59,30 +58,52 @@
 #define ACCESS_TYPE_T 0x10
 #define ACCESS_TYPE_L 0x20
 
+#define ACCESS_TYPE_ALL ((1 << ACC_LEN) - 1)
+
 #define DICT_HASH_SIZE 4096
 
 extern char *smackfs_mnt;
 extern int smackfs_mnt_dirfd;
 
-struct label_dict {
-	char **labels;
-	int nof_labels;
-	struct hsearch_data *htab;
+extern int init_smackfs_mnt(void);
+
+union smack_perm {
+	struct {
+		int8_t allow_code;
+		int8_t deny_code;
+	};
+	uint16_t allow_deny_code;
 };
 
 struct smack_rule {
-	int8_t allow_code;
-	int8_t deny_code;
-	int subject_id;
+	union smack_perm perm;
 	int object_id;
-	struct smack_rule *next;
+	struct smack_rule *next_rule;
+};
+
+struct smack_label {
+	uint8_t len;
+	int id;
+	char *label;
+	struct smack_rule *first_rule;
+	struct smack_rule *last_rule;
+	struct smack_label *next_label;
+};
+
+struct smack_hash_entry {
+	struct smack_label *first;
+	struct smack_label *last;
 };
 
 struct smack_accesses {
-	struct smack_rule *first;
-	struct smack_rule *last;
-	struct label_dict *dict;
-	int long_labels;
+	int has_long;
+	int labels_cnt;
+	int labels_alloc;
+	int page_size;
+	struct smack_label **labels;
+	struct smack_hash_entry *label_hash;
+	union smack_perm *merge_perms;
+	int *merge_object_ids;
 };
 
 struct cipso_mapping {
@@ -94,56 +115,105 @@ struct cipso_mapping {
 };
 
 struct smack_cipso {
+	int has_long;
 	struct cipso_mapping *first;
 	struct cipso_mapping *last;
 };
 
+struct smack_file_buffer {
+	int fd;
+	int pos;
+	int flush_pos;
+	char *buf;
+};
+
+static int open_smackfs_file(const char *long_name, const char *short_name,
+			     int *use_long);
 static int accesses_apply(struct smack_accesses *handle, int clear);
-static inline ssize_t get_label(char *dest, const char *src);
+static int accesses_print(struct smack_accesses *handle,
+			  int clear, int use_long, int multiline,
+			  struct smack_file_buffer *load_buffer,
+			  struct smack_file_buffer *change_buffer);
+static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash);
 static inline int str_to_access_code(const char *str);
 static inline void access_code_to_str(unsigned code, char *str);
-static int dict_create(struct label_dict **dict);
-static int dict_free(struct label_dict *dict);
-static const char *dict_get_label(const struct label_dict *dict, int id);
-static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *src);
-static int accesses_print(struct smack_accesses *handle, int clear,
-			  int load_fd, int change_fd, int use_long, int add_lf);
+static struct smack_label *label_add(struct smack_accesses *handle, const char *src);
 
 int smack_accesses_new(struct smack_accesses **accesses)
 {
 	struct smack_accesses *result;
 
-	result = calloc(sizeof(struct smack_accesses), 1);
+	result = calloc(1, sizeof(struct smack_accesses));
 	if (result == NULL)
 		return -1;
 
-	if (dict_create(&(result->dict)))
-		return -1;
+	result->labels_alloc = 128;
+	result->labels = malloc(result->labels_alloc * sizeof(struct smack_label *));
+	if (result->labels == NULL)
+		goto err_out;
+	result->merge_perms = malloc(result->labels_alloc * sizeof(union smack_perm));
+	if (result->merge_perms == NULL)
+		goto err_out;
+	result->merge_object_ids = malloc(result->labels_alloc * sizeof(int));
+	if (result->merge_object_ids == NULL)
+		goto err_out;
+
+	result->label_hash = calloc(DICT_HASH_SIZE, sizeof(struct smack_hash_entry));
+	if (result->label_hash == NULL)
+		goto err_out;
+
+	result->page_size = sysconf(_SC_PAGESIZE);
 	*accesses = result;
 	return 0;
+
+err_out:
+	free(result->merge_object_ids);
+	free(result->merge_perms);
+	free(result->labels);
+	free(result);
+	return -1;
 }
 
 void smack_accesses_free(struct smack_accesses *handle)
 {
+	struct smack_rule *rule;
+	struct smack_rule *next_rule;
+	int i;
+
 	if (handle == NULL)
 		return;
 
-	struct smack_rule *rule = handle->first;
-	struct smack_rule *next_rule = NULL;
-
-	while (rule != NULL) {
-		next_rule = rule->next;
-		free(rule);
-		rule = next_rule;
+	for (i = 0; i < handle->labels_cnt; ++i) {
+		rule = handle->labels[i]->first_rule;
+		while (rule != NULL) {
+			next_rule = rule->next_rule;
+			free(rule);
+			rule = next_rule;
+		}
+		free(handle->labels[i]->label);
+		free(handle->labels[i]);
 	}
 
-	dict_free(handle->dict);
+	free(handle->label_hash);
+	free(handle->merge_object_ids);
+	free(handle->merge_perms);
+	free(handle->labels);
 	free(handle);
 }
 
 int smack_accesses_save(struct smack_accesses *handle, int fd)
 {
-	return accesses_print(handle, 0, fd, fd, 1, 1);
+	struct smack_file_buffer buffer;
+	int ret;
+
+	buffer.fd = fd;
+	buffer.buf = malloc(handle->page_size + LOAD_LEN);
+	if (buffer.buf == NULL)
+		return -1;
+
+	ret = accesses_print(handle, 0, 1, 1, &buffer, &buffer);
+	free(buffer.buf);
+	return ret;
 }
 
 int smack_accesses_apply(struct smack_accesses *handle)
@@ -156,45 +226,47 @@ int smack_accesses_clear(struct smack_accesses *handle)
 	return accesses_apply(handle, 1);
 }
 
-int accesses_add(struct smack_accesses *handle, const char *subject,
+static int accesses_add(struct smack_accesses *handle, const char *subject,
 		 const char *object, const char *allow_access_type,
 		 const char *deny_access_type)
 {
-	struct smack_rule *rule = NULL;
-	int ret;
+	struct smack_rule *rule;
+	struct smack_label *subject_label;
+	struct smack_label *object_label;
 
 	rule = calloc(sizeof(struct smack_rule), 1);
 	if (rule == NULL)
 		return -1;
 
-	ret = dict_add_label(handle->dict, &(rule->subject_id), subject);
-	if (ret < 0)
+	subject_label = label_add(handle, subject);
+	if (subject_label == NULL)
 		goto err_out;
-	if (ret > SHORT_LABEL_LEN)
-		handle->long_labels = 1;
-
-	ret = dict_add_label(handle->dict, &(rule->object_id), object);
-	if (ret < 0)
+	object_label = label_add(handle, object);
+	if (object_label == NULL)
 		goto err_out;
-	if (ret > SHORT_LABEL_LEN)
-		handle->long_labels = 1;
 
-	rule->allow_code = str_to_access_code(allow_access_type);
-	if (rule->allow_code == -1)
+	if (subject_label->len > SHORT_LABEL_LEN ||
+	    object_label->len > SHORT_LABEL_LEN)
+		handle->has_long = 1;
+
+	rule->object_id = object_label->id;
+
+	rule->perm.allow_code = str_to_access_code(allow_access_type);
+	if (rule->perm.allow_code == -1)
 		goto err_out;
 
 	if (deny_access_type != NULL) {
-		rule->deny_code = str_to_access_code(deny_access_type);
-		if (rule->deny_code == -1)
+		rule->perm.deny_code = str_to_access_code(deny_access_type);
+		if (rule->perm.deny_code == -1)
 			goto err_out;
 	} else
-		rule->deny_code = -1; /* no modify */
+		rule->perm.deny_code = ACCESS_TYPE_ALL & ~rule->perm.allow_code;
 
-	if (handle->first == NULL) {
-		handle->first = handle->last = rule;
+	if (subject_label->first_rule == NULL) {
+		subject_label->first_rule = subject_label->last_rule = rule;
 	} else {
-		handle->last->next = rule;
-		handle->last = rule;
+		subject_label->last_rule->next_rule = rule;
+		subject_label->last_rule = rule;
 	}
 
 	return 0;
@@ -280,27 +352,33 @@ int smack_have_access(const char *subject, const char *object,
 	int code;
 	int ret;
 	int fd;
-	int access2 = 1;
+	int use_long = 1;
+	ssize_t slen;
+	ssize_t olen;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
-	fd = openat(smackfs_mnt_dirfd, "access2", O_RDWR);
-	if (fd < 0) {
-		if (errno != ENOENT)
-			return -1;
-		
-		fd = openat(smackfs_mnt_dirfd, "access", O_RDWR);
-		if (fd < 0)
-			return -1;
-		access2 = 0;
+	slen = get_label(NULL, subject, NULL);
+	olen = get_label(NULL, object, NULL);
+
+	if (slen < 0 || olen < 0)
+		return -1;
+
+	fd = open_smackfs_file("access2", "access", &use_long);
+	if (fd < 0)
+		return -1;
+
+	if (!use_long && (slen > SHORT_LABEL_LEN || olen > SHORT_LABEL_LEN))  {
+		close(fd);
+		return -1;
 	}
 
 	if ((code = str_to_access_code(access_type)) < 0)
 		return -1;
 	access_code_to_str(code, str);
 
-	if (access2)
+	if (use_long)
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
 			       subject, object, str);
 	else
@@ -362,18 +440,22 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int fd;
 	int i;
 	int offset;
+	int use_long;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
-	fd = openat(smackfs_mnt_dirfd, "cipso2", O_WRONLY);
+	fd = open_smackfs_file("cipso2", "cipso", &use_long);
 	if (fd < 0)
+		return -1;
+
+	if (!use_long && cipso->has_long)
 		return -1;
 
 	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
-		snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
-		offset = strlen(buf) + 1;
+		offset = (int)snprintf(buf, SMACK_LABEL_LEN + 1, 
+		     use_long ? "%s " : "%-23s ", m->label);
 
 		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
 		offset += NUM_LEN;
@@ -425,8 +507,14 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		level = strtok_r(NULL, " \t\n", &ptr);
 		cat = strtok_r(NULL, " \t\n", &ptr);
 
-		if (level == NULL || get_label(mapping->label, label) < 0)
+		if (level == NULL)
 			goto err_out;
+
+		val  = get_label(mapping->label, label, NULL);
+		if (val < 0)
+			goto err_out;
+		if (val > SHORT_LABEL_LEN)
+			cipso->has_long = 1;
 
 		errno = 0;
 		val = strtol(level, NULL, 10);
@@ -475,6 +563,7 @@ err_out:
 
 const char *smack_smackfs_path(void)
 {
+	init_smackfs_mnt();
 	return smackfs_mnt;
 }
 
@@ -547,7 +636,7 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	if (result == NULL)
 		return -1;
 
-	ret = get_label(result, buf);
+	ret = get_label(result, buf, NULL);
 	if (ret < 0) {
 		free(result);
 		return -1;
@@ -563,7 +652,7 @@ int smack_set_label_for_self(const char *label)
 	int fd;
 	int ret;
 
-	len = get_label(NULL, label);
+	len = get_label(NULL, label, NULL);
 	if (len < 0)
 		return -1;
 
@@ -583,10 +672,10 @@ int smack_revoke_subject(const char *subject)
 	int fd;
 	int len;
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
-	len = get_label(NULL, subject);
+	len = get_label(NULL, subject, NULL);
 	if (len < 0)
 		return -1;
 
@@ -602,117 +691,243 @@ int smack_revoke_subject(const char *subject)
 
 ssize_t smack_label_length(const char *label)
 {
-	return get_label(NULL, label);
+	return get_label(NULL, label, NULL);
+}
+
+static int open_smackfs_file(const char *long_name, const char *short_name,
+			     int *use_long)
+{
+	int fd;
+
+	fd = openat(smackfs_mnt_dirfd, long_name, O_WRONLY);
+	if (fd < 0) {
+		if (errno != ENOENT)
+			return -1;
+
+		fd = openat(smackfs_mnt_dirfd, short_name, O_WRONLY);
+		if (fd < 0)
+			return -1;
+
+		*use_long = 0;
+		return fd;
+	}
+
+	*use_long = 1;
+	return fd;
+}
+
+static inline int check_multiline(int change_fd)
+{
+	/* This string will be written to kernel Smack "change-rule" interface
+	 * to check if it can handle multiple rules in one write.
+	 * It consists of two rules, separated by '\n': first that does nothing
+	 * and second that has invalid format. If kernel parses only the first
+	 * line (pre-3.12 behavior), it won't see the invalid rule and succeed.
+	 * If it parses both lines, an error will be returned.
+	 */
+	static const char test_str[] = "^ ^ - -\n-";
+	int ret;
+
+	ret = write(change_fd, test_str, sizeof(test_str) - 1);
+	if (ret == -1 && errno == EINVAL)
+		return 1;
+	return 0;
 }
 
 static int accesses_apply(struct smack_accesses *handle, int clear)
 {
 	int ret;
-	int load_fd;
-	int change_fd;
-	int load2 = 1;
+	int use_long = 1;
+	int multiline = 0;
+	struct smack_file_buffer load_buffer = {.fd = -1, .buf = NULL};
+	struct smack_file_buffer change_buffer = {.fd = -1, .buf = NULL};
 
-	if (smackfs_mnt_dirfd < 0)
+	if (init_smackfs_mnt())
 		return -1;
 
-	load_fd = openat(smackfs_mnt_dirfd, "load2", O_WRONLY);
-	if (load_fd < 0) {
-		if (errno != ENOENT)
-			return -1;
-		/* fallback */
-		load_fd = openat(smackfs_mnt_dirfd, "load", O_WRONLY);
-		/* Try to continue if the file doesn't exist, we might not need it. */
-		if (load_fd < 0 && errno != ENOENT)
-			return -1;
-		load2 = 0;
-	}
-
-	change_fd = openat(smackfs_mnt_dirfd, "change-rule", O_WRONLY);
-	/* Try to continue if the file doesn't exist, we might not need it. */
-	if (change_fd < 0 && errno != ENOENT) {
-		ret = -1;
+	load_buffer.fd = open_smackfs_file("load2", "load", &use_long);
+	if (load_buffer.fd < 0)
+		return -1;
+	load_buffer.buf = malloc(handle->page_size + LOAD_LEN);
+	if (load_buffer.buf == NULL)
 		goto err_out;
+
+	change_buffer.fd = openat(smackfs_mnt_dirfd, "change-rule", O_WRONLY);
+	if (change_buffer.fd >= 0) {
+		change_buffer.buf = malloc(handle->page_size + LOAD_LEN);
+		if (change_buffer.buf == NULL)
+			goto err_out;
+
+		multiline = check_multiline(change_buffer.fd);
+	} else {
+		/* Try to continue if "change-rule" doesn't exist, we might
+		 * not need it. */
+		if (errno != ENOENT)
+			goto err_out;
 	}
 
-	ret = accesses_print(handle, clear, load_fd, change_fd, load2, 0);
+	ret = accesses_print(handle, clear, use_long, multiline,
+		&load_buffer, &change_buffer);
+	goto out;
 
 err_out:
-	if (load_fd >= 0)
-		close(load_fd);
-	if (change_fd >= 0)
-		close(change_fd);
+	ret = -1;
+out:
+	if (load_buffer.fd >= 0)
+		close(load_buffer.fd);
+	if (change_buffer.fd >= 0)
+		close(change_buffer.fd);
+	free(load_buffer.buf);
+	free(change_buffer.buf);
 	return ret;
 }
 
-static int accesses_print(struct smack_accesses *handle, int clear,
-			  int load_fd, int change_fd, int use_long, int add_lf)
+static int buffer_flush(struct smack_file_buffer *buf)
 {
-	char buf[LOAD_LEN + 1];
+	int pos;
+	int ret;
+
+	/* Write buffered bytes to kernel, up to flush_pos */
+	for (pos = 0; pos < buf->flush_pos; ) {
+		ret = write(buf->fd, buf->buf + pos, buf->flush_pos - pos);
+		if (ret == -1) {
+			if (errno != EINTR)
+				return -1;
+		} else
+			pos += ret;
+	}
+
+	/* Move remaining, not flushed bytes to the buffer start */
+	memcpy(buf->buf, buf->buf + pos, buf->pos - pos);
+	buf->pos -= pos;
+	buf->flush_pos = 0;
+
+	return 0;
+}
+
+static inline void rule_print_long(char *buf, int *pos,
+	struct smack_label *subject_label, struct smack_label *object_label,
+	const char *allow_str, const char *deny_str)
+{
+	memcpy(buf + *pos, subject_label->label, subject_label->len);
+	*pos += subject_label->len;
+	buf[(*pos)++] = ' ';
+	memcpy(buf + *pos, object_label->label, object_label->len);
+	*pos += object_label->len;
+	buf[(*pos)++] = ' ';
+	memcpy(buf + *pos, allow_str, ACC_LEN);
+	*pos += ACC_LEN;
+	if (deny_str != NULL) {
+		buf[(*pos)++] = ' ';
+		memcpy(buf + *pos, deny_str, ACC_LEN);
+		*pos += ACC_LEN;
+	}
+}
+
+static int accesses_print(struct smack_accesses *handle, int clear,
+			  int use_long, int multiline,
+			  struct smack_file_buffer *load_buffer,
+			  struct smack_file_buffer *change_buffer)
+{
+	struct smack_file_buffer *buffer;
 	char allow_str[ACC_LEN + 1];
 	char deny_str[ACC_LEN + 1];
+	struct smack_label *subject_label;
+	struct smack_label *object_label;
 	struct smack_rule *rule;
-	int ret;
-	int fd;
-	int i;
-	int cnt;
+	union smack_perm *perm;
+	int merge_cnt;
+	int x;
+	int y;
 
-	if (!use_long && handle->long_labels)
+	if (!use_long && handle->has_long)
 		return -1;
 
-	for (rule = handle->first; rule != NULL; rule = rule->next) {
-		/* Fail immediately without doing any further processing
-		   if modify rules are not supported. */
-		if (rule->deny_code >= 0 && change_fd < 0)
-			return -1;
+	load_buffer->pos = 0;
+	change_buffer->pos = 0;
+	bzero(handle->merge_perms, handle->labels_cnt * sizeof(union smack_perm));
+	for (x = 0; x < handle->labels_cnt; ++x) {
+		subject_label = handle->labels[x];
+		merge_cnt = 0;
+		for (rule = subject_label->first_rule; rule != NULL; rule = rule->next_rule) {
+			perm = &(handle->merge_perms[rule->object_id]);
+			if (perm->allow_deny_code == 0)
+				handle->merge_object_ids[merge_cnt++] = rule->object_id;
 
-		access_code_to_str(clear ? 0 : rule->allow_code, allow_str);
-
-		if (rule->deny_code != -1 && !clear) {
-			access_code_to_str(rule->deny_code, deny_str);
-
-			fd = change_fd;
-			cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_MODIFY_FORMAT,
-				       dict_get_label(handle->dict, rule->subject_id),
-				       dict_get_label(handle->dict, rule->object_id),
-				       allow_str,
-				       deny_str);
-		} else {
-			fd = load_fd;
-			if (use_long)
-				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_LONG_FORMAT,
-					       dict_get_label(handle->dict, rule->subject_id),
-					       dict_get_label(handle->dict, rule->object_id),
-					       allow_str);
-			else {
-				cnt = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
-					       dict_get_label(handle->dict, rule->subject_id),
-					       dict_get_label(handle->dict, rule->object_id),
-					       allow_str);
+			if (clear) {
+				perm->allow_code = 0;
+				perm->deny_code  = ACCESS_TYPE_ALL;
+			} else {
+				perm->allow_code |=  rule->perm.allow_code;
+				perm->allow_code &= ~rule->perm.deny_code;
+				perm->deny_code  &= ~rule->perm.allow_code;
+				perm->deny_code  |=  rule->perm.deny_code;
 			}
 		}
 
-		if (cnt < 0)
-			return -1;
-		if (add_lf)
-			buf[cnt++] = '\n';
+		for (y = 0; y < merge_cnt; ++y) {
+			object_label = handle->labels[handle->merge_object_ids[y]];
+			perm = &(handle->merge_perms[object_label->id]);
+			access_code_to_str(perm->allow_code, allow_str);
 
-		for (i = 0; i < cnt; ) {
-			ret = write(fd, buf + i, cnt - i);
-			if (ret == -1) {
-				if (errno == EINTR)
-					continue;
-				return -1;
+			if ((perm->allow_code | perm->deny_code) != ACCESS_TYPE_ALL) {
+				/* Fail immediately without doing any further processing
+				   if modify rules are not supported. */
+				if (change_buffer->fd < 0)
+					return -1;
+
+				buffer = change_buffer;
+				buffer->flush_pos = buffer->pos;
+				access_code_to_str(perm->deny_code, deny_str);
+				rule_print_long(buffer->buf, &(buffer->pos),
+					subject_label, object_label, allow_str, deny_str);
+			} else {
+				buffer = load_buffer;
+				buffer->flush_pos = buffer->pos;
+				if (use_long)
+					rule_print_long(buffer->buf, &(buffer->pos),
+						subject_label, object_label, allow_str, NULL);
+				else
+					buffer->pos += sprintf(buffer->buf + buffer->pos,
+						KERNEL_SHORT_FORMAT,
+						subject_label->label, object_label->label,
+						allow_str);
 			}
-			i += ret;
+			perm->allow_deny_code = 0;
+
+			if (multiline) {
+				buffer->buf[buffer->pos++] = '\n';
+				if (buffer->pos >= handle->page_size)
+					if (buffer_flush(buffer))
+						return -1;
+			} else {
+				/* When no multi-line is supported, just flush
+				 * the rule that was just generated */
+				buffer->flush_pos = buffer->pos;
+				if (buffer_flush(buffer))
+					return -1;
+			}
 		}
+	}
+
+	if (load_buffer->pos > 0) {
+		load_buffer->flush_pos = load_buffer->pos;
+		if (buffer_flush(load_buffer))
+			return -1;
+	}
+	if (change_buffer->pos > 0) {
+		change_buffer->flush_pos = change_buffer->pos;
+		if (buffer_flush(change_buffer))
+			return -1;
 	}
 
 	return 0;
 }
 
-static inline ssize_t get_label(char *dest, const char *src)
+static inline ssize_t get_label(char *dest, const char *src, unsigned int *hash)
 {
 	int i;
+	unsigned int h = 5381;/*DJB2 hashing function magic number*/;
 
 	if (!src || src[0] == '\0' || src[0] == '-')
 		return -1;
@@ -732,10 +947,17 @@ static inline ssize_t get_label(char *dest, const char *src)
 
 		if (dest)
 			dest[i] = src[i];
+		if (hash)
+			/* This efficient hash function,
+			 * created by Daniel J. Bernstein,
+			 * is known as DJB2 algorithm */
+			h = (h << 5) + h + src[i];
 	}
 
 	if (dest && i < (SMACK_LABEL_LEN + 1))
 		dest[i] = '\0';
+	if (hash)
+		*hash = h % DICT_HASH_SIZE;
 
 	return i < (SMACK_LABEL_LEN + 1) ? i : -1;
 }
@@ -793,79 +1015,81 @@ static inline void access_code_to_str(unsigned int code, char *str)
 	str[6] = '\0';
 }
 
-static int dict_create(struct label_dict **dict)
+static inline struct smack_label *
+is_label_known(struct smack_accesses *handle, const char *label, int hash)
 {
-	*dict = calloc(1, sizeof(struct label_dict));
-	if (!*dict)
-		goto err;
-	(*dict)->htab = calloc(1, sizeof(struct hsearch_data));
-	if (!(*dict)->htab)
-		goto free_dict;
-	(*dict)->labels = calloc(DICT_HASH_SIZE, sizeof(char *));
-	if (!(*dict)->labels)
-		goto free_htab;
-	if (hcreate_r(DICT_HASH_SIZE, (*dict)->htab) == 0)
-		goto free_labels;
-	return 0;
-
-free_labels:
-	free((*dict)->labels);
-free_htab:
-	free((*dict)->htab);
-free_dict:
-	free(*dict);
-err:
-	return -1;
+	struct smack_label *lab = handle->label_hash[hash].first;
+	while (lab != NULL && strcmp(label, lab->label) != 0)
+		lab = lab->next_label;
+	return lab;
 }
 
-static int dict_free(struct label_dict *dict)
+static inline int accesses_resize(struct smack_accesses *handle)
 {
-	int i;
-	for (i = 0; i < (dict->nof_labels); i++)
-		free((dict->labels)[i]);
-	free(dict->labels);
-	hdestroy_r(dict->htab);
-	free(dict->htab);
-	free(dict);
-	return 0;
-}
+	struct smack_label **labels;
+	union smack_perm *merge_perms;
+	int *merge_object_ids;
+	int alloc = handle->labels_alloc << 1;
 
-static ssize_t dict_add_label(struct label_dict *dict, int *id, const char *label)
-{
-	ENTRY e, *ep;
-	int ret, search;
-
-	ret = get_label(NULL, label);
-
-	if (dict->nof_labels == DICT_HASH_SIZE)
-		return -2;
-	if (ret == -1)
+	labels = realloc(handle->labels, alloc * sizeof(struct smack_label *));
+	if (labels == NULL)
 		return -1;
+	handle->labels = labels;
 
-	e.key =  (char *)label;
-	e.data = (void *)(&(dict->labels[dict->nof_labels]));
+	merge_perms = realloc(handle->merge_perms, alloc * sizeof(union smack_perm));
+	if (merge_perms == NULL)
+		return -1;
+	handle->merge_perms = merge_perms;
 
-	search = hsearch_r(e, ENTER, &ep, dict->htab);
-	if (search == 0)
-		return -2;
-	if (e.data != ep->data) {/*found an existing entry*/
-		*id = (int)((char **)(ep->data) - dict->labels);
-	} else {/*new entry added*/
-		ep->key = malloc(ret + 1);
-		if (!ep->key)
-			return -3;
-		ep->key[ret] = '\0';
-		memcpy(ep->key, label, ret);
-		dict->labels[dict->nof_labels] = ep->key;
-		*id = dict->nof_labels++;
-	}
-	return ret;
+	merge_object_ids = realloc(handle->merge_object_ids, alloc * sizeof(int));
+	if (merge_object_ids == NULL)
+		return -1;
+	handle->merge_object_ids = merge_object_ids;
+
+	handle->labels_alloc = alloc;
+	return 0;
 }
 
-static const char *dict_get_label(const struct label_dict *dict, int id)
+static struct smack_label *label_add(struct smack_accesses *handle, const char *label)
 {
-	if (id < dict->nof_labels)
-		return dict->labels[id];
-	else
+	struct smack_hash_entry *hash_entry;
+	unsigned int hash_value = 0;
+	struct smack_label *new_label;
+	int len;
+
+	len = get_label(NULL, label, &hash_value);
+	if (len == -1)
 		return NULL;
+
+	new_label = is_label_known(handle, label, hash_value);
+	if (new_label == NULL) {/*no entry added yet*/
+		if (handle->labels_cnt == handle->labels_alloc)
+			if (accesses_resize(handle))
+				return NULL;
+
+		new_label = malloc(sizeof(struct smack_label));
+		if (new_label == NULL)
+			return NULL;
+		new_label->label = malloc(len + 1);
+		if (new_label->label == NULL)
+			return NULL;
+
+		memcpy(new_label->label, label, len + 1);
+		new_label->id = handle->labels_cnt;
+		new_label->len = len;
+		new_label->first_rule = NULL;
+		new_label->last_rule = NULL;
+		new_label->next_label = NULL;
+		hash_entry = &(handle->label_hash[hash_value]);
+		if (hash_entry->first == NULL) {
+			hash_entry->first = new_label;
+			hash_entry->last = new_label;
+		} else {
+			hash_entry->last->next_label = new_label;
+			hash_entry->last = new_label;
+		}
+		handle->labels[handle->labels_cnt++] = new_label;
+	}
+
+	return new_label;
 }
