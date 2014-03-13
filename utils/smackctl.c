@@ -25,25 +25,6 @@
 #include <errno.h>
 #include <string.h>
 
-static int apply_all(void)
-{
-	if (!smack_smackfs_path()) {
-		fprintf(stderr, "SmackFS is not mounted.\n");
-		return -1;
-	}
-
-	if (clear())
-		return -1;
-
-	if (apply_rules(ACCESSES_D_PATH, 0))
-		return -1;
-
-	if (apply_cipso(CIPSO_D_PATH))
-		return -1;
-
-	return 0;
-}
-
 int main(int argc, char **argv)
 {
 	const char *tmp = smack_smackfs_path();
@@ -53,7 +34,7 @@ int main(int argc, char **argv)
 	}
 
 	if (!strcmp(argv[1], "apply")) {
-		if (apply_all())
+		if (smack_load_policy())
 			exit(1);
 	} else if (!strcmp(argv[1], "clear")) {
 		if (clear())

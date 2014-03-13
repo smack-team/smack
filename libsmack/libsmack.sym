@@ -28,6 +28,7 @@ global:
 	smack_label_length;
 	smack_set_label_for_path;
 	smack_remove_label_for_path;
+	 smack_load_policy;
 local:
 	*;
 } LIBSMACK_1.0;
