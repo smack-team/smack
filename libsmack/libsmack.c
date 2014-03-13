@@ -21,6 +21,7 @@
  */
 
 #include "sys/smack.h"
+#include "common.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -1117,4 +1118,23 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 	}
 
 	return new_label;
+}
+
+int smack_load_policy(void)
+{
+	if (!smack_smackfs_path()) {
+		fprintf(stderr, "SmackFS is not mounted.\n");
+		return -1;
+	}
+
+	if (clear())
+		return -1;
+
+	if (apply_rules(ACCESSES_D_PATH, 0))
+		return -1;
+
+	if (apply_cipso(CIPSO_D_PATH))
+		return -1;
+
+	return 0;
 }

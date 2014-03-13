@@ -281,6 +281,16 @@ int smack_revoke_subject(const char *subject);
  */
 ssize_t smack_label_length(const char *label);
 
+/*!
+ * Perform the initial policy load.
+ * This function loads the Smack policy from default location and loads
+ * it to kernel. Smackfs file system must be alreadt mounted.
+ * It is designed for init process to load the policy at system startup.
+ *
+ * @return Returns 0 on success and negative on failure.
+ */
+int smack_load_policy(void);
+
 #ifdef __cplusplus
 }
 #endif
