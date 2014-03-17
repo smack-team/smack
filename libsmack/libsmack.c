@@ -128,7 +128,7 @@ struct smack_file_buffer {
 };
 
 static int open_smackfs_file(const char *long_name, const char *short_name,
-			     int *use_long);
+			     mode_t mode, int *use_long);
 static int accesses_apply(struct smack_accesses *handle, int clear);
 static int accesses_print(struct smack_accesses *handle,
 			  int clear, int use_long, int multiline,
@@ -365,7 +365,7 @@ int smack_have_access(const char *subject, const char *object,
 	if (slen < 0 || olen < 0)
 		return -1;
 
-	fd = open_smackfs_file("access2", "access", &use_long);
+	fd = open_smackfs_file("access2", "access", O_RDWR, &use_long);
 	if (fd < 0)
 		return -1;
 
@@ -445,7 +445,7 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	if (init_smackfs_mnt())
 		return -1;
 
-	fd = open_smackfs_file("cipso2", "cipso", &use_long);
+	fd = open_smackfs_file("cipso2", "cipso", O_WRONLY, &use_long);
 	if (fd < 0)
 		return -1;
 
@@ -690,16 +690,16 @@ int smack_revoke_subject(const char *subject)
 }
 
 static int open_smackfs_file(const char *long_name, const char *short_name,
-			     int *use_long)
+			     mode_t mode, int *use_long)
 {
 	int fd;
 
-	fd = openat(smackfs_mnt_dirfd, long_name, O_WRONLY);
+	fd = openat(smackfs_mnt_dirfd, long_name, mode);
 	if (fd < 0) {
 		if (errno != ENOENT)
 			return -1;
 
-		fd = openat(smackfs_mnt_dirfd, short_name, O_WRONLY);
+		fd = openat(smackfs_mnt_dirfd, short_name, mode);
 		if (fd < 0)
 			return -1;
 
@@ -740,7 +740,7 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	if (init_smackfs_mnt())
 		return -1;
 
-	load_buffer.fd = open_smackfs_file("load2", "load", &use_long);
+	load_buffer.fd = open_smackfs_file("load2", "load", O_WRONLY, &use_long);
 	if (load_buffer.fd < 0)
 		return -1;
 	load_buffer.buf = malloc(handle->page_size + LOAD_LEN);
