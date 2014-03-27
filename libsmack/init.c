@@ -111,22 +111,16 @@ static int verify_smackfs_mnt(const char *mnt)
 
 	if (rc == 0) {
 		if ((uint32_t) sfbuf.f_type == (uint32_t) SMACK_MAGIC) {
-			struct statvfs vfsbuf;
-			rc = statvfs(mnt, &vfsbuf);
-			if (rc == 0) {
-				if (!(vfsbuf.f_flag & ST_RDONLY)) {
-					pthread_mutex_lock(&smackfs_mnt_lock);
-					if (smackfs_mnt_dirfd == -1) {
-						smackfs_mnt = strdup(mnt);
-						smackfs_mnt_dirfd = fd;
-					} else {
-						/* Some other thread won the race. */
-						close(fd);
-					}
-					pthread_mutex_unlock(&smackfs_mnt_lock);
-					return 0;
-				}
+			pthread_mutex_lock(&smackfs_mnt_lock);
+			if (smackfs_mnt_dirfd == -1) {
+				smackfs_mnt = strdup(mnt);
+				smackfs_mnt_dirfd = fd;
+			} else {
+				/* Some other thread won the race. */
+				close(fd);
 			}
+			pthread_mutex_unlock(&smackfs_mnt_lock);
+			return 0;
 		}
 	}
 
