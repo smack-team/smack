@@ -32,10 +32,13 @@
 #include <getopt.h>
 #include <errno.h>
 #include <libgen.h>
+#include "config.h"
 
 static const char usage[] =
 	"Usage: %s [options] <path>\n"
 	"options:\n"  
+	" -v --version       output version information and exit\n"
+	" -h --help          output usage information and exit\n"
 	" -a --access        set/remove "XATTR_NAME_SMACK"\n"  
 	" -e --exec          set/remove "XATTR_NAME_SMACKEXEC"\n"  
 	" -m --mmap          set/remove "XATTR_NAME_SMACKMMAP"\n"  
@@ -114,8 +117,10 @@ static int smack_remove_label_for_path(const char *path,
 /* main */
 int main(int argc, char *argv[])
 {
-	static const char shortoptions[] = "a::e::m::tdL";
+	static const char shortoptions[] = "vha::e::m::tdL";
 	static struct option options[] = {
+		{"version", no_argument, 0, 'v'},
+		{"help", no_argument, 0, 'h'},
 		{"access", optional_argument, 0, 'a'},
 		{"exec", optional_argument, 0, 'e'},
 		{"mmap", optional_argument, 0, 'm'},
@@ -185,6 +190,13 @@ int main(int argc, char *argv[])
 							basename(argv[0]), options[options_map[c]].name);
 				follow_flag = 1;
 				break;
+			case 'v':
+				printf("%s (libsmack) version " PACKAGE_VERSION "\n",
+				       basename(argv[0]));
+				exit(0);
+			case 'h':
+				printf(usage, basename(argv[0]));
+				exit(0);
 			default:
 				printf(usage, basename(argv[0]));
 				exit(1);

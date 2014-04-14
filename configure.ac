@@ -6,6 +6,7 @@ AC_INIT([libsmack],
 	[https://github.com/smack-team/smack])
 AC_CONFIG_SRCDIR([libsmack/libsmack.c])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_HEADERS([utils/config.h])
 AM_INIT_AUTOMAKE([-Wall -Werror dist-bzip2 foreign])
 AC_GNU_SOURCE
 AC_CONFIG_MACRO_DIR([m4])

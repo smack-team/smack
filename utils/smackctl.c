@@ -24,6 +24,25 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <libgen.h>
+#include "config.h"
+
+static const char usage[] =
+	"Usage: %s [options] <subject> <object> <access>\n"
+	"options:\n"
+	" -v --version       output version information and exit\n"
+	" -h --help          output usage information and exit\n"
+;
+
+static const char short_options[] = "vh";
+
+static struct option options[] = {
+	{"version", no_argument, 0, 'v'},
+	{"help", no_argument, 0, 'h'},
+	{NULL, 0, 0, 0}
+};
 
 static int apply_all(void)
 {
@@ -46,21 +65,46 @@ static int apply_all(void)
 
 int main(int argc, char **argv)
 {
-	const char *tmp = smack_smackfs_path();
-	if (argc < 2) {
-		fprintf(stderr, "Usage: %s <action>\n", argv[0]);
+	const char *cmd;
+	int c;
+
+	for ( ; ; ) {
+		c = getopt_long(argc, argv, short_options, options, NULL);
+
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'v':
+			printf("%s (libsmack) version " PACKAGE_VERSION "\n",
+			       basename(argv[0]));
+			exit(0);
+		case 'h':
+			printf(usage, basename(argv[0]));
+			exit(0);
+		default:
+			printf(usage, basename(argv[0]));
+			exit(1);
+		}
+	}
+
+	if ((argc - optind) != 1) {
+		printf(usage, basename(argv[0]));
 		exit(1);
 	}
 
-	if (!strcmp(argv[1], "apply")) {
+	cmd = argv[optind];
+
+	if (!strcmp(cmd, "apply")) {
 		if (apply_all())
 			exit(1);
-	} else if (!strcmp(argv[1], "clear")) {
+	} else if (!strcmp(cmd, "clear")) {
 		if (clear())
 			exit(1);
-	} else if (!strcmp(argv[1], "status")) {
-		if (tmp)
-			printf("SmackFS is mounted to %s.\n", tmp);
+	} else if (!strcmp(cmd, "status")) {
+		if (smack_smackfs_path())
+			printf("SmackFS is mounted to %s.\n",
+			       smack_smackfs_path());
 		else
 			printf("SmackFS is not mounted.\n");
 		exit(0);

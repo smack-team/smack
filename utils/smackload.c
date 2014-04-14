@@ -23,31 +23,64 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/smack.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <libgen.h>
+#include "config.h"
 
-static void usage(const char *bin)
-{
-	fprintf(stderr, "Usage: %s [-c] <path>\n", bin);
-	exit(1);
-}
+static const char usage[] =
+	"Usage: %s [options] <subject> <object> <access>\n"
+	"options:\n"
+	" -v --version       output version information and exit\n"
+	" -h --help          output usage information and exit\n"
+	" -c --clear         clear access rules\n"
+;
+
+static const char short_options[] = "vhc";
+
+static struct option options[] = {
+	{"version", no_argument, 0, 'v'},
+	{"help", no_argument, 0, 'h'},
+	{"clear", no_argument, 0, 'c'},
+	{NULL, 0, 0, 0}
+};
 
 int main(int argc, char **argv)
 {
 	int clear = 0;
 	int c;
 
+	for ( ; ; ) {
+		c = getopt_long(argc, argv, short_options, options, NULL);
+
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'c':
+			clear = 1;
+			break;
+		case 'v':
+			printf("%s (libsmack) version " PACKAGE_VERSION "\n",
+			       basename(argv[0]));
+			exit(0);
+		case 'h':
+			printf(usage, basename(argv[0]));
+			exit(0);
+		default:
+			printf(usage, basename(argv[0]));
+			exit(1);
+		}
+	}
+
 	if (!smack_smackfs_path()) {
 		fprintf(stderr, "SmackFS is not mounted.\n");
 		exit(1);
 	}
 
-	while ((c = getopt(argc, argv, "c")) != -1) {
-		switch (c) {
-		case 'c':
-			clear = 1;
-			break;
-		default:
-			usage(argv[0]);
-		}
+	if ((argc - optind) > 1) {
+		printf(usage, basename(argv[0]));
+		exit(1);
 	}
 
 	if (optind == argc) {
