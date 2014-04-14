@@ -31,6 +31,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <libgen.h>
 
 static const char usage[] =
 	"Usage: %s [options] <path>\n"
