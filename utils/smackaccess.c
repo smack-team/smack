@@ -1,4 +1,3 @@
-
 /*
  * This file is part of libsmack
  *
@@ -26,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <libgen.h>
 
 int main(int argc, char **argv)
 {
