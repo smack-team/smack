@@ -632,6 +632,7 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 		lgetxattr(path, xattr, buf, SMACK_LABEL_LEN + 1);
 	if (ret < 0)
 		return -1;
+	buf[ret] = '\0';
 
 	result = calloc(ret + 1, 1);
 	if (result == NULL)

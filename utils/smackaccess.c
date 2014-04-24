@@ -26,17 +26,63 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <unistd.h>
+#include <getopt.h>
+#include "config.h"
+
+static const char usage[] =
+	"Usage: %s [options] <subject> <object> <access>\n"
+	"options:\n"
+	" -v --version       output version information and exit\n"
+	" -h --help          output usage information and exit\n"
+;
+
+static const char short_options[] = "vh";
+
+static struct option options[] = {
+	{"version", no_argument, 0, 'v'},
+	{"help", no_argument, 0, 'h'},
+	{NULL, 0, 0, 0}
+};
 
 int main(int argc, char **argv)
 {
+	const char *subject;
+	const char *object;
+	const char *access;
 	int ret;
+	int c;
 
-	if (argc < 4) {
-		fprintf(stderr, "Usage: %s <subject> <object> <access>\n", argv[0]);
-		return EXIT_FAILURE;
+	for ( ; ; ) {
+		c = getopt_long(argc, argv, short_options, options, NULL);
+
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'v':
+			printf("%s (libsmack) version " PACKAGE_VERSION "\n",
+			       basename(argv[0]));
+			exit(0);
+		case 'h':
+			printf(usage, basename(argv[0]));
+			exit(0);
+		default:
+			printf(usage, basename(argv[0]));
+			exit(1);
+		}
 	}
 
-	ret = smack_have_access(argv[1], argv[2], argv[3]);
+	if ((argc - optind) != 3) {
+		printf(usage, basename(argv[0]));
+		exit(1);
+	}
+
+	subject = argv[optind];
+	object = argv[optind + 1];
+	access = argv[optind + 2];
+
+	ret = smack_have_access(subject, object, access);
 	if (ret < 0) {
 		fprintf(stderr,"%s: input values are invalid.\n", basename(argv[0]));
 		return EXIT_FAILURE;

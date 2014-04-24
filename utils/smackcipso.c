@@ -23,16 +23,56 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/smack.h>
+#include <getopt.h>
+#include <libgen.h>
+#include "config.h"
+
+static const char usage[] =
+	"Usage: %s [options] <subject> <object> <access>\n"
+	"options:\n"
+	" -v --version       output version information and exit\n"
+	" -h --help          output usage information and exit\n"
+;
+
+static const char short_options[] = "vh";
+
+static struct option options[] = {
+	{"version", no_argument, 0, 'v'},
+	{"help", no_argument, 0, 'h'},
+	{NULL, 0, 0, 0}
+};
 
 int main(int argc, char **argv)
 {
+	int c;
+
+	for ( ; ; ) {
+		c = getopt_long(argc, argv, short_options, options, NULL);
+
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'v':
+			printf("%s (libsmack) version " PACKAGE_VERSION "\n",
+			       basename(argv[0]));
+			exit(0);
+		case 'h':
+			printf(usage, basename(argv[0]));
+			exit(0);
+		default:
+			printf(usage, basename(argv[0]));
+			exit(1);
+		}
+	}
+
 	if (!smack_smackfs_path()) {
 		fprintf(stderr, "SmackFS is not mounted.\n");
 		exit(1);
 	}
 
-	if (argc > 2) {
-		fprintf(stderr, "Usage: %s <path>\n", argv[0]);
+	if ((argc - optind) > 1) {
+		printf(usage, basename(argv[0]));
 		exit(1);
 	}
 
