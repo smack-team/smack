@@ -637,6 +637,9 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	if (result == NULL)
 		return -1;
 
+	/* It is possible that the attribute is not terminated */
+	buf[ret] = '\0';
+
 	ret = get_label(result, buf, NULL);
 	if (ret < 0) {
 		free(result);
