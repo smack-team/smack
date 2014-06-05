@@ -1098,8 +1098,10 @@ static struct smack_label *label_add(struct smack_accesses *handle, const char *
 		if (new_label == NULL)
 			return NULL;
 		new_label->label = malloc(len + 1);
-		if (new_label->label == NULL)
+		if (new_label->label == NULL) {
+			free(new_label);
 			return NULL;
+		}
 
 		memcpy(new_label->label, label, len + 1);
 		new_label->id = handle->labels_cnt;
