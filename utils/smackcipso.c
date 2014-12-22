@@ -28,10 +28,17 @@
 #include "config.h"
 
 static const char usage[] =
-	"Usage: %s [options] <subject> <object> <access>\n"
+	"Usage: %s [options] [path]\n"
 	"options:\n"
 	" -v --version       output version information and exit\n"
 	" -h --help          output usage information and exit\n"
+	"path - path from which files will be loaded and parsed,\n"
+	"if this is a directory all files from this directory will be loaded\n"
+	"files should have a format of each line: 'label level [list of categories]'\n"
+	"   where 'label' is a string (smack label format)\n"
+	"         'level' is an integer (level of sensitivity in CIPSO)\n"
+	"         'list of categories' - space separated list of integers - bit numbers\n"
+	"path may be omitted, if it is, then cipso are loaded from stdin"
 ;
 
 static const char short_options[] = "vh";
