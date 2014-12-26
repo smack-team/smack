@@ -45,8 +45,7 @@
 #define LEVEL_MAX 255
 #define NUM_LEN 4
 #define BUF_SIZE 512
-#define CAT_MAX_COUNT 240
-#define CAT_MAX_VALUE 63
+#define CAT_MAX_COUNT 184
 #define CIPSO_POS(i)   (SMACK_LABEL_LEN + 1 + NUM_LEN + NUM_LEN + i * NUM_LEN)
 #define CIPSO_MAX_SIZE CIPSO_POS(CAT_MAX_COUNT)
 #define CIPSO_NUM_LEN_STR "%-4d"
@@ -108,7 +107,7 @@ struct smack_accesses {
 
 struct cipso_mapping {
 	char label[SMACK_LABEL_LEN + 1];
-	int cats[CAT_MAX_VALUE];
+	int cats[CAT_MAX_COUNT];
 	int ncats;
 	int level;
 	struct cipso_mapping *next;
@@ -532,7 +531,7 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 			if (errno)
 				goto err_out;
 
-			if (val < 0 || val > CAT_MAX_VALUE)
+			if (val <= 0 || val > CAT_MAX_COUNT)
 				goto err_out;
 
 			mapping->cats[i] = val;
