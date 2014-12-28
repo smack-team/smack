@@ -28,6 +28,8 @@ global:
 	smack_label_length;
 	smack_set_label_for_path;
 	smack_remove_label_for_path;
+	smack_set_label_for_fd;
+	smack_remove_label_for_fd;
 	 smack_load_policy;
 local:
 	*;

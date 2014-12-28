@@ -257,6 +257,29 @@ int smack_remove_label_for_path(const char *path,
 				  int follow);
 
 /*!
+  * Set the SMACK label in an extended attribute.
+  *
+  * @param fd file descriptor
+  * @param xattr the extended attribute containing the SMACK label
+  * @param label output variable for the returned label
+  * @return Returns length of the label on success and negative value
+  * on failure.
+  */
+int smack_set_label_for_fd(int fd,
+				  const char *xattr,
+				  const char *label);
+
+/*!
+  * Remove the SMACK label in an extended attribute.
+  *
+  * @param fd file descriptor
+  * @param xattr the extended attribute containing the SMACK label
+  * @return Returns 0 on success and negative on failure.
+  */
+int smack_remove_label_for_fd(int fd,
+				  const char *xattr);
+
+/*!
  * Set the label associated with the callers process. The caller must have
  * CAP_MAC_ADMIN POSIX capability in order to do this.
  *
