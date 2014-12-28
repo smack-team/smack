@@ -582,6 +582,9 @@ ssize_t smack_new_label_from_self(char **label)
 	int fd;
 	int ret;
 
+	if(!label)
+		return -1;
+
 	result = calloc(SMACK_LABEL_LEN + 1, 1);
 	if (result == NULL)
 		return -1;
@@ -610,6 +613,9 @@ ssize_t smack_new_label_from_socket(int fd, char **label)
 	socklen_t length = 1;
 	char *result;
 
+	if(!label)
+		return -1;
+
 	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
 	if (ret < 0 && errno != ERANGE)
 		return -1;
@@ -634,6 +640,9 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	char buf[SMACK_LABEL_LEN + 1];
 	char *result;
 	ssize_t ret = 0;
+
+	if(!label)
+		return -1;
 
 	ret = follow ?
 		getxattr(path, xattr, buf, SMACK_LABEL_LEN + 1) :
