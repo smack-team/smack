@@ -24,20 +24,20 @@ smackctl \- Load and unload the system Smack rules files
 
 .SH DESCRIPTION
 .B smackctl
-is a program to load and unload the Smack context configurations.  It is generally called by an init process on startup and shutdown of the system when it is needed to change the Smack rules in the kernel.  The Smack system configuration files are all store in see FILES below.
+is a program to load and unload the Smack context configurations.  It is generally called by an init process on startup and shutdown of the system when it is needed to change the Smack rules in the kernel.  The Smack system configuration files are stored in configuration directories (see FILES below).
 .SH OPTIONS
 .IP apply
-Apply all the rules found in the configuration directory's
+Apply all the rules found in the configuration directories (/etc/smack/accesses.d and /etc/smack/cipso.d)
 .IP clear
-Remove all system rules from the kernel
+Remove all system rules from the kernel.
 .IP status
-Show the status of the Smack system, specifically if /smack is mounted
+Show the status of the Smack system, specifically if smackfs filesystem is mounted and where.
 .SH EXIT STATUS
 On success
 .B smackctl
 returns 0 and 1 on failure.
 .SH FILES
-/smack
+/smack or /sys/fs/smackfs
 .br
 /etc/smack/acceses.d
 .br

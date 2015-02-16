@@ -28,7 +28,10 @@ global:
 	smack_label_length;
 	smack_set_label_for_path;
 	smack_remove_label_for_path;
-	 smack_load_policy;
+	smack_load_policy;
+	smack_new_label_from_file;
+	smack_set_label_for_file;
+	smack_remove_label_for_file;
 local:
 	*;
 } LIBSMACK_1.0;

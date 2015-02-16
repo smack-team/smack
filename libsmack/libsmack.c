@@ -656,6 +656,32 @@ ssize_t smack_new_label_from_path(const char *path, const char *xattr,
 	return ret;
 }
 
+ssize_t smack_new_label_from_file(int fd, const char *xattr, 
+				  char **label)
+{
+	char buf[SMACK_LABEL_LEN + 1];
+	char *result;
+	ssize_t ret = 0;
+
+	ret = fgetxattr(fd, xattr, buf, SMACK_LABEL_LEN + 1);
+	if (ret < 0)
+		return -1;
+	buf[ret] = '\0';
+
+	result = calloc(ret + 1, 1);
+	if (result == NULL)
+		return -1;
+
+	ret = get_label(result, buf, NULL);
+	if (ret < 0) {
+		free(result);
+		return -1;
+	}
+
+	*label = result;
+	return ret;
+}
+
 int smack_set_label_for_path(const char *path,
 				  const char *xattr,
 				  int follow,
@@ -674,11 +700,31 @@ int smack_set_label_for_path(const char *path,
 	return ret;
 }
 
+int smack_set_label_for_file(int fd,
+				  const char *xattr,
+				  const char *label)
+{
+	int len;
+	int ret;
+
+	len = (int)smack_label_length(label);
+	if (len < 0)
+		return -2;
+
+	ret = fsetxattr(fd, xattr, label, len, 0);
+	return ret;
+}
+
 int smack_remove_label_for_path(const char *path,
 				  const char *xattr,
 				  int follow)
 {
 	return follow ? removexattr(path, xattr) : lremovexattr(path, xattr);
+}
+
+int smack_remove_label_for_file(int fd, const char *xattr)
+{
+	return fremovexattr(fd, xattr);
 }
 
 int smack_set_label_for_self(const char *label)
