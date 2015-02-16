@@ -1,5 +1,6 @@
 Doxyfile
 doxygen.stamp
+doxygen_sqlite3.db
 html/
 man/
 libsmack-*.tar.gz
