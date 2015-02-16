@@ -1,7 +1,7 @@
 AC_PREREQ(2.60)
 AC_INIT([libsmack],
 	[1.1],
-	[jarkko.sakkinen@linux.intel.com],
+	[r.krypa@samsung.com],
 	[libsmack],
 	[https://github.com/smack-team/smack])
 AC_CONFIG_SRCDIR([libsmack/libsmack.c])

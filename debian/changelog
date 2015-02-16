@@ -1,3 +1,9 @@
+smack (1.1) UNRELEASED; urgency=low
+
+  * To be filled
+
+ -- Rafal Krypa <r.krypa@samsung.com>  Mon, 16 Feb 2015 16:53:52 +0100
+
 smack (1.0) unstable; urgency=low
 
   * Initial package release for debian
