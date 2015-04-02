@@ -279,11 +279,14 @@ int main(int argc, char *argv[])
 			/* Print file path. */
 			printf("%s", argv[i]);
 
+			errno = 0;
 			rc = (int)smack_new_label_from_path(argv[i],
 						XATTR_NAME_SMACK, follow_flag, &label);
 			if (rc > 0) {
 				printf(" access=\"%s\"", label);
 				free(label);
+			} else if (errno != 0) {
+				printf(": %s", strerror(errno));
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
