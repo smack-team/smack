@@ -38,7 +38,7 @@ static const char usage[] =
 	"   where 'label' is a string (smack label format)\n"
 	"         'level' is an integer (level of sensitivity in CIPSO)\n"
 	"         'list of categories' - space separated list of integers - bit numbers\n"
-	"path may be omitted, if it is, then cipso are loaded from stdin"
+	"path may be omitted, if it is, then cipso are loaded from stdin\n"
 ;
 
 static const char short_options[] = "vh";
