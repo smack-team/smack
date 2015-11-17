@@ -327,6 +327,19 @@ ssize_t smack_label_length(const char *label);
  */
 int smack_load_policy(void);
 
+/*!
+ * Update list of labels to which the current process will be allowed to switch.
+ * The caller must have CAP_MAC_ADMIN POSIX capability in order to do this.
+ * Later, if the caller drops capabilities, it will be permitted to change its
+ * label (e.g. by smack_set_label_for_self()) only to one of labels permitted
+ * here.
+ *
+ * @param labels list of permitted labels
+ * @param cnt number of labels
+ * @return Returns 0 on success and negative on failure.
+ */
+int smack_set_relabel_self(const char **labels, int cnt);
+
 #ifdef __cplusplus
 }
 #endif

@@ -8,7 +8,7 @@ EXTRA_DIST = libsmack.sym
 lib_LTLIBRARIES = libsmack.la
 
 libsmack_la_LDFLAGS = \
-	-version-info 2:0:1 \
+	-version-info 3:0:2 \
 	-Wl,--version-script=$(top_srcdir)/libsmack/libsmack.sym
 libsmack_la_SOURCES = libsmack.c init.c
 libsmack_la_LIBADD = libsmackcommon.la
