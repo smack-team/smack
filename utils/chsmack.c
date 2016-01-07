@@ -36,20 +36,21 @@
 
 static const char usage[] =
 	"Usage: %s [options] <path>\n"
-	"options:\n"  
+	"Options:\n"  
 	" -v --version         output version information and exit\n"
 	" -h --help            output usage information and exit\n"
 	" -a --access          set/remove "XATTR_NAME_SMACK"\n"
 	" -e --exec            set/remove "XATTR_NAME_SMACKEXEC"\n"
 	" -m --mmap            set/remove "XATTR_NAME_SMACKMMAP"\n"
 	" -t --transmute       set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
-	" -d --remove          tell to remove the attribute\n"
 	" -L --dereference     tell to follow the symbolic links\n"
 	" -D --drop            remove unset attributes\n"
 	" -A --drop-access     remove "XATTR_NAME_SMACK"\n"
 	" -E --drop-exec       remove "XATTR_NAME_SMACKEXEC"\n"
 	" -M --drop-mmap       remove "XATTR_NAME_SMACKMMAP"\n"
 	" -T --drop-transmute  remove "XATTR_NAME_SMACKTRANSMUTE"\n"
+	"Obsolete option:\n"
+	" -d --remove          tell to remove the attribute\n"
 ;
 
 static const char shortoptions[] = "vha::e::m::tdLDAEMT";
@@ -83,6 +84,12 @@ struct labelset {
 	const char *value; /* value of the option set if any or NULL else */
 };
 
+static struct labelset access_set = { unset, NULL }; /* for option "access" */
+static struct labelset exec_set = { unset, NULL }; /* for option "exec" */
+static struct labelset mmap_set = { unset, NULL }; /* for option "mmap" */
+static enum state transmute_flag = unset; /* for option "transmute" */
+static enum state follow_flag = unset; /* for option "dereference" */
+
 /* get the option for the given char */
 static struct option *option_by_char(int car)
 {
@@ -93,18 +100,18 @@ static struct option *option_by_char(int car)
 }
 
 /* modify attributes of a file */
-static void modify_file(const char *path, struct labelset *ls,
-						const char *attr, int follow)
+static void modify_prop(const char *path, struct labelset *ls, const char *attr)
 {
 	int rc;
 	switch (ls->isset) {
 	case positive:
-		rc = smack_set_label_for_path(path, attr, follow, ls->value);
+		rc = smack_set_label_for_path(path, attr, follow_flag,
+								ls->value);
 		if (rc < 0)
 			perror(path);
 		break;
 	case negative:
-		rc = smack_remove_label_for_path(path, attr, follow);
+		rc = smack_remove_label_for_path(path, attr, follow_flag);
 		if (rc < 0 && errno != ENODATA)
 			perror(path);
 		break;
@@ -112,13 +119,13 @@ static void modify_file(const char *path, struct labelset *ls,
 }
 
 /* modify transmutation of a file */
-static void modify_transmute(const char *path, enum state isset, int follow)
+static void modify_transmute(const char *path)
 {
 	struct stat st;
 	int rc;
-	switch (isset) {
+	switch (transmute_flag) {
 	case positive:
-		rc = follow ?  stat(path, &st) : lstat(path, &st);
+		rc = follow_flag ?  stat(path, &st) : lstat(path, &st);
 		if (rc < 0)
 			perror(path);
 		else if (!S_ISDIR(st.st_mode)) {
@@ -127,14 +134,14 @@ static void modify_transmute(const char *path, enum state isset, int follow)
 		}
 		else {
 			rc = smack_set_label_for_path(path,
-				XATTR_NAME_SMACKTRANSMUTE, follow, "TRUE");
+				XATTR_NAME_SMACKTRANSMUTE, follow_flag, "TRUE");
 			if (rc < 0)
 				perror(path);
 		}
 		break;
 	case negative:
 		rc = smack_remove_label_for_path(path,
-					XATTR_NAME_SMACKTRANSMUTE, follow);
+					XATTR_NAME_SMACKTRANSMUTE, follow_flag);
 		if (rc < 0 && errno != ENODATA)
 			perror(path);
 		break;
@@ -144,16 +151,10 @@ static void modify_transmute(const char *path, enum state isset, int follow)
 /* main */
 int main(int argc, char *argv[])
 {
-	struct labelset access_set = { unset, NULL }; /* for option "access" */
-	struct labelset exec_set = { unset, NULL }; /* for option "exec" */
-	struct labelset mmap_set = { unset, NULL }; /* for option "mmap" */
-
 	struct labelset *labelset;
 	char *label;
 
 	enum state delete_flag = unset;
-	enum state follow_flag = unset;
-	enum state transmute_flag = unset;
 	int modify = 0;
 	int rc;
 	int c;
@@ -328,13 +329,10 @@ int main(int argc, char *argv[])
 	/* modifying label of files */
 	if (modify) {
 		for (i = optind; i < argc; i++) {
-			modify_file(argv[i], &access_set, XATTR_NAME_SMACK,
-								follow_flag);
-			modify_file(argv[i], &exec_set, XATTR_NAME_SMACKEXEC,
-								follow_flag);
-			modify_file(argv[i], &mmap_set, XATTR_NAME_SMACKMMAP,
-								follow_flag);
-			modify_transmute(argv[i], transmute_flag, follow_flag);
+			modify_prop(argv[i], &access_set, XATTR_NAME_SMACK);
+			modify_prop(argv[i], &exec_set, XATTR_NAME_SMACKEXEC);
+			modify_prop(argv[i], &mmap_set, XATTR_NAME_SMACKMMAP);
+			modify_transmute(argv[i]);
 		}
 	}
 
