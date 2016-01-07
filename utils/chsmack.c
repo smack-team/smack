@@ -267,6 +267,8 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				set_state(&delete_flag, positive, c, 0);
+				fprintf(stderr, 
+					"remove: option -d is obsolete!\n");
 				break;
 			case 'D':
 				set_state(&delete_flag, negative, c, 0);
