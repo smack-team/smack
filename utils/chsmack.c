@@ -59,6 +59,19 @@ static struct option options[] = {
 	{NULL, 0, 0, 0}
 };
 
+/* enumeration for state of flags */
+enum state {
+	unset    = 0,
+	positive = 1,
+	negative = 2
+};
+
+/* structure for recording options of label and their init */
+struct labelset {
+	enum state isset;  /* how is it set */
+	const char *value; /* value of the option set if any or NULL else */
+};
+
 /* get the option for the given char */
 static struct option *option_by_char(int car)
 {
@@ -71,15 +84,9 @@ static struct option *option_by_char(int car)
 /* main */
 int main(int argc, char *argv[])
 {
-
-	/* structure for recording options of label and their init */
-	struct labelset {
-		int isset; /* 0 if option not set, 1 if option set */
-		const char *value; /* value of the option set if any or NULL else */
-	};
-	struct labelset access_set = { 0, NULL }; /* for option "access" */
-	struct labelset exec_set = { 0, NULL }; /* for option "exec" */
-	struct labelset mmap_set = { 0, NULL }; /* for option "mmap" */
+	struct labelset access_set = { unset, NULL }; /* for option "access" */
+	struct labelset exec_set = { unset, NULL }; /* for option "exec" */
+	struct labelset mmap_set = { unset, NULL }; /* for option "mmap" */
 
 	struct labelset *labelset;
 	struct stat st;
@@ -156,7 +163,7 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		if (labelset->isset) {
+		if (labelset->isset != unset) {
 			fprintf(stderr, "%s: %s: option set many times.\n",
 				basename(argv[0]), option_by_char(c)->name);
 			exit(1);
@@ -188,7 +195,7 @@ int main(int argc, char *argv[])
 				basename(argv[0]), option_by_char(c)->name, optarg);
 			exit(1);
 		}
-		labelset->isset = 1;
+		labelset->isset = positive;
 		labelset->value = optarg;
 		option_flag = 1;
 	}
@@ -196,27 +203,27 @@ int main(int argc, char *argv[])
 	/* deleting labels */
 	if (delete_flag) {
 		if (!option_flag) {
-			access_set.isset = 1;
-			exec_set.isset = 1;
-			mmap_set.isset = 1;
+			access_set.isset = positive;
+			exec_set.isset = positive;
+			mmap_set.isset = positive;
 			transmute_flag = 1;
 		}
 		for (i = optind; i < argc; i++) {
-			if (access_set.isset) {
+			if (access_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACK, follow_flag);
 				if (rc < 0 && (option_flag || errno != ENODATA))
 					perror(argv[i]);
 			}
 
-			if (exec_set.isset) {
+			if (exec_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKEXEC, follow_flag);
 				if (rc < 0 && (option_flag || errno != ENODATA))
 					perror(argv[i]);
 			}
 
-			if (mmap_set.isset) {
+			if (mmap_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKMMAP, follow_flag);
 				if (rc < 0 && (option_flag || errno != ENODATA))
@@ -235,21 +242,21 @@ int main(int argc, char *argv[])
 	/* setting labels */
 	else if (option_flag) {
 		for (i = optind; i < argc; i++) {
-			if (access_set.isset) {
+			if (access_set.isset != unset) {
 				rc = smack_set_label_for_path(argv[i],
 							XATTR_NAME_SMACK, follow_flag, access_set.value);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
-			if (exec_set.isset) {
+			if (exec_set.isset != unset) {
 				rc = smack_set_label_for_path(argv[i],
 							XATTR_NAME_SMACKEXEC, follow_flag, exec_set.value);
 				if (rc < 0)
 					perror(argv[i]);
 			}
 
-			if (mmap_set.isset) {
+			if (mmap_set.isset != unset) {
 				rc = smack_set_label_for_path(argv[i],
 							XATTR_NAME_SMACKMMAP, follow_flag, mmap_set.value);
 				if (rc < 0)
