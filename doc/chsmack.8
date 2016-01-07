@@ -26,7 +26,7 @@ chsmack \- Change or list the Smack properties of filesystem objects
 
 .B chsmack [-L|--dereference] [--] files...
 
-.B chsmack [-L|--dereference] props... [--] files...
+.B chsmack [-L|--dereference] [-D|--drop] props... [--] files...
 
 .B chsmack (-d|--remove) [-L|--dereference] [props]... [--] files...
 
@@ -139,6 +139,13 @@ while still ensuring that the config files of the editor remain protected.
 
 This label is stored in the \fBsecurity.SMACK64TRANSMUTE\fR extended attribute.
 
+.TP
+.B -D, --drop
+
+Use this option to remove the smack properties that are not set for files.
+If no property is specified, it means that all the properties will
+be removed.
+
 .SH RETURN VALUE
 
 The current values for the labels will be printed to stdout on success.
@@ -171,6 +178,16 @@ There are some predefined labels:
 
 -	\fB@\fR 	Pronounced "web", a single at sign character.
 
+.SH EXAMPLES
+
+Here are some examples that may be useful.
+
+.EX
+chsmack -aUser -D file1 file2
+.EE
+
+This command set the Smack \fIaccess\fR property to \fIUser\fR and
+drop any other Smack properties for the files \fIfile1\fR and \fIfile2\fR.
 
 .SH "SEE ALSO"
 

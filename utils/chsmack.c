@@ -45,9 +45,10 @@ static const char usage[] =
 	" -t --transmute     set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
 	" -d --remove        tell to remove the attribute\n"
 	" -L --dereference   tell to follow the symbolic links\n"
+	" -D --drop          remove unset attributes\n"
 ;
 
-static const char shortoptions[] = "vha::e::m::tdL";
+static const char shortoptions[] = "vha::e::m::tdLD";
 static struct option options[] = {
 	{"version", no_argument, 0, 'v'},
 	{"help", no_argument, 0, 'h'},
@@ -56,6 +57,8 @@ static struct option options[] = {
 	{"mmap", optional_argument, 0, 'm'},
 	{"transmute", no_argument, 0, 't'},
 	{"dereference", no_argument, 0, 'L'},
+	{"drop", no_argument, 0, 'D'},
+	{"remove", no_argument, 0, 'd'},
 	{NULL, 0, 0, 0}
 };
 
@@ -140,8 +143,8 @@ int main(int argc, char *argv[])
 	struct labelset *labelset;
 	char *label;
 
-	int delete_flag = 0;
-	int follow_flag = 0;
+	enum state delete_flag = unset;
+	enum state follow_flag = unset;
 	enum state transmute_flag = unset;
 	int modify = 0;
 	int rc;
@@ -169,16 +172,32 @@ int main(int argc, char *argv[])
 				modify = 1;
 				break;
 			case 'd':
-				if (delete_flag)
+				if (delete_flag == negative) {
+					fprintf(stderr, "%s: %s: opposed to previous option.\n",
+							basename(argv[0]), option_by_char(c)->name);
+					exit(1);
+				}
+				if (delete_flag != unset)
 					fprintf(stderr, "%s: %s: option set many times.\n",
 							basename(argv[0]), option_by_char(c)->name);
-				delete_flag = 1;
+				delete_flag = positive;
+				break;
+			case 'D':
+				if (delete_flag == positive) {
+					fprintf(stderr, "%s: %s: opposed to previous option.\n",
+							basename(argv[0]), option_by_char(c)->name);
+					exit(1);
+				}
+				if (delete_flag != unset)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), option_by_char(c)->name);
+				delete_flag = negative;
 				break;
 			case 'L':
-				if (follow_flag)
+				if (follow_flag != unset)
 					fprintf(stderr, "%s: %s: option set many times.\n",
 							basename(argv[0]), option_by_char(c)->name);
-				follow_flag = 1;
+				follow_flag = positive;
 				break;
 			case 'v':
 				printf("%s (libsmack) version " PACKAGE_VERSION "\n",
@@ -192,7 +211,7 @@ int main(int argc, char *argv[])
 				exit(1);
 		}
 	}
-	if (delete_flag && transmute_flag != unset)
+	if (delete_flag == positive && transmute_flag != unset)
 		transmute_flag = negative;
 
 	/* scan options with argument (possibly) */
@@ -223,13 +242,13 @@ int main(int argc, char *argv[])
 			optarg = argv[optind++];
 		}
 		if (optarg == NULL) {
-			if (!delete_flag) {
+			if (delete_flag != positive) {
 				fprintf(stderr, "%s: %s: requires a label when setting.\n",
 					basename(argv[0]), option_by_char(c)->name);
 				exit(1);
 			}
 		}
-		else if (delete_flag) {
+		else if (delete_flag == positive) {
 			fprintf(stderr, "%s: %s: requires no label when deleting.\n",
 				basename(argv[0]), option_by_char(c)->name);
 			exit(1);
@@ -245,13 +264,24 @@ int main(int argc, char *argv[])
 				basename(argv[0]), option_by_char(c)->name, optarg);
 			exit(1);
 		}
-		labelset->isset = delete_flag ? negative : positive;
+		labelset->isset = delete_flag == positive ? negative : positive;
 		labelset->value = optarg;
 		modify = 1;
 	}
 
 	/* update states */
-	if (delete_flag && !modify) {
+	if (delete_flag == negative) {
+		/* remove unset attributes */
+		if (access_set.isset == unset)
+			access_set.isset = negative;
+		if (exec_set.isset == unset)
+			exec_set.isset = negative;
+		if (mmap_set.isset == unset)
+			mmap_set.isset = negative;
+		if (transmute_flag == unset)
+			transmute_flag = negative;
+	}
+	else if (delete_flag == positive && !modify) {
 		access_set.isset = negative;
 		exec_set.isset = negative;
 		mmap_set.isset = negative;
@@ -281,7 +311,7 @@ int main(int argc, char *argv[])
 
 			errno = 0;
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACK, follow_flag, &label);
+				XATTR_NAME_SMACK, follow_flag, &label);
 			if (rc > 0) {
 				printf(" access=\"%s\"", label);
 				free(label);
@@ -290,21 +320,21 @@ int main(int argc, char *argv[])
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACKEXEC, follow_flag, &label);
+				XATTR_NAME_SMACKEXEC, follow_flag, &label);
 			if (rc > 0) {
 				printf(" execute=\"%s\"", label);
 				free(label);
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACKMMAP, follow_flag, &label);
+				XATTR_NAME_SMACKMMAP, follow_flag, &label);
 			if (rc > 0) {
 				printf(" mmap=\"%s\"", label);
 				free(label);
 			}
 
 			rc = (int)smack_new_label_from_path(argv[i],
-						XATTR_NAME_SMACKTRANSMUTE, follow_flag, &label);
+				XATTR_NAME_SMACKTRANSMUTE, follow_flag, &label);
 			if (rc > 0) {
 				printf(" transmute=\"%s\"", label);
 				free(label);
