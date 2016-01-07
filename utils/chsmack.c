@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
 	int delete_flag = 0;
 	int follow_flag = 0;
-	int transmute_flag = 0;
+	enum state transmute_flag = unset;
 	int option_flag = 0;
 	int rc;
 	int c;
@@ -114,10 +114,10 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 't':
-				if (transmute_flag)
+				if (transmute_flag != unset)
 					fprintf(stderr, "%s: %s: option set many times.\n",
 							basename(argv[0]), option_by_char(c)->name);
-				transmute_flag = 1;
+				transmute_flag = positive;
 				option_flag = 1;
 				break;
 			case 'd':
@@ -144,6 +144,8 @@ int main(int argc, char *argv[])
 				exit(1);
 		}
 	}
+	if (delete_flag && transmute_flag != unset)
+		transmute_flag = negative;
 
 	/* scan options with argument (possibly) */
 	optind = 1;
@@ -195,19 +197,19 @@ int main(int argc, char *argv[])
 				basename(argv[0]), option_by_char(c)->name, optarg);
 			exit(1);
 		}
-		labelset->isset = positive;
+		labelset->isset = delete_flag ? negative : positive;
 		labelset->value = optarg;
 		option_flag = 1;
 	}
 
 	/* deleting labels */
+	if (delete_flag && !option_flag) {
+		access_set.isset = negative;
+		exec_set.isset = negative;
+		mmap_set.isset = negative;
+		transmute_flag = negative;
+	}
 	if (delete_flag) {
-		if (!option_flag) {
-			access_set.isset = positive;
-			exec_set.isset = positive;
-			mmap_set.isset = positive;
-			transmute_flag = 1;
-		}
 		for (i = optind; i < argc; i++) {
 			if (access_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
@@ -230,7 +232,7 @@ int main(int argc, char *argv[])
 					perror(argv[i]);
 			}
 
-			if (transmute_flag) {
+			if (transmute_flag != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKTRANSMUTE, follow_flag);
 				if (rc < 0 && errno != ENODATA)
@@ -263,7 +265,7 @@ int main(int argc, char *argv[])
 					perror(argv[i]);
 			}
 
-			if (transmute_flag) {
+			if (transmute_flag != unset) {
 				rc = follow_flag ?  stat(argv[i], &st) : lstat(argv[i], &st);
 				if (rc < 0)
 					perror(argv[i]);
