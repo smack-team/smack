@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	int delete_flag = 0;
 	int follow_flag = 0;
 	enum state transmute_flag = unset;
-	int option_flag = 0;
+	int modify = 0;
 	int rc;
 	int c;
 	int i;
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 					fprintf(stderr, "%s: %s: option set many times.\n",
 							basename(argv[0]), option_by_char(c)->name);
 				transmute_flag = positive;
-				option_flag = 1;
+				modify = 1;
 				break;
 			case 'd':
 				if (delete_flag)
@@ -199,16 +199,18 @@ int main(int argc, char *argv[])
 		}
 		labelset->isset = delete_flag ? negative : positive;
 		labelset->value = optarg;
-		option_flag = 1;
+		modify = 1;
 	}
 
-	/* deleting labels */
-	if (delete_flag && !option_flag) {
+	/* update states */
+	if (delete_flag && !modify) {
 		access_set.isset = negative;
 		exec_set.isset = negative;
 		mmap_set.isset = negative;
 		transmute_flag = negative;
 	}
+
+	/* deleting labels */
 	if (delete_flag) {
 		for (i = optind; i < argc; i++) {
 			if (access_set.isset != unset) {
@@ -242,7 +244,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* setting labels */
-	else if (option_flag) {
+	else if (modify) {
 		for (i = optind; i < argc; i++) {
 			if (access_set.isset != unset) {
 				rc = smack_set_label_for_path(argv[i],
