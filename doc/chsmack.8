@@ -26,7 +26,7 @@ chsmack \- Change or list the Smack properties of filesystem objects
 
 .B chsmack [-L|--dereference] [--] files...
 
-.B chsmack [-L|--dereference] [-D|--drop] props... [--] files...
+.B chsmack [-L|--dereference] props... [--] files...
 
 .B chsmack (-d|--remove) [-L|--dereference] [props]... [--] files...
 
@@ -36,7 +36,7 @@ chsmack \- Change or list the Smack properties of filesystem objects
 
 First form is used to query the Smack properties of the files.
 
-Second form is used to set some Smack properties to the files.
+Second form is used to set and reset some Smack properties to the files.
 
 Third form is used to remove all or some of the Smack properties of the
 listed files.
@@ -96,7 +96,15 @@ to read and execute the binary from the \fBapplication\fR context.
 This label is stored in the \fBsecurity.SMACK64\fR extended attribute.
 
 .TP
+.B -A, --drop-access
 
+Drop the \fIaccess\fR property attached to the file.
+
+After that operation, the \fIaccess\fR property for the file
+will be the default access property set during the file system
+mounting or \fB_\fR if none.
+
+.TP
 .B -e, --exec \fR[label]
 
 If removing properties (option \fB-d\fR), no label must be set.
@@ -109,7 +117,11 @@ it will be launched in.
 This label is stored in the \fBsecurity.SMACK64EXEC\fR extended attribute.
 
 .TP
+.B -E, --drop-exec
 
+Drop the \fIexec\fR property attached to the file.
+
+.TP
 .B -m, --mmap \fR[label]
 
 If removing properties (option \fB-d\fR), no label must be set.
@@ -123,7 +135,11 @@ access to.
 This label is stored in the \fBsecurity.SMACK64MMAP\fR extended attribute.
 
 .TP
+.B -M, --drop-mmap
 
+Drop the \fImmap\fR property attached to the file.
+
+.TP
 .B -t, --transmute
 
 When used this will set the transmute flag of a directory to True.
@@ -138,6 +154,11 @@ Each of the text editors can open the files and edit them in a shared fashion,
 while still ensuring that the config files of the editor remain protected.
 
 This label is stored in the \fBsecurity.SMACK64TRANSMUTE\fR extended attribute.
+
+.TP
+.B -T, --drop-transmute
+
+Drop the \fItransmute\fR property attached to the file.
 
 .TP
 .B -D, --drop
@@ -188,6 +209,13 @@ chsmack -aUser -D file1 file2
 
 This command set the Smack \fIaccess\fR property to \fIUser\fR and
 drop any other Smack properties for the files \fIfile1\fR and \fIfile2\fR.
+
+.EX
+chsmack -E -a Nobody file3
+.EE
+
+This command set the Smack \fIaccess\fR property to \fINobody\fR and
+drops the \fIexec\fR property for the file \fIfile3\fR.
 
 .SH "SEE ALSO"
 

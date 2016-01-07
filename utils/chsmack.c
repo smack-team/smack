@@ -37,18 +37,22 @@
 static const char usage[] =
 	"Usage: %s [options] <path>\n"
 	"options:\n"  
-	" -v --version       output version information and exit\n"
-	" -h --help          output usage information and exit\n"
-	" -a --access        set/remove "XATTR_NAME_SMACK"\n"  
-	" -e --exec          set/remove "XATTR_NAME_SMACKEXEC"\n"  
-	" -m --mmap          set/remove "XATTR_NAME_SMACKMMAP"\n"  
-	" -t --transmute     set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
-	" -d --remove        tell to remove the attribute\n"
-	" -L --dereference   tell to follow the symbolic links\n"
-	" -D --drop          remove unset attributes\n"
+	" -v --version         output version information and exit\n"
+	" -h --help            output usage information and exit\n"
+	" -a --access          set/remove "XATTR_NAME_SMACK"\n"
+	" -e --exec            set/remove "XATTR_NAME_SMACKEXEC"\n"
+	" -m --mmap            set/remove "XATTR_NAME_SMACKMMAP"\n"
+	" -t --transmute       set/remove "XATTR_NAME_SMACKTRANSMUTE"\n"
+	" -d --remove          tell to remove the attribute\n"
+	" -L --dereference     tell to follow the symbolic links\n"
+	" -D --drop            remove unset attributes\n"
+	" -A --drop-access     remove "XATTR_NAME_SMACK"\n"
+	" -E --drop-exec       remove "XATTR_NAME_SMACKEXEC"\n"
+	" -M --drop-mmap       remove "XATTR_NAME_SMACKMMAP"\n"
+	" -T --drop-transmute  remove "XATTR_NAME_SMACKTRANSMUTE"\n"
 ;
 
-static const char shortoptions[] = "vha::e::m::tdLD";
+static const char shortoptions[] = "vha::e::m::tdLDAEMT";
 static struct option options[] = {
 	{"version", no_argument, 0, 'v'},
 	{"help", no_argument, 0, 'h'},
@@ -58,6 +62,10 @@ static struct option options[] = {
 	{"transmute", no_argument, 0, 't'},
 	{"dereference", no_argument, 0, 'L'},
 	{"drop", no_argument, 0, 'D'},
+	{"drop-access", no_argument, 0, 'A'},
+	{"drop-exec", no_argument, 0, 'E'},
+	{"drop-mmap", no_argument, 0, 'M'},
+	{"drop-transmute", no_argument, 0, 'T'},
 	{"remove", no_argument, 0, 'd'},
 	{NULL, 0, 0, 0}
 };
@@ -163,6 +171,34 @@ int main(int argc, char *argv[])
 						&& argv[optind][0] != '-') {
 					optind++;
 				}
+				break;
+			case 'A':
+				if (access_set.isset != unset)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), option_by_char(c)->name);
+				access_set.isset = negative;
+				modify = 1;
+				break;
+			case 'E':
+				if (exec_set.isset != unset)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), option_by_char(c)->name);
+				exec_set.isset = negative;
+				modify = 1;
+				break;
+			case 'M':
+				if (mmap_set.isset != unset)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), option_by_char(c)->name);
+				mmap_set.isset = negative;
+				modify = 1;
+				break;
+			case 'T':
+				if (transmute_flag != unset)
+					fprintf(stderr, "%s: %s: option set many times.\n",
+							basename(argv[0]), option_by_char(c)->name);
+				transmute_flag = negative;
+				modify = 1;
 				break;
 			case 't':
 				if (transmute_flag != unset)
