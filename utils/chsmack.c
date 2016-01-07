@@ -47,25 +47,30 @@ static const char usage[] =
 	" -L --dereference   tell to follow the symbolic links\n"
 ;
 
+static const char shortoptions[] = "vha::e::m::tdL";
+static struct option options[] = {
+	{"version", no_argument, 0, 'v'},
+	{"help", no_argument, 0, 'h'},
+	{"access", optional_argument, 0, 'a'},
+	{"exec", optional_argument, 0, 'e'},
+	{"mmap", optional_argument, 0, 'm'},
+	{"transmute", no_argument, 0, 't'},
+	{"dereference", no_argument, 0, 'L'},
+	{NULL, 0, 0, 0}
+};
+
+/* get the option for the given char */
+static struct option *option_by_char(int car)
+{
+	struct option *result = options;
+	while (result->name != NULL && result->val != car)
+		result++;
+	return result;
+}
+
 /* main */
 int main(int argc, char *argv[])
 {
-	static const char shortoptions[] = "vha::e::m::tdL";
-	static struct option options[] = {
-		{"version", no_argument, 0, 'v'},
-		{"help", no_argument, 0, 'h'},
-		{"access", optional_argument, 0, 'a'},
-		{"exec", optional_argument, 0, 'e'},
-		{"mmap", optional_argument, 0, 'm'},
-		{"transmute", no_argument, 0, 't'},
-		{"dereference", no_argument, 0, 'L'},
-		{NULL, 0, 0, 0}
-	};
-
-	/*  Buffers are zeroed automatically by keeping them static variables.
-	 *  No separate memset is needed this way.
-	 */
-	static int options_map[128];
 
 	/* structure for recording options of label and their init */
 	struct labelset {
@@ -88,9 +93,6 @@ int main(int argc, char *argv[])
 	int c;
 	int i;
 
-	for (i = 0; options[i].name != NULL; i++)
-		options_map[options[i].val] = i;
-
 	/* scan options without argument */
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
 
@@ -107,20 +109,20 @@ int main(int argc, char *argv[])
 			case 't':
 				if (transmute_flag)
 					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), options[options_map[c]].name);
+							basename(argv[0]), option_by_char(c)->name);
 				transmute_flag = 1;
 				option_flag = 1;
 				break;
 			case 'd':
 				if (delete_flag)
 					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), options[options_map[c]].name);
+							basename(argv[0]), option_by_char(c)->name);
 				delete_flag = 1;
 				break;
 			case 'L':
 				if (follow_flag)
 					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), options[options_map[c]].name);
+							basename(argv[0]), option_by_char(c)->name);
 				follow_flag = 1;
 				break;
 			case 'v':
@@ -156,7 +158,7 @@ int main(int argc, char *argv[])
 
 		if (labelset->isset) {
 			fprintf(stderr, "%s: %s: option set many times.\n",
-				basename(argv[0]), options[options_map[c]].name);
+				basename(argv[0]), option_by_char(c)->name);
 			exit(1);
 		}
 		/* greedy on optional arguments */
@@ -166,24 +168,24 @@ int main(int argc, char *argv[])
 		if (optarg == NULL) {
 			if (!delete_flag) {
 				fprintf(stderr, "%s: %s: requires a label when setting.\n",
-					basename(argv[0]), options[options_map[c]].name);
+					basename(argv[0]), option_by_char(c)->name);
 				exit(1);
 			}
 		}
 		else if (delete_flag) {
 			fprintf(stderr, "%s: %s: requires no label when deleting.\n",
-				basename(argv[0]), options[options_map[c]].name);
+				basename(argv[0]), option_by_char(c)->name);
 			exit(1);
 		}
 		else if (strnlen(optarg, SMACK_LABEL_LEN + 1) == SMACK_LABEL_LEN + 1) {
 			fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
-				basename(argv[0]), options[options_map[c]].name, optarg,
+				basename(argv[0]), option_by_char(c)->name, optarg,
 				 SMACK_LABEL_LEN);
 			exit(1);
 		}
 		else if (smack_label_length(optarg) < 0) {
 			fprintf(stderr, "%s: %s: \"%s\" is an invalid Smack label.\n",
-				basename(argv[0]), options[options_map[c]].name, optarg);
+				basename(argv[0]), option_by_char(c)->name, optarg);
 			exit(1);
 		}
 		labelset->isset = 1;
