@@ -212,28 +212,28 @@ int main(int argc, char *argv[])
 			if (access_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACK, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENODATA))
+				if (rc < 0 && errno != ENODATA)
 					perror(argv[i]);
 			}
 
 			if (exec_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKEXEC, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENODATA))
+				if (rc < 0 && errno != ENODATA)
 					perror(argv[i]);
 			}
 
 			if (mmap_set.isset != unset) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKMMAP, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENODATA))
+				if (rc < 0 && errno != ENODATA)
 					perror(argv[i]);
 			}
 
 			if (transmute_flag) {
 				rc = smack_remove_label_for_path(argv[i],
 							XATTR_NAME_SMACKTRANSMUTE, follow_flag);
-				if (rc < 0 && (option_flag || errno != ENODATA))
+				if (rc < 0 && errno != ENODATA)
 					perror(argv[i]);
 			}
 		}
