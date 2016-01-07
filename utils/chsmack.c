@@ -148,6 +148,59 @@ static void modify_transmute(const char *path)
 	}
 }
 
+/* modify the file (or directory) of path */
+static void modify_file(const char *path)
+{
+	modify_prop(path, &access_set, XATTR_NAME_SMACK);
+	modify_prop(path, &exec_set, XATTR_NAME_SMACKEXEC);
+	modify_prop(path, &mmap_set, XATTR_NAME_SMACKMMAP);
+	modify_transmute(path);
+}
+
+/* print the file (or directory) of path */
+static void print_file(const char *path)
+{
+	int rc;
+	char *label;
+
+	/* Print file path. */
+	printf("%s", path);
+
+	errno = 0;
+	rc = (int)smack_new_label_from_path(path,
+		XATTR_NAME_SMACK, follow_flag, &label);
+	if (rc > 0) {
+		printf(" access=\"%s\"", label);
+		free(label);
+	}
+	else if (errno != 0) {
+		printf(": %s", strerror(errno));
+	}
+
+	rc = (int)smack_new_label_from_path(path,
+		XATTR_NAME_SMACKEXEC, follow_flag, &label);
+	if (rc > 0) {
+		printf(" execute=\"%s\"", label);
+		free(label);
+	}
+
+	rc = (int)smack_new_label_from_path(path,
+		XATTR_NAME_SMACKMMAP, follow_flag, &label);
+	if (rc > 0) {
+		printf(" mmap=\"%s\"", label);
+		free(label);
+	}
+
+	rc = (int)smack_new_label_from_path(path,
+		XATTR_NAME_SMACKTRANSMUTE, follow_flag, &label);
+	if (rc > 0) {
+		printf(" transmute=\"%s\"", label);
+		free(label);
+	}
+
+	printf("\n");
+}
+
 /* set the state to to */
 static void set_state(enum state *to, enum state value, int car, int fatal)
 {
@@ -172,8 +225,8 @@ static void set_state(enum state *to, enum state value, int car, int fatal)
 int main(int argc, char *argv[])
 {
 	struct labelset *labelset;
-	char *label;
 
+	void (*fun)(const char*);
 	enum state delete_flag = unset;
 	enum state svalue;
 	int modify = 0;
@@ -310,57 +363,9 @@ int main(int argc, char *argv[])
 		modify = 1;
 	}
 
-	/* modifying label of files */
-	if (modify) {
-		for (i = optind; i < argc; i++) {
-			modify_prop(argv[i], &access_set, XATTR_NAME_SMACK);
-			modify_prop(argv[i], &exec_set, XATTR_NAME_SMACKEXEC);
-			modify_prop(argv[i], &mmap_set, XATTR_NAME_SMACKMMAP);
-			modify_transmute(argv[i]);
-		}
-	}
-
-	/* listing label of files */
-	else {
-		for (i = optind; i < argc; i++) {
-
-			/* Print file path. */
-			printf("%s", argv[i]);
-
-			errno = 0;
-			rc = (int)smack_new_label_from_path(argv[i],
-				XATTR_NAME_SMACK, follow_flag, &label);
-			if (rc > 0) {
-				printf(" access=\"%s\"", label);
-				free(label);
-			} else if (errno != 0) {
-				printf(": %s", strerror(errno));
-			}
-
-			rc = (int)smack_new_label_from_path(argv[i],
-				XATTR_NAME_SMACKEXEC, follow_flag, &label);
-			if (rc > 0) {
-				printf(" execute=\"%s\"", label);
-				free(label);
-			}
-
-			rc = (int)smack_new_label_from_path(argv[i],
-				XATTR_NAME_SMACKMMAP, follow_flag, &label);
-			if (rc > 0) {
-				printf(" mmap=\"%s\"", label);
-				free(label);
-			}
-
-			rc = (int)smack_new_label_from_path(argv[i],
-				XATTR_NAME_SMACKTRANSMUTE, follow_flag, &label);
-			if (rc > 0) {
-				printf(" transmute=\"%s\"", label);
-				free(label);
-			}
-
-			printf("\n");
-		}
-	}
-
+	/* process */
+	fun = modify ? modify_file : print_file;
+	for (i = optind; i < argc; i++)
+		fun(argv[i]);
 	exit(0);
 }
