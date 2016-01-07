@@ -81,6 +81,55 @@ static struct option *option_by_char(int car)
 	return result;
 }
 
+/* modify attributes of a file */
+static void modify_file(const char *path, struct labelset *ls,
+						const char *attr, int follow)
+{
+	int rc;
+	switch (ls->isset) {
+	case positive:
+		rc = smack_set_label_for_path(path, attr, follow, ls->value);
+		if (rc < 0)
+			perror(path);
+		break;
+	case negative:
+		rc = smack_remove_label_for_path(path, attr, follow);
+		if (rc < 0 && errno != ENODATA)
+			perror(path);
+		break;
+	}
+}
+
+/* modify transmutation of a file */
+static void modify_transmute(const char *path, enum state isset, int follow)
+{
+	struct stat st;
+	int rc;
+	switch (isset) {
+	case positive:
+		rc = follow ?  stat(path, &st) : lstat(path, &st);
+		if (rc < 0)
+			perror(path);
+		else if (!S_ISDIR(st.st_mode)) {
+			fprintf(stderr, "%s: transmute: not a directory\n",
+				path);
+		}
+		else {
+			rc = smack_set_label_for_path(path,
+				XATTR_NAME_SMACKTRANSMUTE, follow, "TRUE");
+			if (rc < 0)
+				perror(path);
+		}
+		break;
+	case negative:
+		rc = smack_remove_label_for_path(path,
+					XATTR_NAME_SMACKTRANSMUTE, follow);
+		if (rc < 0 && errno != ENODATA)
+			perror(path);
+		break;
+	}
+}
+
 /* main */
 int main(int argc, char *argv[])
 {
@@ -89,7 +138,6 @@ int main(int argc, char *argv[])
 	struct labelset mmap_set = { unset, NULL }; /* for option "mmap" */
 
 	struct labelset *labelset;
-	struct stat st;
 	char *label;
 
 	int delete_flag = 0;
@@ -208,84 +256,23 @@ int main(int argc, char *argv[])
 		exec_set.isset = negative;
 		mmap_set.isset = negative;
 		transmute_flag = negative;
+		modify = 1;
 	}
 
-	/* deleting labels */
-	if (delete_flag) {
+	/* modifying label of files */
+	if (modify) {
 		for (i = optind; i < argc; i++) {
-			if (access_set.isset != unset) {
-				rc = smack_remove_label_for_path(argv[i],
-							XATTR_NAME_SMACK, follow_flag);
-				if (rc < 0 && errno != ENODATA)
-					perror(argv[i]);
-			}
-
-			if (exec_set.isset != unset) {
-				rc = smack_remove_label_for_path(argv[i],
-							XATTR_NAME_SMACKEXEC, follow_flag);
-				if (rc < 0 && errno != ENODATA)
-					perror(argv[i]);
-			}
-
-			if (mmap_set.isset != unset) {
-				rc = smack_remove_label_for_path(argv[i],
-							XATTR_NAME_SMACKMMAP, follow_flag);
-				if (rc < 0 && errno != ENODATA)
-					perror(argv[i]);
-			}
-
-			if (transmute_flag != unset) {
-				rc = smack_remove_label_for_path(argv[i],
-							XATTR_NAME_SMACKTRANSMUTE, follow_flag);
-				if (rc < 0 && errno != ENODATA)
-					perror(argv[i]);
-			}
+			modify_file(argv[i], &access_set, XATTR_NAME_SMACK,
+								follow_flag);
+			modify_file(argv[i], &exec_set, XATTR_NAME_SMACKEXEC,
+								follow_flag);
+			modify_file(argv[i], &mmap_set, XATTR_NAME_SMACKMMAP,
+								follow_flag);
+			modify_transmute(argv[i], transmute_flag, follow_flag);
 		}
 	}
 
-	/* setting labels */
-	else if (modify) {
-		for (i = optind; i < argc; i++) {
-			if (access_set.isset != unset) {
-				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACK, follow_flag, access_set.value);
-				if (rc < 0)
-					perror(argv[i]);
-			}
-
-			if (exec_set.isset != unset) {
-				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKEXEC, follow_flag, exec_set.value);
-				if (rc < 0)
-					perror(argv[i]);
-			}
-
-			if (mmap_set.isset != unset) {
-				rc = smack_set_label_for_path(argv[i],
-							XATTR_NAME_SMACKMMAP, follow_flag, mmap_set.value);
-				if (rc < 0)
-					perror(argv[i]);
-			}
-
-			if (transmute_flag != unset) {
-				rc = follow_flag ?  stat(argv[i], &st) : lstat(argv[i], &st);
-				if (rc < 0)
-					perror(argv[i]);
-				else if (!S_ISDIR(st.st_mode)) {
-					fprintf(stderr, "%s: transmute: not a directory %s\n",
-						basename(argv[0]), argv[i]);
-				}
-				else {
-					rc = smack_set_label_for_path(argv[i],
-								XATTR_NAME_SMACKTRANSMUTE, follow_flag, "TRUE");
-					if (rc < 0)
-						perror(argv[i]);
-				}
-			}
-		}
-	}
-
-	/* listing labels */
+	/* listing label of files */
 	else {
 		for (i = optind; i < argc; i++) {
 
