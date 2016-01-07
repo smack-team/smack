@@ -24,11 +24,11 @@ chsmack \- Change or list the Smack properties of filesystem objects
 
 .SH SYNOPSIS 
 
-.B chsmack [-L|--dereference] [--] files...
+.B chsmack [-L] [-r] [--] files...
 
-.B chsmack [-L|--dereference] props... [--] files...
+.B chsmack [-L] [-r] props... [--] files...
 
-chsmack (-d|--remove) [-L|--dereference] [props]... [--] files...
+chsmack -d [-L] [-r] [props]... [--] files...
 
 .SH DESCRIPTION
 
@@ -154,6 +154,12 @@ Drop the \fItransmute\fR property attached to the file.
 Use this option to remove the smack properties that are not set for files.
 If no property is specified, it means that all the properties will
 be removed.
+
+.TP
+.B -r, --recursive
+
+Use this option to list or modify files in subdirectories.
+It follows symbolic links only if in the command line.
 
 .SH OBSOLETE OPTIONS
 
