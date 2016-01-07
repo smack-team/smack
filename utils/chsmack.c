@@ -148,6 +148,26 @@ static void modify_transmute(const char *path)
 	}
 }
 
+/* set the state to to */
+static void set_state(enum state *to, enum state value, int car, int fatal)
+{
+	if (*to == unset)
+		*to = value;
+	else if (*to == value) {
+		fprintf(stderr, "%s, option --%s or -%c already set.\n",
+			fatal ? "error" : "warning",
+			option_by_char(car)->name, option_by_char(car)->val);
+		if (fatal)
+			exit(1);
+	}
+	else {
+		fprintf(stderr, "error, option --%s or -%c opposite to an "
+			"option already set.\n",
+			option_by_char(car)->name, option_by_char(car)->val);
+		exit(1);
+	}
+}
+
 /* main */
 int main(int argc, char *argv[])
 {
@@ -155,12 +175,13 @@ int main(int argc, char *argv[])
 	char *label;
 
 	enum state delete_flag = unset;
+	enum state svalue;
 	int modify = 0;
 	int rc;
 	int c;
 	int i;
 
-	/* scan options without argument */
+	/* scan options without argument and not depending of -d */
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
 
 		switch (c) {
@@ -174,67 +195,31 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'A':
-				if (access_set.isset != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				access_set.isset = negative;
+				set_state(&access_set.isset, negative, c, 0);
 				modify = 1;
 				break;
 			case 'E':
-				if (exec_set.isset != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				exec_set.isset = negative;
+				set_state(&exec_set.isset, negative, c, 0);
 				modify = 1;
 				break;
 			case 'M':
-				if (mmap_set.isset != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				mmap_set.isset = negative;
+				set_state(&mmap_set.isset, negative, c, 0);
 				modify = 1;
 				break;
 			case 'T':
-				if (transmute_flag != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				transmute_flag = negative;
+				set_state(&transmute_flag, negative, c, 0);
 				modify = 1;
 				break;
 			case 't':
-				if (transmute_flag != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				transmute_flag = positive;
-				modify = 1;
 				break;
 			case 'd':
-				if (delete_flag == negative) {
-					fprintf(stderr, "%s: %s: opposed to previous option.\n",
-							basename(argv[0]), option_by_char(c)->name);
-					exit(1);
-				}
-				if (delete_flag != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				delete_flag = positive;
+				set_state(&delete_flag, positive, c, 0);
 				break;
 			case 'D':
-				if (delete_flag == positive) {
-					fprintf(stderr, "%s: %s: opposed to previous option.\n",
-							basename(argv[0]), option_by_char(c)->name);
-					exit(1);
-				}
-				if (delete_flag != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				delete_flag = negative;
+				set_state(&delete_flag, negative, c, 0);
 				break;
 			case 'L':
-				if (follow_flag != unset)
-					fprintf(stderr, "%s: %s: option set many times.\n",
-							basename(argv[0]), option_by_char(c)->name);
-				follow_flag = positive;
+				set_state(&follow_flag, positive, c, 0);
 				break;
 			case 'v':
 				printf("%s (libsmack) version " PACKAGE_VERSION "\n",
@@ -248,10 +233,9 @@ int main(int argc, char *argv[])
 				exit(1);
 		}
 	}
-	if (delete_flag == positive && transmute_flag != unset)
-		transmute_flag = negative;
 
-	/* scan options with argument (possibly) */
+	/* scan options with optional argument and -t */
+	svalue = delete_flag == positive ? negative : positive;
 	optind = 1;
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
 
@@ -265,43 +249,43 @@ int main(int argc, char *argv[])
 			case 'm':
 				labelset = &mmap_set;
 				break;
+			case 't':
+				set_state(&transmute_flag, svalue, c, 0);
+				modify = 1;
 			default:
 				continue;
 		}
 
-		if (labelset->isset != unset) {
-			fprintf(stderr, "%s: %s: option set many times.\n",
-				basename(argv[0]), option_by_char(c)->name);
-			exit(1);
-		}
 		/* greedy on optional arguments */
-		if (optarg == NULL && argv[optind] != NULL && argv[optind][0] != '-') {
+		if (optarg == NULL && argv[optind] != NULL
+						&& argv[optind][0] != '-') {
 			optarg = argv[optind++];
 		}
 		if (optarg == NULL) {
 			if (delete_flag != positive) {
-				fprintf(stderr, "%s: %s: requires a label when setting.\n",
-					basename(argv[0]), option_by_char(c)->name);
+				fprintf(stderr, "%s: require a label on set.\n",
+						option_by_char(c)->name);
 				exit(1);
 			}
 		}
 		else if (delete_flag == positive) {
-			fprintf(stderr, "%s: %s: requires no label when deleting.\n",
-				basename(argv[0]), option_by_char(c)->name);
+			fprintf(stderr, "%s: require no label on delete.\n",
+						option_by_char(c)->name);
 			exit(1);
 		}
 		else if (strnlen(optarg, SMACK_LABEL_LEN + 1) == SMACK_LABEL_LEN + 1) {
-			fprintf(stderr, "%s: %s: \"%s\" exceeds %d characters.\n",
-				basename(argv[0]), option_by_char(c)->name, optarg,
-				 SMACK_LABEL_LEN);
+			fprintf(stderr, "%s: \"%s\" exceeds %d characters.\n",
+					option_by_char(c)->name, optarg,
+					SMACK_LABEL_LEN);
 			exit(1);
 		}
 		else if (smack_label_length(optarg) < 0) {
-			fprintf(stderr, "%s: %s: \"%s\" is an invalid Smack label.\n",
-				basename(argv[0]), option_by_char(c)->name, optarg);
+			fprintf(stderr, "%s: invalid Smack label '%s'.\n",
+					option_by_char(c)->name, optarg);
 			exit(1);
 		}
-		labelset->isset = delete_flag == positive ? negative : positive;
+
+		set_state(&labelset->isset, svalue, c, 1);
 		labelset->value = optarg;
 		modify = 1;
 	}
