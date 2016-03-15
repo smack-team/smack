@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/smack.h>
 
 typedef int (*add_func)(void *smack, int fd);
@@ -43,6 +44,25 @@ int clear(void)
 	snprintf(path, sizeof path, "%s/load2", smack_mnt);
 	ret = apply_rules(path, 1);
 	return ret;
+}
+
+static int d_type(int dirfd, const char* path)
+{
+	struct stat stat;
+
+	if (fstatat(dirfd, path, &stat, AT_SYMLINK_NOFOLLOW) == -1) {
+		return DT_UNKNOWN;
+	}
+
+	switch (stat.st_mode & S_IFMT) {
+	case S_IFREG: return DT_REG;
+	case S_IFDIR: return DT_DIR;
+	case S_IFIFO: return DT_FIFO;
+	case S_IFLNK: return DT_LNK;
+	case S_IFCHR: return DT_CHR;
+	case S_IFBLK: return DT_BLK;
+	default: return DT_UNKNOWN;
+	}
 }
 
 static int apply_path(const char *path, void *smack, add_func func)
@@ -64,17 +84,23 @@ static int apply_path(const char *path, void *smack, add_func func)
 	if (dir) {
 		for (dfd = dirfd(dir), dent = readdir(dir);
 		     dent != NULL; dent = readdir(dir)) {
-			if (dent->d_type == DT_DIR)
+			int dtype = dent->d_type;
+
+			if (dtype == DT_UNKNOWN) {
+				dtype = d_type(dirfd(dir), dent->d_name);
+			}
+
+			if (dtype == DT_DIR)
 				continue;
 
-			if (dent->d_type == DT_UNKNOWN) {
+			if (dtype == DT_UNKNOWN) {
 				fprintf(stderr, "'%s' file type is unknown\n",
 					dent->d_name);
 				closedir(dir);
 				return -1;
 			}
 
-			if (dent->d_type != DT_REG) {
+			if (dtype != DT_REG) {
 				fprintf(stderr, "'%s' is a non-regular file\n",
 					dent->d_name);
 				closedir(dir);
