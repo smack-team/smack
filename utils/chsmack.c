@@ -123,7 +123,7 @@ static void modify_prop(const char *path, struct labelset *ls, const char *attr)
 	}
 }
 
-/* modify transmutation of a file */
+/* modify transmutation of a directory */
 static void modify_transmute(const char *path)
 {
 	struct stat st;
@@ -169,51 +169,47 @@ static void modify_file(const char *path)
 /* print the file (or directory) of path */
 static void print_file(const char *path)
 {
-	int rc;
+	ssize_t rc;
 	char *label;
-	int n = 0;
+	int has_some_smack = 0;
 
 	/* Print file path. */
 	printf("%s", path);
 
 	errno = 0;
-	rc = (int)smack_new_label_from_path(path,
-					    XATTR_NAME_SMACK, follow_flag,
-					    &label);
+	rc = smack_new_label_from_path(path, XATTR_NAME_SMACK, follow_flag,
+				       &label);
 	if (rc > 0) {
 		printf(" access=\"%s\"", label);
 		free(label);
-		n = 1;
+		has_some_smack = 1;
 	}
 
-	rc = (int)smack_new_label_from_path(path,
-					    XATTR_NAME_SMACKEXEC, follow_flag,
-					    &label);
+	rc = smack_new_label_from_path(path, XATTR_NAME_SMACKEXEC, follow_flag,
+				       &label);
 	if (rc > 0) {
 		printf(" execute=\"%s\"", label);
 		free(label);
-		n = 1;
+		has_some_smack = 1;
 	}
 
-	rc = (int)smack_new_label_from_path(path,
-					    XATTR_NAME_SMACKMMAP, follow_flag,
-					    &label);
+	rc = smack_new_label_from_path(path, XATTR_NAME_SMACKMMAP, follow_flag,
+				       &label);
 	if (rc > 0) {
 		printf(" mmap=\"%s\"", label);
 		free(label);
-		n = 1;
+		has_some_smack = 1;
 	}
 
-	rc = (int)smack_new_label_from_path(path,
-					    XATTR_NAME_SMACKTRANSMUTE,
-					    follow_flag, &label);
+	rc = smack_new_label_from_path(path, XATTR_NAME_SMACKTRANSMUTE,
+				       follow_flag, &label);
 	if (rc > 0) {
 		printf(" transmute=\"%s\"", label);
 		free(label);
-		n = 1;
+		has_some_smack = 1;
 	}
 
-	printf(n ? "\n" : ": No smack property found\n");
+	printf(has_some_smack ? "\n" : ": No smack property found\n");
 }
 
 static void explore(const char *path, void (*fun)(const char*), int follow)
@@ -258,14 +254,17 @@ static void explore(const char *path, void (*fun)(const char*), int follow)
 	for (;;) {
 		rc = readdir_r(dir, &dent, &pent);
 		if (rc != 0 || pent == NULL) {
+			if (rc)
+				fprintf(stderr,
+					"error: while scaning directory '%s'.\n",
+					path ? path : ".");
 			free(file);
 			closedir(dir);
 			return;
 		}
-		l = strlen(dent.d_name);
-		if (l && dent.d_name[0] == '.'
-		    && (l == 1 || l == 2 && dent.d_name[1] == '.'))
+		if (!strcmp(dent.d_name, ".") || !strcmp(dent.d_name, ".."))
 			continue;
+		l = strlen(dent.d_name);
 		if (last + l >= length) {
 			file = realloc(file, last + l + 20);
 			if (file == NULL) {

@@ -151,7 +151,9 @@ Drop the \fItransmute\fR property attached to the file.
 .TP
 .B -D, --drop
 
-Use this option to remove the smack properties that are not set for files.
+Use this option to instruct chsmack to remove all attributes that aren't set by other flags.
+For example chsmack -a Foo -D would drop all attributes except security.SMACK64.
+
 If no property is specified, it means that all the properties will
 be removed.
 
