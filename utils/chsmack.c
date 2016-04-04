@@ -111,7 +111,7 @@ static void modify_prop(const char *path, struct labelset *ls, const char *attr)
 	switch (ls->isset) {
 	case positive:
 		rc = smack_set_label_for_path(path, attr, follow_flag,
-								ls->value);
+					      ls->value);
 		if (rc < 0)
 			perror(path);
 		break;
@@ -139,17 +139,18 @@ static void modify_transmute(const char *path)
 					"%s: transmute: not a directory\n",
 					path);
 			}
-		}
-		else {
+		} else {
 			rc = smack_set_label_for_path(path,
-				XATTR_NAME_SMACKTRANSMUTE, follow_flag, "TRUE");
+						      XATTR_NAME_SMACKTRANSMUTE,
+						      follow_flag, "TRUE");
 			if (rc < 0)
 				perror(path);
 		}
 		break;
 	case negative:
 		rc = smack_remove_label_for_path(path,
-					XATTR_NAME_SMACKTRANSMUTE, follow_flag);
+						 XATTR_NAME_SMACKTRANSMUTE,
+						 follow_flag);
 		if (rc < 0 && errno != ENODATA)
 			perror(path);
 		break;
@@ -177,7 +178,8 @@ static void print_file(const char *path)
 
 	errno = 0;
 	rc = (int)smack_new_label_from_path(path,
-		XATTR_NAME_SMACK, follow_flag, &label);
+					    XATTR_NAME_SMACK, follow_flag,
+					    &label);
 	if (rc > 0) {
 		printf(" access=\"%s\"", label);
 		free(label);
@@ -185,7 +187,8 @@ static void print_file(const char *path)
 	}
 
 	rc = (int)smack_new_label_from_path(path,
-		XATTR_NAME_SMACKEXEC, follow_flag, &label);
+					    XATTR_NAME_SMACKEXEC, follow_flag,
+					    &label);
 	if (rc > 0) {
 		printf(" execute=\"%s\"", label);
 		free(label);
@@ -193,7 +196,8 @@ static void print_file(const char *path)
 	}
 
 	rc = (int)smack_new_label_from_path(path,
-		XATTR_NAME_SMACKMMAP, follow_flag, &label);
+					    XATTR_NAME_SMACKMMAP, follow_flag,
+					    &label);
 	if (rc > 0) {
 		printf(" mmap=\"%s\"", label);
 		free(label);
@@ -201,7 +205,8 @@ static void print_file(const char *path)
 	}
 
 	rc = (int)smack_new_label_from_path(path,
-		XATTR_NAME_SMACKTRANSMUTE, follow_flag, &label);
+					    XATTR_NAME_SMACKTRANSMUTE,
+					    follow_flag, &label);
 	if (rc > 0) {
 		printf(" transmute=\"%s\"", label);
 		free(label);
@@ -250,7 +255,7 @@ static void explore(const char *path, void (*fun)(const char*), int follow)
 		memcpy(file, path, last);
 		file[last++] = '/';
 	}
-	for(;;) {
+	for (;;) {
 		rc = readdir_r(dir, &dent, &pent);
 		if (rc != 0 || pent == NULL) {
 			free(file);
@@ -259,7 +264,7 @@ static void explore(const char *path, void (*fun)(const char*), int follow)
 		}
 		l = strlen(dent.d_name);
 		if (l && dent.d_name[0] == '.'
-			&& (l == 1 || l == 2 && dent.d_name[1] == '.'))
+		    && (l == 1 || l == 2 && dent.d_name[1] == '.'))
 			continue;
 		if (last + l >= length) {
 			file = realloc(file, last + l + 20);
@@ -287,8 +292,7 @@ static void set_state(enum state *to, enum state value, int car, int fatal)
 			option_by_char(car)->name, option_by_char(car)->val);
 		if (fatal)
 			exit(1);
-	}
-	else {
+	} else {
 		fprintf(stderr, "error, option --%s or -%c opposite to an "
 			"option already set.\n",
 			option_by_char(car)->name, option_by_char(car)->val);
@@ -313,57 +317,56 @@ int main(int argc, char *argv[])
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
 
 		switch (c) {
-			case 'a':
-			case 'e':
-			case 'm':
-				/* greedy on optional arguments */
-				if (optarg == NULL && argv[optind] != NULL 
-						&& argv[optind][0] != '-') {
-					optind++;
-				}
-				break;
-			case 'A':
-				set_state(&access_set.isset, negative, c, 0);
-				modify = 1;
-				break;
-			case 'E':
-				set_state(&exec_set.isset, negative, c, 0);
-				modify = 1;
-				break;
-			case 'M':
-				set_state(&mmap_set.isset, negative, c, 0);
-				modify = 1;
-				break;
-			case 'T':
-				set_state(&transmute_flag, negative, c, 0);
-				modify = 1;
-				break;
-			case 't':
-				break;
-			case 'd':
-				set_state(&delete_flag, positive, c, 0);
-				fprintf(stderr, 
-					"remove: option -d is obsolete!\n");
-				break;
-			case 'D':
-				set_state(&delete_flag, negative, c, 0);
-				break;
-			case 'L':
-				set_state(&follow_flag, positive, c, 0);
-				break;
-			case 'r':
-				set_state(&recursive_flag, positive, c, 0);
-				break;
-			case 'v':
-				printf("%s (libsmack) version " PACKAGE_VERSION "\n",
-				       basename(argv[0]));
-				exit(0);
-			case 'h':
-				printf(usage, basename(argv[0]));
-				exit(0);
-			default:
-				printf(usage, basename(argv[0]));
-				exit(1);
+		case 'a':
+		case 'e':
+		case 'm':
+			/* greedy on optional arguments */
+			if (optarg == NULL && argv[optind] != NULL
+			    && argv[optind][0] != '-') {
+				optind++;
+			}
+			break;
+		case 'A':
+			set_state(&access_set.isset, negative, c, 0);
+			modify = 1;
+			break;
+		case 'E':
+			set_state(&exec_set.isset, negative, c, 0);
+			modify = 1;
+			break;
+		case 'M':
+			set_state(&mmap_set.isset, negative, c, 0);
+			modify = 1;
+			break;
+		case 'T':
+			set_state(&transmute_flag, negative, c, 0);
+			modify = 1;
+			break;
+		case 't':
+			break;
+		case 'd':
+			set_state(&delete_flag, positive, c, 0);
+			fprintf(stderr, "remove: option -d is obsolete!\n");
+			break;
+		case 'D':
+			set_state(&delete_flag, negative, c, 0);
+			break;
+		case 'L':
+			set_state(&follow_flag, positive, c, 0);
+			break;
+		case 'r':
+			set_state(&recursive_flag, positive, c, 0);
+			break;
+		case 'v':
+			printf("%s (libsmack) version " PACKAGE_VERSION "\n",
+			       basename(argv[0]));
+			exit(0);
+		case 'h':
+			printf(usage, basename(argv[0]));
+			exit(0);
+		default:
+			printf(usage, basename(argv[0]));
+			exit(1);
 		}
 	}
 
@@ -373,48 +376,46 @@ int main(int argc, char *argv[])
 	while ((c = getopt_long(argc, argv, shortoptions, options, NULL)) != -1) {
 
 		switch (c) {
-			case 'a':
-				labelset = &access_set;
-				break;
-			case 'e':
-				labelset = &exec_set;
-				break;
-			case 'm':
-				labelset = &mmap_set;
-				break;
-			case 't':
-				set_state(&transmute_flag, svalue, c, 0);
-				modify = 1;
-			default:
-				continue;
+		case 'a':
+			labelset = &access_set;
+			break;
+		case 'e':
+			labelset = &exec_set;
+			break;
+		case 'm':
+			labelset = &mmap_set;
+			break;
+		case 't':
+			set_state(&transmute_flag, svalue, c, 0);
+			modify = 1;
+		default:
+			continue;
 		}
 
 		/* greedy on optional arguments */
 		if (optarg == NULL && argv[optind] != NULL
-						&& argv[optind][0] != '-') {
+		    && argv[optind][0] != '-') {
 			optarg = argv[optind++];
 		}
 		if (optarg == NULL) {
 			if (delete_flag != positive) {
 				fprintf(stderr, "%s: require a label on set.\n",
-						option_by_char(c)->name);
+					option_by_char(c)->name);
 				exit(1);
 			}
-		}
-		else if (delete_flag == positive) {
+		} else if (delete_flag == positive) {
 			fprintf(stderr, "%s: require no label on delete.\n",
-						option_by_char(c)->name);
+				option_by_char(c)->name);
 			exit(1);
-		}
-		else if (strnlen(optarg, SMACK_LABEL_LEN + 1) == SMACK_LABEL_LEN + 1) {
+		} else if (strnlen(optarg, SMACK_LABEL_LEN + 1) ==
+			   SMACK_LABEL_LEN + 1) {
 			fprintf(stderr, "%s: \"%s\" exceeds %d characters.\n",
-					option_by_char(c)->name, optarg,
-					SMACK_LABEL_LEN);
+				option_by_char(c)->name, optarg,
+				SMACK_LABEL_LEN);
 			exit(1);
-		}
-		else if (smack_label_length(optarg) < 0) {
+		} else if (smack_label_length(optarg) < 0) {
 			fprintf(stderr, "%s: invalid Smack label '%s'.\n",
-					option_by_char(c)->name, optarg);
+				option_by_char(c)->name, optarg);
 			exit(1);
 		}
 
@@ -434,8 +435,7 @@ int main(int argc, char *argv[])
 			mmap_set.isset = negative;
 		if (transmute_flag == unset)
 			transmute_flag = negative;
-	}
-	else if (delete_flag == positive && !modify) {
+	} else if (delete_flag == positive && !modify) {
 		access_set.isset = negative;
 		exec_set.isset = negative;
 		mmap_set.isset = negative;
@@ -447,8 +447,7 @@ int main(int argc, char *argv[])
 	fun = modify ? modify_file : print_file;
 	if (optind == argc) {
 		explore(NULL, fun, 0);
-	}
-	else {
+	} else {
 		for (i = optind; i < argc; i++) {
 			fun(argv[i]);
 			if (recursive_flag)
