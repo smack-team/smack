@@ -24,11 +24,11 @@ chsmack \- Change or list the Smack properties of filesystem objects
 
 .SH SYNOPSIS 
 
-.B chsmack [-L|--dereference] [--] files...
+.B chsmack [-L] [-r] [--] files...
 
-.B chsmack [-L|--dereference] props... [--] files...
+.B chsmack [-L] [-r] props... [--] files...
 
-.B chsmack (-d|--remove) [-L|--dereference] [props]... [--] files...
+chsmack -d [-L] [-r] [props]... [--] files...
 
 .SH DESCRIPTION
 
@@ -36,10 +36,11 @@ chsmack \- Change or list the Smack properties of filesystem objects
 
 First form is used to query the Smack properties of the files.
 
-Second form is used to set some Smack properties to the files.
+Second form is used to set and reset some Smack properties to the files.
 
 Third form is used to remove all or some of the Smack properties of the
 listed files.
+\fBThis third form is now obsolete, use second form instead.\fR
 
 Depending on the state and type of the file the different labels,
 which are stored as extended attributes, have a different effect.
@@ -66,20 +67,9 @@ Use this option to process the target of the symbolic links instead of the
 symbolic links themselves.
 
 .TP
-.B -d, --remove
+.B -a, --access \fRlabel
 
-Use this option to remove the smack properties of the files.
-You specify the properties to remove using options \fB-a\fR, \fB-e\fR,
-\fB-m\fR or \fB-t\fR (or their long version) without putting their label
-value.
-If no property is specified, it means that all the properties will
-be removed.
-
-.TP
-.B -a, --access \fR[label]
-
-If removing properties (option \fB-d\fR), no label must be set.
-Otherwise, when setting, the label must be set and its value must be a valid
+When setting, the label must be set and its value must be a valid
 Smack label.
 
 This context is used to confine the access modes, which are defined by the
@@ -96,11 +86,18 @@ to read and execute the binary from the \fBapplication\fR context.
 This label is stored in the \fBsecurity.SMACK64\fR extended attribute.
 
 .TP
+.B -A, --drop-access
 
-.B -e, --exec \fR[label]
+Drop the \fIaccess\fR property attached to the file.
 
-If removing properties (option \fB-d\fR), no label must be set.
-Otherwise, when setting, the label must be set and its value must be a valid
+After that operation, the \fIaccess\fR property for the file
+will be the default access property set during the file system
+mounting or \fB_\fR if none.
+
+.TP
+.B -e, --exec \fRlabel
+
+When setting, the label must be set and its value must be a valid
 Smack label.
 
 If this file is an application binary, this flag defines the context that
@@ -109,11 +106,14 @@ it will be launched in.
 This label is stored in the \fBsecurity.SMACK64EXEC\fR extended attribute.
 
 .TP
+.B -E, --drop-exec
 
-.B -m, --mmap \fR[label]
+Drop the \fIexec\fR property attached to the file.
 
-If removing properties (option \fB-d\fR), no label must be set.
-Otherwise, when setting, the label must be set and its value must be a valid
+.TP
+.B -m, --mmap \fRlabel
+
+When setting, the label must be set and its value must be a valid
 Smack label.
 
 A file with the mmap attribute set can only be mapped by processes with
@@ -123,7 +123,11 @@ access to.
 This label is stored in the \fBsecurity.SMACK64MMAP\fR extended attribute.
 
 .TP
+.B -M, --drop-mmap
 
+Drop the \fImmap\fR property attached to the file.
+
+.TP
 .B -t, --transmute
 
 When used this will set the transmute flag of a directory to True.
@@ -138,6 +142,40 @@ Each of the text editors can open the files and edit them in a shared fashion,
 while still ensuring that the config files of the editor remain protected.
 
 This label is stored in the \fBsecurity.SMACK64TRANSMUTE\fR extended attribute.
+
+.TP
+.B -T, --drop-transmute
+
+Drop the \fItransmute\fR property attached to the file.
+
+.TP
+.B -D, --drop
+
+Use this option to instruct chsmack to remove all attributes that aren't set by other flags.
+For example chsmack -a Foo -D would drop all attributes except security.SMACK64.
+
+If no property is specified, it means that all the properties will
+be removed.
+
+.TP
+.B -r, --recursive
+
+Use this option to list or modify files in subdirectories.
+It follows symbolic links only if in the command line.
+
+.SH OBSOLETE OPTIONS
+
+.TP
+.B -d, --remove
+
+\fBThis option is obsolete, use -D, -A, -M -E, -T instead.\fR
+
+Use this option to remove the smack properties of the files.
+You specify the properties to remove using options \fB-a\fR, \fB-e\fR,
+\fB-m\fR or \fB-t\fR (or their long version) without putting their label
+value.
+If no property is specified, it means that all the properties will
+be removed.
 
 .SH RETURN VALUE
 
@@ -171,6 +209,23 @@ There are some predefined labels:
 
 -	\fB@\fR 	Pronounced "web", a single at sign character.
 
+.SH EXAMPLES
+
+Here are some examples that may be useful.
+
+.EX
+chsmack -aUser -D file1 file2
+.EE
+
+This command set the Smack \fIaccess\fR property to \fIUser\fR and
+drop any other Smack properties for the files \fIfile1\fR and \fIfile2\fR.
+
+.EX
+chsmack -E -a Nobody file3
+.EE
+
+This command set the Smack \fIaccess\fR property to \fINobody\fR and
+drops the \fIexec\fR property for the file \fIfile3\fR.
 
 .SH "SEE ALSO"
 
