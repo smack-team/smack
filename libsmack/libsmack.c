@@ -1193,6 +1193,9 @@ int smack_load_policy(void)
 	if (apply_cipso(CIPSO_D_PATH))
 		return -1;
 
+	if (smack_set_onlycap_from_file(ONLYCAP_PATH))
+		return -1;
+
 	return 0;
 }
 
@@ -1237,5 +1240,115 @@ int smack_set_relabel_self(const char **labels, int cnt)
 out:
 	free(buf);
 	close(fd);
+	return ret;
+}
+
+int smack_set_onlycap(const char **labels, int cnt)
+{
+	int i;
+	int ret;
+	int fd = -1;
+	char *buf = NULL;
+	int size = 0;
+	int len;
+
+	if (init_smackfs_mnt())
+		return -1;
+
+	fd = openat(smackfs_mnt_dirfd, "onlycap", O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	if (labels && cnt) {
+		buf = malloc((SMACK_LABEL_LEN + 1) * cnt);
+		if (buf == NULL) {
+			close(fd);
+			return -1;
+		}
+
+		for (i = 0; i < cnt; ++i) {
+			len = get_label(buf + size, labels[i], NULL);
+			if (len <= 0) {
+				ret = -1;
+				goto out;
+			}
+			size += len;
+			buf[size++] = ' ';
+		}
+		if (write(fd, buf, size) < 0)
+			ret = -1;
+		else
+			ret = 0;
+	} else { /* emtpy list: reset onlycap */
+		if (write(fd, " ", 1) < 0)
+			ret = -1;
+		else
+			ret = 0;
+	}
+
+out:
+	free(buf);
+	close(fd);
+	return ret;
+}
+
+int smack_set_onlycap_from_file(const char* path)
+{
+	FILE *file = fopen(path, "r");
+	int ret = 0;
+	if (file == NULL) {
+		if (errno == ENOENT) /* there is no configuration file,
+				        we should do nothing */
+			return 0;
+		fprintf(stderr, "open() failed for '%s' : %s\n", path,
+			strerror(errno));
+		return -1;
+	}
+
+	char buf[SMACK_LABEL_LEN + 2];
+	int cnt = 0;
+	int size = 10;
+	char **labels = malloc(sizeof(char *) * size);
+	if (labels == NULL) {
+		fputs("Out of memory.\n", stderr);
+		ret = -1;
+		goto out;
+	}
+
+	while (fgets(buf, SMACK_LABEL_LEN + 2, file) != NULL) {
+		if (strcmp(buf, "\n") == 0)
+			continue;
+		if (cnt == size) {
+			size = size * 2;
+			char **new_labels = realloc(labels, sizeof(char *) * size);
+			if (new_labels == NULL) {
+				fputs("Out of memory.\n", stderr);
+				ret = -1;
+				goto out;
+			}
+			labels = new_labels;
+		}
+		int label_len = strlen(buf);
+		char* label = malloc(label_len + 1);
+		if (label == NULL) {
+			fputs("Out of memory.\n", stderr);
+			ret = -1;
+			goto out;
+		}
+		memcpy(label, buf, label_len + 1);
+		if (get_label(label, buf, NULL) <= 0) {
+			free(label);
+			ret = -1;
+			goto out;
+		}
+		labels[cnt++] = label;
+	}
+	ret = smack_set_onlycap((const char **)labels, cnt);
+out:
+	fclose(file);
+	int i;
+	for (i = 0; i < cnt; ++i)
+		free(labels[i]);
+	free(labels);
 	return ret;
 }

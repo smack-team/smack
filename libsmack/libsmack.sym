@@ -38,3 +38,9 @@ LIBSMACK_1.2 {
 global:
 	smack_set_relabel_self;
 } LIBSMACK_1.1;
+
+LIBSMACK_1.3 {
+global:
+	smack_set_onlycap;
+	smack_set_onlycap_from_file;
+} LIBSMACK_1.2;
