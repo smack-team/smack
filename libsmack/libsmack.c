@@ -578,22 +578,27 @@ const char *smack_smackfs_path(void)
 
 ssize_t smack_new_label_from_self(char **label)
 {
+	char buf[SMACK_LABEL_LEN + 1];
 	char *result;
 	int fd;
 	int ret;
 
-	result = calloc(SMACK_LABEL_LEN + 1, 1);
+	fd = open(SELF_LABEL_FILE, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	ret = read(fd, buf, SMACK_LABEL_LEN);
+	close(fd);
+	if (ret < 0)
+		return -1;
+
+	buf[ret] = '\0';
+
+	result = calloc(ret + 1, 1);
 	if (result == NULL)
 		return -1;
 
-	fd = open(SELF_LABEL_FILE, O_RDONLY);
-	if (fd < 0) {
-		free(result);
-		return -1;
-	}
-
-	ret = read(fd, result, SMACK_LABEL_LEN);
-	close(fd);
+	ret = get_label(result, buf, NULL);
 	if (ret < 0) {
 		free(result);
 		return -1;
@@ -605,27 +610,32 @@ ssize_t smack_new_label_from_self(char **label)
 
 ssize_t smack_new_label_from_socket(int fd, char **label)
 {
-	char dummy;
+	char buf[SMACK_LABEL_LEN + 2];
 	int ret;
-	socklen_t length = 1;
+	socklen_t length = SMACK_LABEL_LEN + 1;
 	char *result;
 
-	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, &dummy, &length);
-	if (ret < 0 && errno != ERANGE)
+	/* If getsockopt return more then SMACK_LABEL_LEN the
+	 * buf does not contain proper smack label and get_label
+	 * will return error. */
+	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, buf, &length);
+	if (ret < 0)
 		return -1;
+
+	buf[length] = '\0';
 
 	result = calloc(length + 1, 1);
 	if (result == NULL)
 		return -1;
 
-	ret = getsockopt(fd, SOL_SOCKET, SO_PEERSEC, result, &length);
+	ret = get_label(result, buf, NULL);
 	if (ret < 0) {
 		free(result);
 		return -1;
 	}
 
 	*label = result;
-	return length;
+	return ret;
 }
 
 ssize_t smack_new_label_from_path(const char *path, const char *xattr, 
