@@ -688,16 +688,14 @@ int smack_set_label_for_path(const char *path,
 				  const char *label)
 {
 	int len;
-	int ret;
 
 	len = (int)smack_label_length(label);
 	if (len < 0)
 		return -2;
 
-	ret = follow ?
+	return follow ?
 		setxattr(path, xattr, label, len, 0) :
 		lsetxattr(path, xattr, label, len, 0);
-	return ret;
 }
 
 int smack_set_label_for_file(int fd,
@@ -705,14 +703,12 @@ int smack_set_label_for_file(int fd,
 				  const char *label)
 {
 	int len;
-	int ret;
 
 	len = (int)smack_label_length(label);
 	if (len < 0)
 		return -2;
 
-	ret = fsetxattr(fd, xattr, label, len, 0);
-	return ret;
+	return fsetxattr(fd, xattr, label, len, 0);
 }
 
 int smack_remove_label_for_path(const char *path,
