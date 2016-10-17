@@ -216,10 +216,10 @@ static void explore(const char *path, void (*fun)(const char*), int follow)
 {
 	struct stat st;
 	int rc;
-	char *file;
-	size_t last, length, l;
+	char *buf;
+	size_t buf_size, dir_name_len, file_name_len;
 	DIR *dir;
-	struct dirent dent, *pent;
+	struct dirent *dent;
 
 	/* type of the path */
 	rc = (follow ? stat : lstat)(path ? path : ".", &st);
@@ -240,43 +240,56 @@ static void explore(const char *path, void (*fun)(const char*), int follow)
 	}
 
 	/* iterate ove the directory's entries */
-	last = path ? strlen(path) : 0;
-	length = last + 100;
-	file = malloc(length);
-	if (file == NULL) {
+	dir_name_len = path ? strlen(path) : 1;
+
+	/* dir_name_len + sizeof('/') + sizeof(dirent.d_name) + sizeof('\0') */
+	buf_size = dir_name_len + 1 + 256 + 1;
+	buf = malloc(buf_size);
+	if (buf == NULL) {
 		fprintf(stderr, "error: out of memory.\n");
 		exit(1);
 	}
-	if (last != 0) {
-		memcpy(file, path, last);
-		file[last++] = '/';
+
+	if (path) {
+		memcpy(buf, path, dir_name_len);
+		buf[dir_name_len] = '/';
+	} else {
+		buf[0] = '.';
+		buf[1] = '/';
 	}
+
 	for (;;) {
-		rc = readdir_r(dir, &dent, &pent);
-		if (rc != 0 || pent == NULL) {
-			if (rc)
+		errno = 0;
+		dent = readdir(dir);
+		if (dent == NULL) {
+			if (errno)
 				fprintf(stderr,
 					"error: while scaning directory '%s'.\n",
 					path ? path : ".");
-			free(file);
+			free(buf);
 			closedir(dir);
 			return;
 		}
-		if (!strcmp(dent.d_name, ".") || !strcmp(dent.d_name, ".."))
+		if (!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, ".."))
 			continue;
-		l = strlen(dent.d_name);
-		if (last + l >= length) {
-			file = realloc(file, last + l + 20);
-			if (file == NULL) {
+
+		file_name_len = strlen(dent->d_name);
+		if (dir_name_len + 1 + file_name_len + 1 > buf_size) {
+			char *tmp;
+
+			buf_size = dir_name_len + 1 + file_name_len + 1;
+			tmp = realloc(buf, buf_size);
+			if (tmp == NULL) {
 				fprintf(stderr, "error: out of memory.\n");
 				exit(1);
 			}
-			length = last + l + 20;
+			buf = tmp;
 		}
-		memcpy(file + last, dent.d_name, l + 1);
-		fun(file);
+
+		memcpy(buf + dir_name_len + 1, dent->d_name, file_name_len + 1);
+		fun(buf);
 		if (recursive_flag)
-			explore(file, fun, 0);
+			explore(buf, fun, follow);
 	}
 }
 
