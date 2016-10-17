@@ -250,8 +250,7 @@ ssize_t smack_new_label_from_file(int fd,
   * @param xattr the extended attribute containing the SMACK label
   * @param follow whether or not to follow symbolic link
   * @param label output variable for the returned label
-  * @return Returns length of the label on success and negative value
-  * on failure.
+  * @return Returns 0 on success and negative value on failure.
   */
 int smack_set_label_for_path(const char *path,
 				  const char *xattr,
@@ -264,8 +263,7 @@ int smack_set_label_for_path(const char *path,
   * @param fd opened file descriptor of the file
   * @param xattr the extended attribute containing the SMACK label
   * @param label output variable for the returned label
-  * @return Returns length of the label on success and negative value
-  * on failure.
+  * @return Returns 0 on success and negative value on failure.
   */
 int smack_set_label_for_file(int fd,
 				  const char *xattr,
