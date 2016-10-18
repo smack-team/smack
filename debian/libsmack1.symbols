@@ -2,6 +2,7 @@ libsmack.so.1 libsmack1 #MINVER#
  LIBSMACK_1.0@LIBSMACK_1.0 1.2
  LIBSMACK_1.1@LIBSMACK_1.1 1.2
  LIBSMACK_1.2@LIBSMACK_1.2 1.2
+ LIBSMACK_1.3@LIBSMACK_1.3 1.3
  smack_accesses_add@LIBSMACK_1.0 1.2
  smack_accesses_add_from_file@LIBSMACK_1.0 1.2
  smack_accesses_add_modify@LIBSMACK_1.0 1.2
@@ -19,6 +20,7 @@ libsmack.so.1 libsmack1 #MINVER#
  smack_load_policy@LIBSMACK_1.1 1.2
  smack_new_label_from_file@LIBSMACK_1.1 1.2
  smack_new_label_from_path@LIBSMACK_1.0 1.2
+ smack_new_label_from_process@LIBSMACK_1.3 1.3
  smack_new_label_from_self@LIBSMACK_1.0 1.2
  smack_new_label_from_socket@LIBSMACK_1.0 1.2
  smack_remove_label_for_file@LIBSMACK_1.1 1.2
@@ -27,5 +29,7 @@ libsmack.so.1 libsmack1 #MINVER#
  smack_set_label_for_file@LIBSMACK_1.1 1.2
  smack_set_label_for_path@LIBSMACK_1.1 1.2
  smack_set_label_for_self@LIBSMACK_1.0 1.2
+ smack_set_onlycap@LIBSMACK_1.3 1.3
+ smack_set_onlycap_from_file@LIBSMACK_1.3 1.3
  smack_set_relabel_self@LIBSMACK_1.2 1.2
  smack_smackfs_path@LIBSMACK_1.0 1.2
