@@ -202,6 +202,17 @@ const char *smack_smackfs_path(void);
 ssize_t smack_new_label_from_self(char **label);
 
 /*!
+  * Get the label that is associated with the given process.
+  * Caller is responsible of freeing the returned label.
+  *
+  * @param pid process descriptor to get the label for
+  * @param label output variable for the label
+  * @return Returns length of the label on success and negative value
+  * on failure.
+  */
+ssize_t smack_new_label_from_process(pid_t pid, char **label);
+
+/*!
   * Get the label that is associated with a peer on the other end of a
   * UDS socket (SO_PEERSEC). Caller is responsible of freeing the returned
   * label.
