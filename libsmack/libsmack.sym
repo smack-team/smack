@@ -43,4 +43,5 @@ LIBSMACK_1.3 {
 global:
 	smack_set_onlycap;
 	smack_set_onlycap_from_file;
+	smack_new_label_from_process;
 } LIBSMACK_1.2;
