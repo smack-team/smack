@@ -1334,7 +1334,6 @@ int smack_set_onlycap_from_file(int fd)
 		return -1;
 	}
 
-	char buf[SMACK_LABEL_LEN + 2];
 	int cnt = 0;
 	int size = 10;
 	char **labels = malloc(sizeof(char *) * size);
@@ -1345,31 +1344,30 @@ int smack_set_onlycap_from_file(int fd)
 	}
 
 	while (!feof(file)) {
-		if (fscanf(file, "%s", buf) > 0) {
-			if (cnt == size) {
-				size = size * 2;
-				char **new_labels = realloc(labels, sizeof(char *) * size);
-				if (new_labels == NULL) {
-					fputs("Out of memory.\n", stderr);
-					ret = -1;
-					goto out;
-				}
-				labels = new_labels;
-			}
-			int label_len = strlen(buf);
-			char *label = malloc(label_len + 1);
-			if (label == NULL) {
+		char *label = NULL;
+		int ret = fscanf(file, "%ms", &label);
+		if (ret != 1 && feof(file))
+			break;
+
+		if (ret != 1 || get_label(NULL, label, NULL) <= 0) {
+			fputs("Error while reading onlycap labels from file.\n", stderr);
+			ret = -1;
+			free(label);
+			goto out;
+		}
+
+		if (cnt == size) {
+			size = size * 2;
+			char **new_labels = realloc(labels, sizeof(char *) * size);
+			if (new_labels == NULL) {
 				fputs("Out of memory.\n", stderr);
 				ret = -1;
-				goto out;
-			}
-			if (get_label(label, buf, NULL) <= 0) {
 				free(label);
-				ret = -1;
 				goto out;
 			}
-			labels[cnt++] = label;
+			labels = new_labels;
 		}
+		labels[cnt++] = label;
 	}
 	ret = smack_set_onlycap((const char **)labels, cnt);
 out:
