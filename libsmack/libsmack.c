@@ -131,6 +131,7 @@ struct smack_file_buffer {
 	int fd;
 	int pos;
 	int flush_pos;
+	int size;
 	char *buf;
 };
 
@@ -214,7 +215,8 @@ int smack_accesses_save(struct smack_accesses *handle, int fd)
 	int ret;
 
 	buffer.fd = fd;
-	buffer.buf = malloc(handle->page_size + LOAD_LEN);
+	buffer.size = handle->page_size + LOAD_LEN;
+	buffer.buf = malloc(buffer.size);
 	if (buffer.buf == NULL)
 		return -1;
 
@@ -301,7 +303,8 @@ int smack_accesses_add_modify(struct smack_accesses *handle,
 int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 {
 	FILE *file = NULL;
-	char buf[LOAD_LEN + 1];
+	char *buf = NULL;
+	size_t buf_len = 0;
 	char *ptr;
 	const char *subject, *object, *access, *access2;
 	int newfd;
@@ -317,7 +320,7 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 		return -1;
 	}
 
-	while (fgets(buf, LOAD_LEN + 1, file) != NULL) {
+	while (getline(&buf, &buf_len, file) >= 0) {
 		if (strcmp(buf, "\n") == 0)
 			continue;
 		subject = strtok_r(buf, " \t\n", &ptr);
@@ -326,29 +329,28 @@ int smack_accesses_add_from_file(struct smack_accesses *accesses, int fd)
 		access2 = strtok_r(NULL, " \t\n", &ptr);
 
 		if (subject == NULL || object == NULL || access == NULL ||
-		    strtok_r(NULL, " \t\n", &ptr) != NULL) {
-			fclose(file);
-			return -1;
-		}
+		    strtok_r(NULL, " \t\n", &ptr) != NULL)
+			goto err_out;
 
 		if (access2 == NULL)
 			ret = smack_accesses_add(accesses, subject, object, access);
 		else
 			ret = smack_accesses_add_modify(accesses, subject, object, access, access2);
 
-		if (ret) {
-			fclose(file);
-			return -1;
-		}
+		if (ret)
+			goto err_out;
 	}
 
-	if (ferror(file)) {
-		fclose(file);
-		return -1;
-	}
+	if (ferror(file))
+		goto err_out;
 
+	free(buf);
 	fclose(file);
 	return 0;
+err_out:
+	free(buf);
+	fclose(file);
+	return -1;
 }
 
 int smack_have_access(const char *subject, const char *object,
@@ -392,7 +394,7 @@ int smack_have_access(const char *subject, const char *object,
 		ret = snprintf(buf, LOAD_LEN + 1, KERNEL_SHORT_FORMAT,
 			       subject, object, str);
 
-	if (ret < 0) {
+	if (ret < 0 || ret >= LOAD_LEN + 1) {
 		close(fd);
 		return -1;
 	}
@@ -448,6 +450,8 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 	int i;
 	int offset;
 	int use_long;
+	int ret;
+	int buf_len = sizeof(buf);
 
 	if (init_smackfs_mnt())
 		return -1;
@@ -457,41 +461,60 @@ int smack_cipso_apply(struct smack_cipso *cipso)
 		return -1;
 
 	if (!use_long && cipso->has_long)
-		return -1;
+		goto err_out;
 
-	memset(buf,0,CIPSO_MAX_SIZE);
 	for (m = cipso->first; m != NULL; m = m->next) {
-		offset = (int)snprintf(buf, SMACK_LABEL_LEN + 1, 
-		     use_long ? "%s " : "%-23s ", m->label);
+		if (use_long) {
+			ret = snprintf(buf, SMACK_LABEL_LEN + 1, "%s", m->label);
+			if (ret < 0 || ret > SMACK_LABEL_LEN)
+				goto err_out;
+		} else {
+			ret = snprintf(buf, SHORT_LABEL_LEN + 1, "%-23s", m->label);
+			if (ret < 0 || ret > SHORT_LABEL_LEN)
+				goto err_out;
+		}
 
-		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->level);
-		offset += NUM_LEN;
+		offset = ret;
+		buf[offset++] = ' ';
 
-		sprintf(&buf[offset], CIPSO_NUM_LEN_STR, m->ncats);
-		offset += NUM_LEN;
+		ret = snprintf(buf + offset, buf_len - offset, CIPSO_NUM_LEN_STR, m->level);
+		if (ret < 0 || offset + ret >= buf_len)
+			goto err_out;
+		offset += ret;
+
+		ret = snprintf(buf + offset, buf_len - offset, CIPSO_NUM_LEN_STR, m->ncats);
+		if (ret < 0 || offset + ret >= buf_len)
+			goto err_out;
+		offset += ret;
 
 		for (i = 0; i < CAT_MAX_COUNT; i++) {
 			if (BITTEST(m->cats, i)) {
-				sprintf(&buf[offset], CIPSO_NUM_LEN_STR, i + 1);
-				offset += NUM_LEN;
+				ret = snprintf(buf + offset, buf_len - offset,
+					CIPSO_NUM_LEN_STR, i + 1);
+				if (ret < 0 || offset + ret >= buf_len)
+					goto err_out;
+				offset += ret;
 			}
 		}
 
-		if (write(fd, buf, offset) < 0) {
-			close(fd);
-			return -1;
-		}
+		if (write(fd, buf, offset) < 0)
+			goto err_out;
 	}
 
 	close(fd);
 	return 0;
+
+err_out:
+	close(fd);
+	return -1;
 }
 
 int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 {
 	struct cipso_mapping *mapping = NULL;
 	FILE *file = NULL;
-	char buf[BUF_SIZE];
+	char *buf = NULL;
+	size_t buf_size = 0;
 	char *label, *level, *cat, *ptr;
 	long int val;
 	int i;
@@ -507,7 +530,7 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		return -1;
 	}
 
-	while (fgets(buf, BUF_SIZE, file) != NULL) {
+	while (getline(&buf, &buf_size, file) >= 0) {
 		mapping = calloc(sizeof(struct cipso_mapping), 1);
 		if (mapping == NULL)
 			goto err_out;
@@ -564,16 +587,19 @@ int smack_cipso_add_from_file(struct smack_cipso *cipso, int fd)
 		goto err_out;
 
 	fclose(file);
+	free(buf);
 	return 0;
 err_out:
 	fclose(file);
 	free(mapping);
+	free(buf);
 	return -1;
 }
 
 const char *smack_smackfs_path(void)
 {
-	init_smackfs_mnt();
+	if (init_smackfs_mnt())
+		return NULL;
 	return smackfs_mnt;
 }
 
@@ -617,8 +643,11 @@ ssize_t smack_new_label_from_self(char **label)
 ssize_t smack_new_label_from_process(pid_t pid, char **label)
 {
 	char path[sizeof(PID_LABEL_FILE) + 20];
+	int ret;
 
-	sprintf(path, PID_LABEL_FILE, pid);
+	ret = snprintf(path, sizeof(path), PID_LABEL_FILE, pid);
+	if (ret < 0 || ret >= (int) sizeof(path))
+		return -1;
 	return smack_new_label_from_proc(path, label);
 }
 
@@ -846,16 +875,19 @@ static int accesses_apply(struct smack_accesses *handle, int clear)
 	if (init_smackfs_mnt())
 		return -1;
 
+	load_buffer.size = handle->page_size + LOAD_LEN;
+	change_buffer.size = handle->page_size + LOAD_LEN;
+
 	load_buffer.fd = open_smackfs_file("load2", "load", O_WRONLY, &use_long);
 	if (load_buffer.fd < 0)
 		return -1;
-	load_buffer.buf = malloc(handle->page_size + LOAD_LEN);
+	load_buffer.buf = malloc(load_buffer.size);
 	if (load_buffer.buf == NULL)
 		goto err_out;
 
 	change_buffer.fd = openat(smackfs_mnt_dirfd, "change-rule", O_WRONLY);
 	if (change_buffer.fd >= 0) {
-		change_buffer.buf = malloc(handle->page_size + LOAD_LEN);
+		change_buffer.buf = malloc(change_buffer.size);
 		if (change_buffer.buf == NULL)
 			goto err_out;
 
@@ -906,23 +938,42 @@ static int buffer_flush(struct smack_file_buffer *buf)
 	return 0;
 }
 
-static inline void rule_print_long(char *buf, int *pos,
+static inline int rule_print_long(struct smack_file_buffer *buffer,
 	struct smack_label *subject_label, struct smack_label *object_label,
 	const char *allow_str, const char *deny_str)
 {
-	memcpy(buf + *pos, subject_label->label, subject_label->len);
-	*pos += subject_label->len;
-	buf[(*pos)++] = ' ';
-	memcpy(buf + *pos, object_label->label, object_label->len);
-	*pos += object_label->len;
-	buf[(*pos)++] = ' ';
-	memcpy(buf + *pos, allow_str, ACC_LEN);
-	*pos += ACC_LEN;
+	if (buffer->pos + subject_label->len + 1 + object_label->len + 1 + ACC_LEN >= buffer->size)
+		return -1;
+
+	memcpy(buffer->buf + buffer->pos, subject_label->label, subject_label->len);
+	buffer->pos += subject_label->len;
+	buffer->buf[buffer->pos++] = ' ';
+	memcpy(buffer->buf + buffer->pos, object_label->label, object_label->len);
+	buffer->pos += object_label->len;
+	buffer->buf[buffer->pos++] = ' ';
+	memcpy(buffer->buf + buffer->pos, allow_str, ACC_LEN);
+	buffer->pos += ACC_LEN;
 	if (deny_str != NULL) {
-		buf[(*pos)++] = ' ';
-		memcpy(buf + *pos, deny_str, ACC_LEN);
-		*pos += ACC_LEN;
+		if (buffer->pos + 1 + ACC_LEN >= buffer->size)
+			return -1;
+		buffer->buf[buffer->pos++] = ' ';
+		memcpy(buffer->buf + buffer->pos, deny_str, ACC_LEN);
+		buffer->pos += ACC_LEN;
 	}
+
+	return 0;
+}
+
+static inline int rule_print_short(struct smack_file_buffer *buffer,
+	struct smack_label *subject_label, struct smack_label *object_label,
+	const char *access_str)
+{
+	int ret = snprintf(buffer->buf + buffer->pos, buffer->size - buffer->pos,
+		KERNEL_SHORT_FORMAT, subject_label->label, object_label->label, access_str);
+	if (ret < 0 || ret + buffer->pos >= buffer->size)
+		return -1;
+
+	return 0;
 }
 
 static int accesses_print(struct smack_accesses *handle, int clear,
@@ -967,6 +1018,7 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 		}
 
 		for (y = 0; y < merge_cnt; ++y) {
+			int ret = 0;
 			object_label = handle->labels[handle->merge_object_ids[y]];
 			perm = &(handle->merge_perms[object_label->id]);
 			access_code_to_str(perm->allow_code, allow_str);
@@ -980,20 +1032,21 @@ static int accesses_print(struct smack_accesses *handle, int clear,
 				buffer = change_buffer;
 				buffer->flush_pos = buffer->pos;
 				access_code_to_str(perm->deny_code, deny_str);
-				rule_print_long(buffer->buf, &(buffer->pos),
+				ret = rule_print_long(buffer,
 					subject_label, object_label, allow_str, deny_str);
 			} else {
 				buffer = load_buffer;
 				buffer->flush_pos = buffer->pos;
 				if (use_long)
-					rule_print_long(buffer->buf, &(buffer->pos),
+					ret = rule_print_long(buffer,
 						subject_label, object_label, allow_str, NULL);
 				else
-					buffer->pos += sprintf(buffer->buf + buffer->pos,
-						KERNEL_SHORT_FORMAT,
-						subject_label->label, object_label->label,
-						allow_str);
+					ret = rule_print_short(buffer,
+						subject_label, object_label, allow_str);
 			}
+
+			if (ret)
+				return ret;
 			perm->allow_deny_code = 0;
 
 			if (multiline) {
@@ -1268,7 +1321,8 @@ int smack_set_relabel_self(const char **labels, int cnt)
 
 out:
 	free(buf);
-	close(fd);
+	if (fd >= 0)
+		close(fd);
 	return ret;
 }
 
