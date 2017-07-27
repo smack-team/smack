@@ -42,7 +42,10 @@ int clear(void)
 	if (!smack_mnt)
 		return -1;
 
-	snprintf(path, sizeof path, "%s/load2", smack_mnt);
+	ret = snprintf(path, sizeof(path), "%s/load2", smack_mnt);
+	if (ret >= (int) sizeof(path))
+		return -1;
+
 	ret = apply_rules(path, 1);
 	return ret;
 }
