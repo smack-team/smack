@@ -1,6 +1,6 @@
 AC_PREREQ(2.60)
 AC_INIT([libsmack],
-	[1.3.0],
+	[1.3.1],
 	[r.krypa@samsung.com],
 	[libsmack],
 	[https://github.com/smack-team/smack])
