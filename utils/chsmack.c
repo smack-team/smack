@@ -252,6 +252,8 @@ static void explore(const char *path, void (*fun)(const char*), int follow)
 
 	if (path) {
 		memcpy(buf, path, dir_name_len);
+		while (dir_name_len && buf[dir_name_len - 1] == '/')
+			dir_name_len--;
 		buf[dir_name_len] = '/';
 	} else {
 		buf[0] = '.';
