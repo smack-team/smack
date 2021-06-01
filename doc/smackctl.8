@@ -20,25 +20,61 @@
 .SH NAME
 smackctl \- Load and unload the system Smack rules files
 .SH SYNOPSIS
-.B smackctl ['apply'] ['clear'] ['status']
+.B smackctl ACTION
 
 .SH DESCRIPTION
+
 .B smackctl
 is a program to load and unload the Smack context configurations.  It is generally called by an init process on startup and shutdown of the system when it is needed to change the Smack rules in the kernel.  The Smack system configuration files are stored in configuration directories (see FILES below).
-.SH OPTIONS
+
+.B smackctl
+can also be used to check the status of the Smack system, specifically if smackfs filesystem is mounted.
+
+.SH ACTIONS
+
+.B
 .IP apply
 Apply all the rules found in the configuration directories (/etc/smack/accesses.d and /etc/smack/cipso.d)
+
+.B
 .IP clear
 Remove all system rules from the kernel.
+
+.B
 .IP status
 Show the status of the Smack system, specifically if smackfs filesystem is mounted and where.
+
+.B
+.IP test
+Test the status of the Smack system, specifically if smackfs filesystem is mounted and exit appropriately without prompting norder to indicate to scripts whether Smack is active or not.
+
+.SH OPTIONS
+
+.IP -h --help
+Print a short help and exit immediately.
+
+.IP -v --version
+Print the version and exit immediately.
+
 .SH EXIT STATUS
-On success
+
+Except for action
+.B test
+, on success
 .B smackctl
 returns 0 and 1 on failure.
+
+If action is
+.B test
+the exit value 0 indicates that the Smack system is active, otherwise, if Smack system is not detected active, the exit value is 2 (see NOTE).
+
 .SH FILES
 /smack or /sys/fs/smackfs
 .br
 /etc/smack/acceses.d
 .br
 /etc/smack/cipso.d
+
+.SH NOTE
+
+The value 2 is used in exiting of test to be distinguished from normal error cases. Versions of smackctl anterior to version 1.3.2 would not recognizes the action test and thus will exit with status 1 indicating a wrong action.

@@ -39,6 +39,7 @@ static const char usage[] =
 	" clear   remove all system rules from the kernel\n"
 	" status  show the status of the Smack system, specifically if "
 	       "smackfs is mounted\n"
+	" test    test if Smack is active (exit 0) or inactive (exit 1).\n"
 ;
 
 static const char short_options[] = "vh";
@@ -91,8 +92,11 @@ int main(int argc, char **argv)
 		else
 			printf("SmackFS is not mounted.\n");
 		exit(0);
+	} else if (!strcmp(argv[1], "test")) {
+		if (!smack_smackfs_path())
+			exit(2);
 	} else {
-		fprintf(stderr, "Uknown action: %s\n", argv[1]);
+		fprintf(stderr, "Unknown action: %s\n", argv[1]);
 		fprintf(stderr, usage, argv[0]);
 		exit(1);
 	}
