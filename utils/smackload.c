@@ -29,7 +29,7 @@
 #include "config.h"
 
 static const char usage[] =
-	"Usage: %s [options] <subject> <object> <access>\n"
+	"Usage: %s [options] [path]\n"
 	"options:\n"
 	" -v --version       output version information and exit\n"
 	" -h --help          output usage information and exit\n"
