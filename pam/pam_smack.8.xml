@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding='UTF-8'?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+	"http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd">
+
+<refentry id="pam_smack">
+
+  <refmeta>
+    <refentrytitle>pam_smack</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="sectdesc">Linux-PAM Manual</refmiscinfo>
+  </refmeta>
+
+  <refnamediv id="pam_smack-name">
+    <refname>pam_smack</refname>
+    <refpurpose>PAM module to set the default security context</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <cmdsynopsis id="pam_smack-cmdsynopsis">
+      <command>pam_smack.so</command>
+      <arg choice="opt" rep="repeat">
+	user=label
+      </arg>
+      <arg choice="opt">
+	=default-label
+      </arg>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+
+  <refsect1 id="pam_smack-description">
+    <title>DESCRIPTION</title>
+    <para>
+      pam_smack is a PAM module that sets up the default Smack security
+      context for the next executed process.
+    </para>
+    <para>
+      When a new session is started, the open_session part of the module
+      computes and sets up the execution security context used for the
+      current process, based on the user account.
+    </para>
+  </refsect1>
+
+  <refsect1 id="pam_smack-options">
+    <title>OPTIONS</title>
+    <variablelist>
+      <varlistentry>
+        <term>
+          <option>user=label</option>
+        </term>
+        <listitem>
+          <para>
+            Set the label if it is the user.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>
+          <option>=default-label</option>
+        </term>
+        <listitem>
+          <para>
+            Label to set if no user matches.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1 id="pam_smack-types">
+    <title>MODULE TYPES PROVIDED</title>
+    <para>
+      Only the <option>session</option> module type is provided.
+    </para>
+  </refsect1>
+
+  <refsect1 id='pam_smack-return_values'>
+    <title>RETURN VALUES</title>
+    <variablelist>
+      <varlistentry>
+        <term>PAM_SUCCESS</term>
+        <listitem>
+          <para>
+            The security context was set successfully.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>PAM_SESSION_ERR</term>
+        <listitem>
+          <para>
+            Unable to get or set a valid context.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1 id='pam_smack-examples'>
+    <title>EXAMPLES</title>
+    <programlisting>
+auth     required  pam_unix.so
+session  required  pam_permit.so
+session  optional  pam_smack.so root=System =User
+    </programlisting>
+  </refsect1>
+
+  <refsect1 id='pam_smack-see_also'>
+    <title>SEE ALSO</title>
+    <para>
+      <citerefentry>
+	<refentrytitle>pam.d</refentrytitle><manvolnum>5</manvolnum>
+      </citerefentry>,
+      <citerefentry>
+	<refentrytitle>pam</refentrytitle><manvolnum>8</manvolnum>
+      </citerefentry>
+    </para>
+  </refsect1>
+
+  <refsect1 id='pam_smack-author'>
+    <title>AUTHOR</title>
+      <para>
+        pam_smack was written by Jos&eacute; Bollo &lt;jose.bollo@iot.bzh&gt;.
+      </para>
+  </refsect1>
+
+</refentry>

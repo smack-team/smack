@@ -1,0 +1,61 @@
+.\" -*- coding: us-ascii -*-
+.if \n(.g .ds T< \\FC
+.if \n(.g .ds T> \\F[\n[.fam]]
+.de URL
+\\$2 \(la\\$1\(ra\\$3
+..
+.if \n(.g .mso www.tmac
+.TH pam_smack 8 "6 May 2022" "Linux-PAM Manual" ""
+.SH NAME
+pam_smack \- PAM module to set the default security context
+.SH SYNOPSIS
+'nh
+.fi
+.ad l
+\fBpam_smack.so\fR \kx
+.if (\nx>(\n(.l/2)) .nr x (\n(.l/5)
+'in \n(.iu+\nxu
+[
+user=label
+]\&... [
+=default-label
+]
+'in \n(.iu-\nxu
+.ad b
+'hy
+.SH DESCRIPTION
+pam_smack is a PAM module that sets up the default Smack security
+context for the next executed process.
+.PP
+When a new session is started, the open_session part of the module
+computes and sets up the execution security context used for the
+current process, based on the user account.
+.SH OPTIONS
+.TP 
+\*(T<\fBuser=label\fR\*(T> 
+Set the label if it is the user.
+.TP 
+\*(T<\fB=default\-label\fR\*(T> 
+Label to set if no user matches.
+.SH "MODULE TYPES PROVIDED"
+Only the \*(T<\fBsession\fR\*(T> module type is provided.
+.SH "RETURN VALUES"
+.TP 
+PAM_SUCCESS
+The security context was set successfully.
+.TP 
+PAM_SESSION_ERR
+Unable to get or set a valid context.
+.SH EXAMPLES
+.nf
+\*(T<
+auth     required  pam_unix.so
+session  required  pam_permit.so
+session  optional  pam_smack.so root=System =User
+    \*(T>
+.fi
+.SH "SEE ALSO"
+\fBpam.d\fR(5),
+\fBpam\fR(8)
+.SH AUTHOR
+pam_smack was written by Jos\('e Bollo <jose.bollo@iot.bzh>.
