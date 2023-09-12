@@ -34,8 +34,10 @@
 #include <unistd.h>
 #include <sys/xattr.h>
 
-#define SELF_LABEL_FILE "/proc/self/attr/current"
-#define PID_LABEL_FILE "/proc/%d/attr/current"
+#define SELF_LABEL_FILE "/proc/self/attr/smack/current"
+#define OLD_SELF_LABEL_FILE "/proc/self/attr/current"
+#define PID_LABEL_FILE "/proc/%d/attr/smack/current"
+#define OLD_PID_LABEL_FILE "/proc/%d/attr/current"
 
 #define SHORT_LABEL_LEN 23
 #define ACC_LEN 6
@@ -637,18 +639,29 @@ static ssize_t smack_new_label_from_proc(const char *proc_path, char **label)
 
 ssize_t smack_new_label_from_self(char **label)
 {
-	return smack_new_label_from_proc(SELF_LABEL_FILE, label);
+	ssize_t ret = smack_new_label_from_proc(SELF_LABEL_FILE, label);
+	if (ret < 0 && errno == ENOENT)
+		ret = smack_new_label_from_proc(OLD_SELF_LABEL_FILE, label);
+	return ret;
 }
 
 ssize_t smack_new_label_from_process(pid_t pid, char **label)
 {
 	char path[sizeof(PID_LABEL_FILE) + 20];
 	int ret;
+	ssize_t retval;
 
 	ret = snprintf(path, sizeof(path), PID_LABEL_FILE, pid);
 	if (ret < 0 || ret >= (int) sizeof(path))
 		return -1;
-	return smack_new_label_from_proc(path, label);
+	retval = smack_new_label_from_proc(path, label);
+	if (retval < 0 && errno == ENOENT) {
+		ret = snprintf(path, sizeof(path), OLD_PID_LABEL_FILE, pid);
+		if (ret < 0 || ret >= (int) sizeof(path))
+			return -1;
+		retval = smack_new_label_from_proc(path, label);
+	}
+	return retval;
 }
 
 ssize_t smack_new_label_from_socket(int fd, char **label)
